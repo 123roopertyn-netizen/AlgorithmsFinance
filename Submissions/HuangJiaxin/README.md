@@ -1,6 +1,6 @@
 # Membership queries: LinearSearch, BinarySearch, hash set
 
-Huang Jiaxin, Algorithms in Finance, Class 3 coding lab, Phase 1.
+Huang Jiaxin, Algorithms in Finance, Class 2 coding lab, Phase 1.
 
 ## Specification
 

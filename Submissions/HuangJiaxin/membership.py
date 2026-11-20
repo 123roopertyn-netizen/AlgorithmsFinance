@@ -1,6 +1,6 @@
 """Membership queries on an integer ID array: three methods, one specification.
 
-Specification (Class 3 lab, Phase 1)
+Specification (Class 2 lab, Phase 1)
     Input:  ids      -- list of integer trade IDs (any order, duplicates allowed, may be empty)
             queries  -- list of integer IDs, in a fixed order (may be empty)
     Output: list of Booleans, one per query, in the same order as `queries`;
