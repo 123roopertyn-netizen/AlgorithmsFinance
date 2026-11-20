@@ -131,7 +131,7 @@ as predicted.
 with an explicit index `i`. The revised version (`linear_v2`) iterates over the values
 with a `for` loop. The asymptotic cost is the same Θ(n) per query; the revision only
 removes Python-level index bookkeeping. Measured (n = 100,000, q = 100, hit rate 0.5):
-about 222 ms vs 65 ms, roughly 3.4 times faster. This shows that constant factors
+about 220 ms vs 65 ms, roughly 3.4 times faster. This shows that constant factors
 matter in practice even when the Θ class does not change.
 
 **Library reference.** My `binary_v2` is about 7 times slower than `bisect_ref` for the
@@ -147,18 +147,19 @@ q\* = preparation time ÷ (linear time per query − method time per query).
 
 | n | `binary_v2` q\* | `hash` q\* |
 |---|---|---|
-| 1,000 | about 7.0 | about 1.6 |
-| 10,000 | about 13.9 | about 3.5 |
-| 100,000 | about 20.5 | about 4.6 |
+| 1,000 | about 7.5 | about 1.6 |
+| 10,000 | about 13.6 | about 3.5 |
+| 100,000 | about 19.2 | about 4.5 |
 
 Interpretation: on my machine, building a set pays off after only a few queries; sorting
-plus binary search needs about 7 to 20 queries, more for larger n. For a single query,
+plus binary search needs about 7 to 19 queries, more for larger n. For a single query,
 plain LinearSearch is fastest (n = 100,000: about 0.9 ms vs 3.1 ms for building a set).
 
 ## Results summary (my machine, see `results/environment.json`)
 
-Measured on my MacBook Air (Apple Silicon) inside Docker: Python 3.12.16,
-Linux aarch64 container, 20 November 2026.
+Measured on my MacBook Air (Apple Silicon) inside Docker from a fresh checkout of
+the repository: Python 3.12.16, Linux aarch64 container, 20 November 2026, code at
+commit `0be8421` (recorded in `results/environment.json`).
 
 * **q = 1:** `linear_v2` has the smallest total time; preparation does not pay off.
 * **q = 100:** `hash` has the smallest total time, `binary_v2` is second, LinearSearch
@@ -179,9 +180,34 @@ repository, (2) synthetic data, (3) tests first, (4) implementation and hand tra
 
 ## Commit to be audited
 
-TODO: write the commit hash here after pushing (`git rev-parse HEAD`).
+See the pull request description. The measurements in `results/` were produced
+with the code at commit `0be8421`.
 
 ## Use of AI
 
-TODO (fill in yourself): which parts were suggested by an AI assistant, which
-suggestions you accepted, which you corrected, and which you rejected.
+I used Claude (Anthropic) as an AI assistant during this lab.
+
+* **Accepted:** the project structure and first drafts of all Python files
+  (algorithms, tests, data generator, benchmark, memory, break-even analysis,
+  dashboard), the Dockerfile and the README text. Commits are marked with a
+  Co-Authored-By line.
+* **Checked and corrected by me:** I traced BinarySearch and LinearSearch by hand
+  (`TRACE.md`) and checked the results against the code. In Trace 2 I first wrote
+  `hi = 4` at the matching step and corrected it to `return True` after reviewing
+  the three cases of the comparison. I ran the tests, benchmarks and the Docker image
+  on my own MacBook Air and replaced the assistant's measurements with my own.
+* **Rejected or changed:** Of five extensions the assistant suggested, I chose
+  three (Docker, a second revision, the break-even analysis) and left out
+  theory reference lines and multiple-seed runs, to keep the project small
+  enough to review. I asked to restructure the upload into one commit per step
+  of the Class 1 workflow instead of a single upload. I asked for the hand
+  traces to be in English, as the course is taught in English, and I corrected
+  an authorship line in TRACE.md that overstated how much I had traced alone.
+* **What I can explain myself:** why slicing makes `binary_v1` cost Θ(n) per
+  query; why preparation only pays off after several queries; the three cases of
+  each binary-search step (smaller: move lo, larger: move hi, equal: return True),
+  which I got wrong once in Trace 2; why LinearSearch never reads position 2 when
+  it finds 11 at position 1, and why an absent query is its worst case; why the
+  final loop check `i < n` is not counted as a data comparison; and why the
+  break-even query count for sorting grows with n while it stays small for the
+  hash set.
