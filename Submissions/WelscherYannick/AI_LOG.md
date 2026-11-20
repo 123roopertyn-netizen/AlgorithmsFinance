@@ -2,9 +2,11 @@
 
 Required by the lab (slide 59): which AI suggestions were accepted, corrected or
 rejected. Tool: Claude Code (Claude Sonnet 5.5 for steps 1–2, Claude Opus 5.5 from
-step 3 on). Entries are added as the work
-progresses. "Pending review" means the suggestion is in the code but has not yet
-been checked and confirmed by me.
+step 3 on). Entries were added as the work progressed and marked "Pending
+review" until I had checked them. I reviewed all entries on 2026-11-20 in five
+groups (tests, generator, implementations, measurement, dashboard and README);
+the decisions below are mine. Where a correction came from Claude itself, the
+notes say so.
 
 | Date | Suggestion by Claude | Decision | Notes |
 |---|---|---|---|
@@ -24,8 +26,8 @@ been checked and confirmed by me.
 | 2026-11-20 | Memory measurement with three fresh tracemalloc sessions per method (prepare, query, total), input built before tracing | Accepted | `bench/memory.py`, `tests/test_memory.py`. First full run at `6b79fc8`, current results at `e32d0aa`. Process memory (RSS, optional on slide 62) deliberately not measured; stated in the README. |
 | 2026-11-20 | Claude's first docstring claimed the recursion of v1 is invisible to tracemalloc | Corrected | The smoke run showed a higher v1 query peak; Claude traced it to int objects kept alive by pending recursive calls and fixed the docstring before committing. |
 | 2026-11-20 | Dashboard design: dark navy glass cards with pastel accents | Corrected | I asked for a modern, rounded look with pastel colours based on the base tones of Roberts Space Industries. Claude approximated those tones (no official codes), validated the data colours for contrast and colour-blind separation, and used lighter pastel tints only for UI accents. |
-| 2026-11-20 | Dashboard in Streamlit + Plotly: filters, runtime, revision, memory, raw data and environment views; summaries computed from raw files | Pending review | `dashboard/`, `tests/test_dashboard_data.py`. |
+| 2026-11-20 | Dashboard in Streamlit + Plotly: filters, runtime, revision, memory, raw data and environment views; summaries computed from raw files | Accepted | `dashboard/`, `tests/test_dashboard_data.py`. |
 | 2026-11-20 | README claims "linear is fastest with one query" and "noise at most 6.4 %" | Corrected | The dashboard's computed headline showed linear wins 5 of 6 scenarios (hash wins at n = 1,000, absent query) and that 6.4 % applies to the total, 4.9 % to the query batch. README fixed. |
-| 2026-11-20 | Final README: quick start, structure, specification, test overview, AI use, placeholder for the audit commit | Pending review | Commands checked by Claude in a fresh clone of the branch: install, 140 tests, both benchmark scripts (`--quick`) and a headless run of the dashboard, without editing any file. |
+| 2026-11-20 | Final README: quick start, structure, specification, test overview, AI use, placeholder for the audit commit | Accepted | Commands checked by Claude in a fresh clone of the branch: install, 140 tests, both benchmark scripts (`--quick`) and a headless run of the dashboard, without editing any file. |
 | 2026-11-20 | Fix for the bug found by my new check: linear `prepare` copies `ids` into a tuple | Accepted | Tests were committed failing first (`e8dc99c`, 2 failures), then fixed (`302dc8f`). One memory test that used linear as an example of "no copy" now uses its own aliasing method. Timing and memory were rerun at `302dc8f`; README numbers updated (revision gain now 7–15 %, linear copy about 2 ns and 8 bytes per entry). |
-| 2026-11-20 | Dashboard smoke test (`tests/test_dashboard_app.py`) and relative output path in `bench/benchmark.py` | Pending review | Added after the fresh-clone check; 146 tests pass. The benchmark change only affects the final print, not the measurement. |
+| 2026-11-20 | Dashboard smoke test (`tests/test_dashboard_app.py`) and relative output path in `bench/benchmark.py` | Accepted | Added after the fresh-clone check; 146 tests pass. The benchmark change only affects the final print, not the measurement. |
