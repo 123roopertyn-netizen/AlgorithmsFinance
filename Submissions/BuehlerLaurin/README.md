@@ -17,9 +17,10 @@ Linear search and hash set are unchanged in v2 (see [Revision](#revision)).
 
 ## Commit to be audited
 
-**Commit: `<fill in after the final commit>`** on branch `lab-buehler` of
-`github.com/laurinbuehler/AlgorithmsFinance` (pull request to `cogeorg/AlgorithmsFinance`).
-All commands below run on that commit without editing any file.
+**Commit: `a5b36b6da949078018ae01cbaf9c1eabf430999e`** (short `a5b36b6`) on branch
+`lab-buehler` of `github.com/laurinbuehler/AlgorithmsFinance` (pull request to
+`cogeorg/AlgorithmsFinance`). All commands below run on that commit without editing any file.
+(The later commit that only adds this hash to the README changes nothing else.)
 
 ## Layout
 
