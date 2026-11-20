@@ -95,8 +95,31 @@ Interpretation:
 - Preparation (`sorted`) is identical in v1 and v2, so the total-time gain is smaller
   when sorting dominates (q = 1). This is measured in Step 7.
 - Open observation: v1 at n = 100,000 with hit rate 1.0 (760 us) is slower than with
-  0.0 (450 us), although hits can stop early. This cell was measured first; it may be
-  noise or a warm-up effect of the memory allocator. To be checked in Step 7.
+  0.0 (450 us), although hits can stop early. Resolved in Step 7, see section 6.
 
-Final numbers for all methods (q in {1, 100}, preparation, query batch and total time)
-follow from `bench/timing.py` in Step 7.
+## 6. Measured effect in the full benchmark (Step 7)
+
+Script: `python -m bench.timing`. Development run `results/raw/timing_20261120T143759Z*`
+(`git_dirty = true`; to be replaced by a run on a clean commit). Medians of 5 repeats,
+seconds. Preparation is the same `sorted(ids)` in both versions.
+
+| n | q | hit | v1 prep | v1 query batch | v1 total | v2 prep | v2 query batch | v2 total |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1,000 | 100 | 0.5 | 4.3e-5 | 4.8e-4 | 5.5e-4 | 4.2e-5 | 1.6e-4 | 1.9e-4 |
+| 10,000 | 100 | 0.5 | 1.9e-3 | 3.1e-3 | 5.5e-3 | 1.9e-3 | 1.9e-4 | 2.2e-3 |
+| 100,000 | 100 | 0.5 | 2.7e-2 | 4.4e-2 | 6.7e-2 | 2.8e-2 | 2.6e-4 | 2.9e-2 |
+| 100,000 | 1 | 0.5 | 4.0e-2 | 7.9e-4 | 3.8e-2 | 3.5e-2 | 3.0e-6 | 3.7e-2 |
+
+- **Query batch:** v2 is about 3x (n = 1,000) to 170x (n = 100,000) faster. Confirmed.
+- **Total:** with q = 100 the gain shrinks to about 2.3-2.9x, because sorting is not
+  affected by the revision and takes most of v2's total time. With q = 1 the revision makes
+  no measurable difference in total time: one query is tiny next to the O(n log n) sort.
+- **Correctness:** unchanged; the benchmark checks every result against a `set` oracle.
+- **The v1 hit-vs-miss puzzle (section 5):** with interleaved measurement, v1 at
+  n = 100,000, q = 100 again shows a higher median for hit rate 1.0 (0.060 s) than 0.0
+  (0.045 s), but the raw repeats are bimodal (0.0475-0.0479 or 0.060-0.064 s); the fast
+  ones equal the all-absent case. Explanation: almost all of v1's copying is in the first
+  slices (n/2 + n/4 + ...), which hits and misses both make; an early hit only skips the
+  small last slices. The spread comes from allocating ~400 KB lists, not from the
+  algorithm. Lesson: a median of 5 repeats can still be pulled by noise; look at the raw
+  repeats before explaining a difference.
