@@ -62,11 +62,20 @@ def test_dashboard_renders_filters_and_spot_check(results_dir, monkeypatch):
     at.run()
     check(at)
     assert at.selectbox(key="run").value.endswith(RUN_ID)  # newest non-quick run
+    assert [t.label for t in at.tabs] == ["Overview", "Runtime", "Spot check",
+                                          "Details for auditors"]
     assert any("1 failed" in e.value for e in at.error)    # parsed from tests.xml
+    values = next(d.value for d in at.dataframe if "measure" in d.value.columns)  # Runtime table
+    assert {"n = 10", "n = 100"} <= set(values.columns)
+    assert "Per query (derived = batch / q)" in set(values["measure"])
     assert any(f"All {len(METHODS)} method/versions" in s.value for s in at.success)  # slide example
 
-    at.toggle(key="per_query").set_value(True)
-    at.toggle(key="spread").set_value(False)
+    # Every Details section renders, with the v1 vs v2 charts switched on.
+    at.toggle(key="compare").set_value(True)
+    for section in at.radio(key="details").options:
+        at.radio(key="details").set_value(section).run()
+        check(at)
+    at.radio(key="details").set_value("Memory").run()
     at.toggle(key="memory_bytes").set_value(True)
     at.selectbox(key="q").set_value(1)
     at.selectbox(key="scenario").set_value("all_absent")

@@ -1,12 +1,11 @@
 # AI usage
 
-Slide 58 says: "If you used AI, explain which suggestions you accepted,
-corrected, or rejected."
-
 **Tool:** Claude Code (Anthropic), desktop app.
 
 **Date:** 2026-11-20. The initial build used high reasoning effort.
-Refinements may use a faster model.
+Refinements medium reasoning.
+
+In both cases Opus 5.5
 
 ## What the AI produced
 
@@ -23,21 +22,27 @@ slides, following the instructions in `AGENTS.md`:
   format spec
 - an independent AI review of the build, acting as a Phase 2 auditor; the
   findings and how they were handled are below
+- a simplified dashboard layout, after Maurice found the first version (nine
+  tabs) too hard to read: four tabs (Overview, Runtime, Spot check, Details for
+  auditors). No content was removed; the less central parts moved into Details.
+  Only `dashboard/app.py` and its smoke test changed, not the measured code
 
-## Decisions for Maurice to record
+## My decisions
 
-Fill this in yourself: what you checked, kept, changed or threw away, and why.
-
-| Suggestion | Accepted / corrected / rejected | Why / what you changed |
-|---|---|---|
-| Split each method into `prepare` + `query` so preparation can be timed separately | | |
-| v1 → v2 revisions (no copy plus direct iteration; recursive → iterative) | | |
-| Identical `TypeError` validation for all methods, excluded from timing | | |
-| Measure `total` directly instead of summing prepare + query | | |
-| Calibrated batching of short calls (`min_measure_seconds`), gc disabled in timed loops | | |
-| Generator: IDs from `[0, 2n)` with duplicates, exact hit counts, q=1 "mixed" rounds up | | |
-| Dashboard content for reviewers (provenance, test evidence, same-code control, slopes, spot check) | | |
-| Review findings (see below) | | |
+- **Instructions (mine):** I specified what to build, where it goes
+  (`Submissions/BonackerMaurice/`), what `AGENTS.md` must contain (slides 54–64),
+  and that nothing goes to the course repository before my review (work was
+  pushed only to my fork, then submitted by pull request after review).
+- **Accepted:** the three methods and both revisions (linear: no copy;
+  binary: recursive → iterative). I checked them against my handwritten trace. All methods returned the expected result.
+- **Accepted, extended:** I wanted a generator that can produce longer lists,
+  so the methods can be compared on different input sizes.
+- **Corrected:** the dashboard. Claude showed too much information for a
+  reviewer, so I reduced it to what is needed to test and assess the
+  application. Lesson for next time: limit the scope in the prompt.
+- **Own understanding:** I had the three methods (linear, binary, hash search)
+  explained step by step and traced them by hand myself, including the
+  simplified hash-table model (slot = value % 8).
 
 ## Review findings and how they were handled
 

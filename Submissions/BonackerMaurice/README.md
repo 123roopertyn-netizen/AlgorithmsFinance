@@ -5,9 +5,11 @@ hash-set membership under one specification. It includes tests written first,
 a seeded synthetic-data generator, timing and memory measurements, and a
 Streamlit dashboard for reviewers.
 
-**Commit to be audited:** `8e8109a`. This is the commit whose `01_code/` was
-measured. Later commits only add results and docs; `01_code/` is identical,
-which the source fingerprint `2621865bef6c…` in the dashboard verifies.
+**Commit to be audited:** `3e0a768` (all code, results and the simplified
+dashboard; later commits only edit docs). The benchmark run was measured at `8e8109a`. Later commits add results and docs, simplify the dashboard
+(`dashboard/` and its smoke test only) and add the large-n script (`explore/`). The measured code (`search_algos/`,
+`datagen/`, `benchmarks/`) is identical, which the source fingerprint
+`2621865bef6c…` in the dashboard verifies.
 
 **Committed results:** `02_results/20261120-142828_8e8109a/`. The run had a
 clean tree, status `complete`, the source unchanged during the run, and 674
@@ -32,6 +34,8 @@ Optional commands:
 python -m benchmarks.run --quick                                # small grid, about 15 s (gitignored)
 python -m datagen.generator --n 1000 --q 100 --scenario mixed   # inspect one dataset
 python -m datagen.generator --n 1000 --q 100 --scenario mixed --out data.json
+python -m explore.large_n                                       # n up to 10M, about 9 min (see Exploration)
+python -m explore.large_n 50000,500000,5000000                  # any array lengths
 ```
 
 Use `python -m streamlit`, not `streamlit`: on Windows, application-control
@@ -47,6 +51,7 @@ the tests, the benchmarks or the dashboard.
   datagen/        generator.py
   benchmarks/     config.py, timing.py, memory.py, environment.py, run.py
   dashboard/      app.py, data.py
+  explore/        large_n.py (large-n exploration, not part of the slide grid)
   tests/          test_search.py, test_generator.py, test_benchmarks.py, test_dashboard.py, mutation_check.py
 02_results/   saved benchmark runs, one folder per run
 AGENTS.md     working instructions for AI agents and collaborators
@@ -135,6 +140,48 @@ Reading these results:
   between single measurements, such as hash `total` coming out below hash
   `prepare`, are therefore within noise. Compare ratios that hold consistently
   across datasets instead.
+
+## Exploration: up to 10 million IDs
+
+The slide grid stops at n = 100,000. To check that the results hold for much
+longer lists, `python -m explore.large_n` reruns the same timing pipeline
+(unchanged `benchmarks.timing`, same measured code: source fingerprint
+`2621865bef6c…`) on a larger grid:
+
+- n = 100,000, 1,000,000 and 10,000,000
+- q = 10, scenarios `all_absent` and `mixed`
+- 3 repeats; no memory phase
+
+The run is `02_results/20261120-144435_2611dd1_large_quick/`. It took 9 minutes
+and is selectable in the dashboard. Medians per call, `all_absent` (linear
+search's worst case):
+
+| | n = 100k | n = 1M | n = 10M | slope |
+|---|---|---|---|---|
+| LinearSearch v2, batch of 10 | 20.5 ms | 201 ms | 2.54 s | 1.05 |
+| BinarySearch v2, prepare (sort) | 20.5 ms | 280 ms | 4.40 s | 1.17 |
+| BinarySearch v2, batch of 10 | 14.6 µs | 19.1 µs | 34.9 µs | 0.19 |
+| Hash set, prepare (build) | 7.6 ms | 110 ms | 2.55 s | 1.26 |
+| Hash set, batch of 10 | 305 ns | 325 ns | 664 ns | 0.17 |
+
+What it shows:
+
+- **Linear search stays linear.** 100× more data takes 124× longer, about 25 ns
+  per element checked.
+- **With few queries, preparing does not pay off.** At n = 10M with 10 queries,
+  `total` (prepare plus the batch) is 2.56 s for linear, 2.52 s for hash and
+  4.56 s for binary. Sorting costs about as much as 17 linear scans, building the
+  set about 10, so binary search wins from roughly 18 queries and the hash set
+  from roughly 11.
+- **Lookups slow down once the data leaves the CPU cache.** From 1M to 10M,
+  binary and hash query batches take 1.8–2.0× longer, while log₂ n predicts only about
+  1.2× for binary search. At 10M the sorted list and the set (hundreds of MB) no
+  longer fit in cache, so lookups wait for main memory.
+- **The revisions hold:** linear v2 is 2.15–2.62× faster than v1 and binary v2
+  1.17–1.44× faster, in all 6 datasets.
+
+This is one machine and 3 repeats, so treat it as a robustness check, not as
+part of the graded grid.
 
 ## Tests
 
@@ -251,22 +298,25 @@ absolute values across machines.
 ## Dashboard (`01_code/dashboard/`)
 
 `python -m streamlit run dashboard/app.py` reads saved results only and never
-runs a benchmark. It shows:
+runs a benchmark. It has four tabs:
 
-- **Provenance:** commit, warnings, source-fingerprint check, environment, and
-  the reproduce commands.
-- **Test evidence:** the counts and the per-test table.
-- **Definitions and inputs:** what each segment includes and excludes, and every
-  dataset.
-- **Runtime against n:** log–log, with prepare, query batch and total shown
-  separately.
-- **v1 against v2:** speed-ups, and a same-code control: binary v1 and v2 share
-  `prepare`, so their ratio shows the noise level.
-- **Scaling check:** fitted slopes next to the expected orders.
-- **Memory:** the tracemalloc table.
-- **Raw repeats:** every measurement, with downloads.
+- **Overview:** the measured commit, the test result, the key results table
+  (n = 100,000, q = 100, mixed), the v1 → v2 speed-ups with the noise band, and
+  the reproduce commands. Warnings appear only when something is wrong.
+- **Runtime:** time against n on log–log axes (prepare, query batch and total),
+  filtered by q and scenario in the sidebar, with a toggle to compare v1 and v2
+  and the fitted slopes next to their expected values.
 - **Spot check:** type your own IDs and queries and compare every method side by
   side.
+- **Details for auditors:** everything else, one section at a time:
+  - provenance and environment, including the source-fingerprint check
+  - the per-test results and the mutation check
+  - definitions, settings and the datasets with checksums
+  - every v1/v2 ratio and the same-code control (binary v1 and v2 share
+    `prepare`, so their ratio shows the noise level)
+  - local slopes for every q and scenario
+  - the tracemalloc memory table
+  - the raw repeats, and downloads of every file
 
 ## Dependencies
 

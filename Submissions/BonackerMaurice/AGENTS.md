@@ -115,8 +115,10 @@ Submissions/BonackerMaurice/
       memory.py          memory phase (tracemalloc), run as a separate process
       run.py             orchestrator: tests, then timing, then memory, into ../02_results/<run_id>/
     dashboard/           app.py (Streamlit page), data.py (loading and derived tables)
+    explore/large_n.py   large-n exploration (n up to 10M): timing pipeline, custom grid
     tests/               pytest suite, plus mutation_check.py
-  02_results/<run_id>/   saved raw results (committed; *_quick runs are gitignored)
+  02_results/<run_id>/   saved raw results (committed; *_quick runs are gitignored, except
+                         the large-n run reported in the README)
 ```
 
 ## 4. Commands
@@ -130,6 +132,7 @@ python -m tests.mutation_check            # the tests catch deliberately buggy v
 python -m benchmarks.run                  # full run: tests, timing, memory -> ../02_results/<run_id>/
 python -m benchmarks.run --quick          # small grid for development (gitignored)
 python -m datagen.generator --n 1000 --q 100 --scenario mixed   # inspect one dataset
+python -m explore.large_n [sizes]         # exploration up to n = 10M (about 9 min; gitignored)
 python -m streamlit run dashboard/app.py  # dashboard on http://localhost:8501
 ```
 
@@ -242,7 +245,21 @@ timestamp in UTC.
 ## 8. Dashboard (`01_code/dashboard/`)
 
 The audience is the **Phase 2 reviewer**. The dashboard loads saved results only
-and never reruns benchmarks. It has these parts:
+and never reruns benchmarks. Keep it readable: four tabs, with the main page
+showing only what a reviewer needs first.
+
+- **Overview:** measured commit, tree state, run status and test result; the key
+  results table (current versions, largest n and q, mixed); the v1 → v2
+  speed-ups with the same-code noise band; the reproduce commands. Warnings
+  appear above the tabs only when something is wrong.
+- **Runtime:** item 4 below, with a "compare v1 and v2" toggle (item 5's
+  curves), a values table (median prepare, batch, derived per query and total
+  for every n) and a compact slope table (item 6).
+- **Spot check:** item 9.
+- **Details for auditors:** items 1–3, 5 (tables), 6 (full), 7 and 8, one
+  section at a time.
+
+The content these tabs must cover:
 
 1. **Provenance:**
    - commit and branch, the dirty and unknown-git warnings, and the run status
