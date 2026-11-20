@@ -9,6 +9,7 @@ def generate_synthetic_data(
     num_queries: int,
     hit_rate: float = 0.5,
     seed: int = 0,
+    allow_duplicates: bool = True,
 ) -> Tuple[List[int], List[int]]:
     """Return an integer ID array and ordered membership queries.
 
@@ -26,7 +27,14 @@ def generate_synthetic_data(
 
     rng = random.Random(seed)
     value_bound = max(100, num_ids * 10)
-    ids = [rng.randint(-value_bound, value_bound) for _ in range(num_ids)]
+    if allow_duplicates:
+        ids = [
+            rng.randint(-value_bound, value_bound)
+            for _ in range(num_ids)
+        ]
+    else:
+        population = range(-value_bound, value_bound + 1)
+        ids = rng.sample(population, num_ids)
 
     requested_hits = round(num_queries * hit_rate)
     actual_hits = requested_hits if ids else 0
