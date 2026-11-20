@@ -133,7 +133,7 @@ query copies about n/2 + n/4 + ... ≈ n entries: Θ(n) per query instead of Θ(
 extra memory. The revised version (`binary_v2`) is iterative and keeps two indices
 `lo` and `hi`; it never copies. Invariant: before each loop check, if x occurs it lies
 in `sorted_ids[lo..hi]`. Measured (n = 100,000, q = 100, hit rate 0.5): query batch
-about 23 ms original vs 0.14 ms revised, roughly 170 times faster. The gap grows with n,
+about 24 ms original vs 0.14 ms revised, roughly 170 times faster. The gap grows with n,
 as predicted.
 
 **Revision 2, LinearSearch.** The original (`linear_v1`) follows the slides' pseudocode
@@ -143,7 +143,7 @@ removes Python-level index bookkeeping. Measured (n = 100,000, q = 100, hit rate
 about 220 ms vs 65 ms, roughly 3.4 times faster. This shows that constant factors
 matter in practice even when the Θ class does not change.
 
-**Library reference.** My `binary_v2` is about 7 times slower than `bisect_ref` for the
+**Library reference.** My `binary_v2` is about 6 times slower than `bisect_ref` for the
 same Θ(log n) idea, because `bisect` runs in C while my loop runs in Python.
 
 ## Break-even analysis
@@ -156,19 +156,21 @@ q\* = preparation time ÷ (linear time per query − method time per query).
 
 | n | `binary_v2` q\* | `hash` q\* |
 |---|---|---|
-| 1,000 | about 7.5 | about 1.6 |
-| 10,000 | about 13.6 | about 3.5 |
-| 100,000 | about 19.2 | about 4.5 |
+| 1,000 | about 7.6 | about 1.7 |
+| 10,000 | about 13.9 | about 3.6 |
+| 100,000 | about 20.0 | about 4.7 |
 
 Interpretation: on my machine, building a set pays off after only a few queries; sorting
-plus binary search needs about 7 to 19 queries, more for larger n. For a single query,
-plain LinearSearch is fastest (n = 100,000: about 0.9 ms vs 3.1 ms for building a set).
+plus binary search needs about 8 to 20 queries, more for larger n. For a single query and
+n ≥ 10,000, plain LinearSearch is fastest (n = 100,000: about 0.6 ms vs 3.1 ms for building
+a set). At n = 1,000 the two are close (about 0.009 ms vs 0.011 ms in my run).
 
 ## Results summary (my machine, see `results/environment.json`)
 
 Measured on my MacBook Air (Apple Silicon) inside Docker from a fresh checkout of
 the repository: Python 3.12.16, Linux aarch64 container, 20 November 2026, code at
-commit `0be8421` (recorded in `results/environment.json`).
+commit `4cb994b`, after the fixes from the Phase 2 audit (recorded in
+`results/environment.json`, `breakeven_environment.json` and `memory_environment.json`).
 
 * **q = 1:** for n ≥ 10,000, `linear_v2` has the smallest total time; preparation does
   not pay off. At n = 1,000 LinearSearch and the hash set are close (see the spread tables in
@@ -213,7 +215,7 @@ repository, (2) synthetic data, (3) tests first, (4) implementation and hand tra
 ## Commit to be audited
 
 See the pull request description. The measurements in `results/` were produced
-with the code at commit `0be8421`.
+with the code at commit `4cb994b`.
 
 ## Use of AI
 
