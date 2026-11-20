@@ -65,6 +65,9 @@ def test_dashboard_renders_filters_and_spot_check(results_dir, monkeypatch):
     assert [t.label for t in at.tabs] == ["Overview", "Runtime", "Spot check",
                                           "Details for auditors"]
     assert any("1 failed" in e.value for e in at.error)    # parsed from tests.xml
+    values = next(d.value for d in at.dataframe if "measure" in d.value.columns)  # Runtime table
+    assert {"n = 10", "n = 100"} <= set(values.columns)
+    assert "Per query (derived = batch / q)" in set(values["measure"])
     assert any(f"All {len(METHODS)} method/versions" in s.value for s in at.success)  # slide example
 
     # Every Details section renders, with the v1 vs v2 charts switched on.

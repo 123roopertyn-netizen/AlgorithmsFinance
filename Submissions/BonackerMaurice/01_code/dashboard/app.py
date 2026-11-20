@@ -499,6 +499,23 @@ def overview_tab(run):
                "checksums, memory, raw repeats, downloads) is in the Details tab.")
 
 
+def values_table(df, q) -> pd.DataFrame:
+    """Median per call for each method/version and size: prepare, batch, per query, total."""
+    measures = [("prepare", "Prepare", 1), ("query", f"Batch of {q} queries", 1),
+                ("query", "Per query (derived = batch / q)", q), ("total", "Total", 1)]
+    if q == 1:
+        measures = [m for m in measures if m[2] == 1]
+    rows = []
+    for _, g in data.sort_rows(df).groupby(["method", "version"], sort=False):
+        for segment, name, divisor in measures:
+            s = g[g["segment"] == segment]
+            if not s.empty:
+                rows.append({"method": g["label"].iloc[0], "measure": name,
+                             **{f"n = {n:,}": data.format_seconds(t / divisor)
+                                for n, t in zip(s["n"], s["median_s"])}})
+    return pd.DataFrame(rows)
+
+
 def runtime_tab(run, q, scenario):
     summary, cfg = run["summary"], run["config"]
     current = cfg.get("current", {})
@@ -520,6 +537,14 @@ def runtime_tab(run, q, scenario):
                         f"- **v2**: {descriptions.get(method + '_v2', '')}")
             segment_charts(sel[sel["method"] == method], run, q, scenario, dash_versions=True)
         first_hit_caption(run, q, scenario)
+
+    st.subheader("Values: median time per call")
+    shown = sel[sel["method"].isin(methods)] if compare else current_only(sel, current)
+    st.dataframe(values_table(shown, q), hide_index=True)
+    st.caption(f"q = {q}, {scenario}; median of the repeats. Total = a fresh prepare plus the "
+               "whole batch, measured directly, so it can differ from prepare + batch by the "
+               "noise (about ±25%). Linear v2 prepare does no work: its tens of nanoseconds are "
+               "call overhead. Every repeat: Details → Raw data & downloads.")
 
     st.subheader("Growth with n: fitted log–log slope (time ∝ n^slope)")
     table = data.scaling_table(summary, q, scenario, cfg)

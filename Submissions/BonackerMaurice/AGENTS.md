@@ -253,7 +253,8 @@ showing only what a reviewer needs first.
   speed-ups with the same-code noise band; the reproduce commands. Warnings
   appear above the tabs only when something is wrong.
 - **Runtime:** item 4 below, with a "compare v1 and v2" toggle (item 5's
-  curves) and a compact slope table (item 6).
+  curves), a values table (median prepare, batch, derived per query and total
+  for every n) and a compact slope table (item 6).
 - **Spot check:** item 9.
 - **Details for auditors:** items 1–3, 5 (tables), 6 (full), 7 and 8, one
   section at a time.
