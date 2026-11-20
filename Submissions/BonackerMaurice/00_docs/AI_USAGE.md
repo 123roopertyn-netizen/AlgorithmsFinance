@@ -31,7 +31,8 @@ slides, following the instructions in `AGENTS.md`:
 
 - **Instructions (mine):** I specified what to build, where it goes
   (`Submissions/BonackerMaurice/`), what `AGENTS.md` must contain (slides 54–64),
-  and that nothing is pushed before my review.
+  and that nothing goes to the course repository before my review (work was
+  pushed only to my fork, then submitted by pull request after review).
 - **Accepted:** the three methods and both revisions (linear: no copy;
   binary: recursive → iterative). I checked them against my handwritten trace. All methods returned the expected result.
 - **Accepted, extended:** I wanted a generator that can produce longer lists,

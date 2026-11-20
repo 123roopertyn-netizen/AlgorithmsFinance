@@ -5,9 +5,9 @@ hash-set membership under one specification. It includes tests written first,
 a seeded synthetic-data generator, timing and memory measurements, and a
 Streamlit dashboard for reviewers.
 
-**Commit to be audited:** `8e8109a`. This is the commit whose `01_code/` was
-measured. Later commits add results and docs and simplify the dashboard
-(`dashboard/` and its smoke test only). The measured code (`search_algos/`,
+**Commit to be audited:** `3e0a768` (all code, results and the simplified
+dashboard; later commits only edit docs). The benchmark run was measured at `8e8109a`. Later commits add results and docs, simplify the dashboard
+(`dashboard/` and its smoke test only) and add the large-n script (`explore/`). The measured code (`search_algos/`,
 `datagen/`, `benchmarks/`) is identical, which the source fingerprint
 `2621865bef6c…` in the dashboard verifies.
 
