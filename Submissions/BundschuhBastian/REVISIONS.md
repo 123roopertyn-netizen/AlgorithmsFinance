@@ -41,8 +41,14 @@ have no v2.
 - Added (run for all methods unless noted): tuple and range input, many equal values,
   unsorted queries with repeats.
 - Added for v2 only: `test_binary_v2_does_not_sort_without_queries` (no iteration over the
-  input when queries are empty) and `test_binary_v2_needs_no_deep_recursion` (works with a
-  recursion limit that allows only about 8 nested calls; v1 raises `RecursionError` under
-  the same limit, checked by hand).
+  input when queries are empty).
+- Call depth tests (version-independent, replace an earlier test that used
+  `sys.setrecursionlimit` and depended on the Python version): `max_python_call_depth`
+  uses `sys.setprofile` to count the deepest nesting of Python-level `call` events
+  (restored in a `finally` block; C calls such as `sorted()` are not counted).
+  On 200,000 sorted IDs: `binary_v2` has depth 1 (the method itself; asserted `< 3`),
+  `binary_v1` has depth 21 (asserted `>= 15`, about log2(n) plus the method and the list
+  comprehension). On 200 IDs `binary_v1` has depth 11, so its depth grows with n.
+  Depth was measured on Python 3.11.0 only; the test does not use the recursion limit.
 
-Result: 306 passed.
+Result: 307 passed.

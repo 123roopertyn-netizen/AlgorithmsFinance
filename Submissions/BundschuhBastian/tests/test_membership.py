@@ -199,16 +199,50 @@ def test_binary_v2_does_not_sort_without_queries():
     assert CountingList.iterations == 0       # no copy, no sort when nothing is asked
 
 
-def test_binary_v2_needs_no_deep_recursion():
-    import inspect
-    ids = list(range(0, 400_000, 2))          # binary search takes ~19 steps
-    queries = [0, 399_998, 1, 399_999, 200_000]
-    old = sys.getrecursionlimit()
-    sys.setrecursionlimit(len(inspect.stack()) + 8)   # allows only ~8 more nested calls
+def max_python_call_depth(function, *args):
+    """Run function(*args); return (result, deepest nesting of Python-level calls).
+
+    sys.setprofile reports a 'call' event when a Python function starts and a 'return'
+    event when it ends (also when it ends by an exception). Calls of C functions such as
+    sorted() are other events ('c_call') and are not counted. Depth 1 = `function` itself.
+    The result does not depend on the Python version's recursion limit.
+    """
+    depth = deepest = 0
+
+    def profiler(frame, event, arg):
+        nonlocal depth, deepest
+        if event == "call":
+            depth += 1
+            deepest = max(deepest, depth)
+        elif event == "return":
+            depth -= 1
+
+    previous = sys.getprofile()
+    sys.setprofile(profiler)
     try:
-        assert METHODS["binary_v2"](ids, queries) == [True, True, False, False, True]
+        result = function(*args)
     finally:
-        sys.setrecursionlimit(old)
+        sys.setprofile(previous)
+    return result, deepest
+
+
+def test_binary_v2_call_depth_is_constant():
+    ids = list(range(200_000))
+    queries = [0, 199_999, 100_000, -1, 200_000]   # present at both ends/middle, absent outside
+    result, depth = max_python_call_depth(METHODS["binary_v2"], ids, queries)
+    assert result == [True, True, True, False, False]
+    assert depth < 3        # only the method itself; no helper, no recursion
+
+
+def test_binary_v1_call_depth_grows_with_log_n():
+    ids = list(range(200_000))                      # log2(200000) is about 17.6
+    queries = [-1, 200_000]                         # absent: the search runs to an empty range
+    result, depth = max_python_call_depth(METHODS["binary_v1"], ids, queries)
+    assert result == [False, False]
+    assert depth >= 15      # about log2(n) nested recursive calls
+    # and the depth grows with n: a 1000 times smaller input is much shallower
+    _, small_depth = max_python_call_depth(METHODS["binary_v1"], list(range(200)), queries)
+    assert small_depth < depth - 5
 
 
 # ---- random tests against the oracle ----------------------------------------------
