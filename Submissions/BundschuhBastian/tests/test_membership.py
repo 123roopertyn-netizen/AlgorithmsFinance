@@ -163,6 +163,54 @@ def test_output_lists_are_independent(method):
     assert method([1], [1]) == [True]
 
 
+# ---- cases added in step 4 (v2) ----------------------------------------------------
+
+@pytest.mark.parametrize("kind", [tuple, range])
+def test_other_sequence_types(method, kind):
+    ids = kind([5, 3, 9]) if kind is tuple else range(0, 20, 5)   # (5,3,9) / 0,5,10,15
+    queries = [5, 4, 15, 16]
+    assert method(ids, queries) == [q in ids for q in queries]
+
+
+def test_many_equal_values(method):
+    ids = [4] * 1000
+    assert method(ids, [4, 3, 5]) == [True, False, False]
+
+
+def test_queries_not_sorted_and_with_repeats(method):
+    ids = [1, 3, 5, 7, 9, 11]
+    queries = [11, 1, 11, 6, 6, 3, 0, 12]
+    assert method(ids, queries) == [True, True, True, False, False, True, False, False]
+
+
+class CountingList(list):
+    """List that counts how often it is iterated (a sort or a scan iterates it)."""
+    iterations = 0
+
+    def __iter__(self):
+        type(self).iterations += 1
+        return super().__iter__()
+
+
+def test_binary_v2_does_not_sort_without_queries():
+    CountingList.iterations = 0
+    ids = CountingList([3, 1, 2])
+    assert METHODS["binary_v2"](ids, []) == []
+    assert CountingList.iterations == 0       # no copy, no sort when nothing is asked
+
+
+def test_binary_v2_needs_no_deep_recursion():
+    import inspect
+    ids = list(range(0, 400_000, 2))          # binary search takes ~19 steps
+    queries = [0, 399_998, 1, 399_999, 200_000]
+    old = sys.getrecursionlimit()
+    sys.setrecursionlimit(len(inspect.stack()) + 8)   # allows only ~8 more nested calls
+    try:
+        assert METHODS["binary_v2"](ids, queries) == [True, True, False, False, True]
+    finally:
+        sys.setrecursionlimit(old)
+
+
 # ---- random tests against the oracle ----------------------------------------------
 
 @pytest.mark.parametrize("seed", range(20))
