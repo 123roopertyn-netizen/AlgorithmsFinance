@@ -62,6 +62,7 @@ MUTANTS = [
     Method("binary_without_sorting", list, lambda s, queries: [_binary_found(s, q) for q in queries]),
     Method("consumes_hits", set, _consuming_query),
     Method("crashes_on_empty_ids", lambda ids: (ids[0], set(ids))[1], REFERENCE.query),
+    Method("state_aliases_input", lambda ids: ids, _linear_query),
     Method(
         "duplicates_count_as_absent",
         lambda ids: {x for x in ids if ids.count(x) == 1},
