@@ -20,3 +20,7 @@ For each step: what the AI suggested, and whether it was accepted, corrected or 
 | 4 | Default `id_range = 2n`, number of hits `floor(hit_rate*q + 0.5)` | Accepted | With "allow", about 21% of the entries are repeats. Rounding half up gives 1 hit for q=1, hit rate 0.5. The realized hit rate is saved. |
 | 4 | Static AST test that linear/binary search functions use no `in` comparison, `bisect`, `.index` or `.count` | Accepted | Turns the rule "searches are hand-written" (F6) into a check that runs automatically. |
 | 4 | Generator implemented now, not stubbed | Accepted | The lab says synthetic data comes first (T5); only the algorithms must fail before implementation (R1). |
+| 5 | v1 binary search as a recursive helper that slices (`arr[:mid]`, `arr[mid+1:]`) | Accepted | Decision Q3: naive v1 on purpose, so the revision has a measurable effect. |
+| 5 | Name the helper `binary_contains_recursive` (no leading underscore) | Accepted | The static F6 test only inspects functions starting with `linear_`/`binary_`; a `_helper` would have escaped the check. |
+| 5 | Linear `prepare` returns the caller's list itself (no copy) | Accepted | No preparation cost; safe because `linear_query` only reads it. |
+| 5 | `hash_query` as a list comprehension with `x in state` | Accepted | `in` on a set is allowed (F6); the ban applies to lists inside the searches. |
