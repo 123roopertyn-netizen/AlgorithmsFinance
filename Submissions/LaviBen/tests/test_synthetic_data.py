@@ -43,6 +43,12 @@ class SyntheticDataTests(unittest.TestCase):
         self.assertTrue(all(query not in set(all_misses_ids) for query in all_misses))
         self.assertTrue(all(query in set(all_hits_ids) for query in all_hits))
 
+    def test_single_query_mixed_rate_uses_nearest_representable_hit_count(self) -> None:
+        ids, queries = generate_search_case(10, 1, seed=5, hit_rate=0.5)
+
+        self.assertEqual(len(queries), 1)
+        self.assertIn(queries[0], set(ids))
+
     def test_invalid_parameters_are_rejected(self) -> None:
         invalid_arguments = (
             (-1, 3, 0.5),

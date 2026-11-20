@@ -7,42 +7,71 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from benchmark import ALGORITHMS, run_benchmarks, write_results
+from benchmark import ALGORITHMS, SCENARIOS, run_benchmarks, write_results
 from dashboard import build_dashboard
 
 
 class BenchmarkPipelineTests(unittest.TestCase):
-    def test_every_algorithm_is_measured_for_every_size(self) -> None:
-        sizes = [0, 4]
-        results = run_benchmarks(sizes, repeats=1, seed=12, hit_rate=0.5)
+    def test_fixed_case_matrix_is_shared_by_every_algorithm(self) -> None:
+        sizes = [4]
+        query_counts = [1, 3]
+        run = run_benchmarks(
+            sizes,
+            query_counts,
+            scenarios=SCENARIOS,
+            repeats=2,
+            base_seed=12,
+        )
 
-        self.assertEqual(len(results), len(sizes) * len(ALGORITHMS))
-        self.assertEqual({result.array_size for result in results}, set(sizes))
-        self.assertTrue(all(result.median_ms >= 0 for result in results))
+        expected_cases = len(sizes) * len(query_counts) * len(SCENARIOS)
+        self.assertEqual(len(run.cases), expected_cases)
+        self.assertEqual(len(run.raw_results), expected_cases * len(ALGORITHMS) * 2)
+        self.assertEqual(len(run.summary), expected_cases * len(ALGORITHMS))
+
+        for case in run.cases:
+            case_rows = [row for row in run.raw_results if row.case_id == case.case_id]
+            self.assertEqual(
+                {row.algorithm for row in case_rows},
+                {algorithm.name for algorithm in ALGORITHMS},
+            )
+            self.assertEqual({row.input_sha256 for row in case_rows}, {case.input_sha256})
+            self.assertTrue(all(row.combined_ns >= row.preparation_ns for row in case_rows))
+            self.assertTrue(all(row.combined_ns >= row.query_batch_ns for row in case_rows))
+
+        self.assertEqual(run.metadata["units"]["raw_timings"], "nanoseconds")
+        self.assertIn("python_version", run.metadata["environment"])
+        self.assertIn("machine", run.metadata["environment"])
+        self.assertIn("git_commit", run.metadata["code_version"])
 
     def test_results_and_dashboard_are_reproducible_artifacts(self) -> None:
-        results = run_benchmarks([3], repeats=1, seed=7, hit_rate=0.5)
+        run = run_benchmarks(
+            [3],
+            [1],
+            scenarios=("mixed",),
+            repeats=1,
+            base_seed=7,
+        )
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_directory = Path(temporary_directory)
-            json_path, csv_path = write_results(
-                results,
-                output_directory,
-                seed=7,
-                hit_rate=0.5,
-            )
+            artifacts = write_results(run, output_directory)
             dashboard_path = build_dashboard(
-                json_path,
+                artifacts["results_json"],
                 output_directory / "runtime_dashboard.html",
             )
 
-            payload = json.loads(json_path.read_text(encoding="utf-8"))
+            payload = json.loads(
+                artifacts["results_json"].read_text(encoding="utf-8")
+            )
             dashboard = dashboard_path.read_text(encoding="utf-8")
 
-            self.assertEqual(len(payload["results"]), len(ALGORITHMS))
-            self.assertIn("algorithm,array_size,query_count", csv_path.read_text())
+            self.assertEqual(len(payload["summary"]), len(ALGORITHMS))
+            self.assertTrue(artifacts["raw_csv"].is_file())
+            self.assertTrue(artifacts["summary_csv"].is_file())
+            self.assertTrue(artifacts["input_manifest_json"].is_file())
             self.assertIn("Search runtime dashboard", dashboard)
             self.assertIn("Binary search iterative v2", dashboard)
+            self.assertIn("Preparation median", dashboard)
 
 
 if __name__ == "__main__":

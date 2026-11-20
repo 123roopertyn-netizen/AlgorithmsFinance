@@ -31,6 +31,13 @@
 | Explain AI suggestions | Complete | Accepted, corrected, and rejected lists in `DEVELOPMENT_LOG.md` |
 | Measure performance | Complete | `benchmark.py` plus recorded JSON/CSV results |
 | Build a runtime dashboard | Complete | `dashboard.py` and `results/runtime_dashboard.html` |
+| Fix inputs before comparing methods | Complete | One immutable tuple pair and SHA-256 per manifest case |
+| Use `n={1k,10k,100k}` and `q={1,100}` | Complete | Default benchmark matrix and input manifest |
+| Include present, absent, and mixed queries | Complete | `SCENARIOS` and requested/realized hit-rate fields |
+| Measure preparation, query batch, and combined time | Complete | Raw and summary timing columns |
+| Save environment and code version | Complete | JSON metadata with Python, machine, Git, and source hash |
+| Save raw measurements and units | Complete | `results/raw_timings.csv` in ns; JSON and summary CSV document units |
+| Save generator settings per case | Complete | `results/input_manifest.json` with seed, rates, policy, and SHA-256 |
 
 ## Correctness reasoning
 
@@ -80,7 +87,7 @@ python3 benchmark.py
 python3 dashboard.py
 ```
 
-Expected test result: **10 tests pass**. Runtime values can vary by machine;
+Expected test result: **11 tests pass**. Runtime values can vary by machine;
 correctness results must not.
 
 ## Scope and limitations
