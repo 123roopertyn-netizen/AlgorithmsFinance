@@ -162,8 +162,9 @@ In the logs, `FAIL` marks a claim that did not hold, not a crash of the script.
 * Timings were rerun once, on one machine, inside Docker; I did not repeat the rerun to
   separate noise from systematic effects.
 * I did not rerun `bench_memory.py`; I only checked his saved memory results.
-* I checked the dashboard indirectly (his 23 dashboard tests pass, and the data it loads
-  is consistent), but I did not inspect every figure by eye.
+* I opened his dashboard and looked through the page myself; his 23 dashboard tests pass
+  and the data it loads is consistent. I did not compare every plotted value with the raw
+  data point by point.
 
 ## Use of AI
 
