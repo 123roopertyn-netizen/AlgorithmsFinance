@@ -1,9 +1,79 @@
 # Lab: Search methods (Phase 1)
 
-Submission of Yannick Welscher for *Algorithms in Finance*.
+Submission of Yannick Welscher for *Algorithms in Finance*, Phase 1:
+implement and measure linear search, binary search on a sorted copy, and
+membership with a standard-library hash set; revise one method and compare
+both versions.
 
-Work in progress. Run commands, expected test results and measurement
-definitions will be added here.
+## Quick start
+
+All commands run from this folder, `Submissions/WelscherYannick/`. Tested
+with Python 3.13.15 on macOS (Apple M4 Pro); the pinned packages need
+Python 3.11 or newer.
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python -m pytest                    # expected: 140 passed
+.venv/bin/python bench/benchmark.py           # timing, about 1-2 minutes, writes results/
+.venv/bin/python bench/memory.py              # memory, a few seconds, writes results/
+.venv/bin/streamlit run dashboard/app.py      # dashboard on http://localhost:8501
+```
+
+The committed `results/` already contain a full run, so the dashboard works
+without rerunning the benchmarks. Rerunning overwrites them with values from
+your machine. `--quick` on either benchmark script writes a small smoke run
+to `results/quick/` instead (ignored by git). No file needs to be edited.
+
+## Project structure
+
+| Path | Content |
+|---|---|
+| `src/interface.py` | The specification and the two-stage `Method` (`prepare`, `query`) |
+| `src/search_v1.py` | v1: linear, recursive binary, hash set |
+| `src/search_v2.py` | v2 (revision): iterative binary; linear and hash imported from v1 |
+| `src/registry.py` | All versions; tests and benchmarks iterate over it |
+| `src/datagen.py` | Synthetic-data generator (seed, hit rate, duplicate rate) |
+| `tests/` | Contract checks, mutant tests, tests for generator, measurement and dashboard code |
+| `bench/benchmark.py` | Runtime measurement |
+| `bench/memory.py` | Memory measurement |
+| `results/` | Raw measurements and metadata of the committed run |
+| `dashboard/` | Streamlit dashboard: `app.py` (views), `data.py` (loading, summaries), `theme.py` (design) |
+| `AI_LOG.md` | AI suggestions accepted, corrected or rejected |
+
+## Specification
+
+Input: an integer array `ids` (may be empty, unsorted, with duplicates) and
+an ordered list `queries`. Output: one `bool` per query, in query order;
+entry i is `True` exactly when `queries[i]` occurs in `ids`. Neither input is
+modified. Each method is split into `prepare(ids)` and `query(state, queries)`
+so that preparation and the query batch can be timed separately;
+`contains_all` runs both. Full text: docstring of `src/interface.py`.
+Example from the slides: array `[7, 11, 7]`, queries `[11, 9, 7]` →
+`[True, False, True]`.
+
+## Tests
+
+```bash
+.venv/bin/python -m pytest        # expected: 140 passed, in a few seconds
+```
+
+| File | Tests | What it checks |
+|---|---|---|
+| `tests/test_search.py` | 86 | 14 contract checks for each of the 3 methods in both versions (84), plus agreement of the methods within each version (2) |
+| `tests/test_mutants.py` | 9 | Eight deliberately broken methods must each fail a check; a correct reference must pass all |
+| `tests/test_datagen.py` | 23 | Generator: determinism, sizes, exact hit and duplicate rates, invalid settings |
+| `tests/test_benchmark.py` | 4 | Timing code: fresh state per repeat, output schema, result check |
+| `tests/test_memory.py` | 7 | Memory code counts a known allocation, the sorted copy and the output, but not the input |
+| `tests/test_dashboard_data.py` | 11 | Dashboard numbers agree with the raw result files |
+
+The contract checks (`tests/contract.py`) cover the cases from the slides:
+empty array and queries, one entry, duplicates, unsorted input, first and last
+matches, absent queries, negative ids, output order, return type, unchanged
+input, repeated calls on one prepared state, and comparison with an
+independent reference (`q in ids`) on generated data. The tests were written
+before the implementation and failed against stubs (43 failures) before v1
+existed. Passing tests are evidence, not a proof of correctness.
 
 ## Revision: v1 to v2
 
@@ -20,10 +90,11 @@ frame. Up to about log2(n) + 1 calls per query (about 18 for n = 100,000) add
 call overhead that a loop avoids. The loop also cannot hit Python's recursion
 limit, although that limit is far from reached at these sizes.
 
-**Correctness after the revision.** The full test suite runs unchanged against
-both versions: 118 tests pass (14 contract checks for each method of each
-version, one cross-method check per version, generator tests and mutant
-tests). No expected result was changed. The revision did not reveal any new
+**Correctness after the revision.** The full test suite ran unchanged against
+both versions: 118 tests passed at that point (14 contract checks for each
+method of each version, one cross-method check per version, generator tests
+and mutant tests; the later tests for measurement and dashboard code bring the
+total to 140). No expected result was changed. The revision did not reveal any new
 case that needed an additional test. Passing tests are evidence, not a proof of
 correctness.
 
@@ -35,8 +106,10 @@ checked in the benchmark, not assumed.
 binary search is 9–15 % below v1 (ratio v2/v1 between 0.850 and 0.912), and
 the ranges of the five repeats do not overlap. For comparison, linear and hash
 search run identical code in both versions; their v1/v2 medians differ by at
-most 4.9 % in the query batch and at most 6.4 % in the total time. The total time barely changes, because sorting
-dominates it (see below).
+most 4.9 % in the query batch and at most 6.4 % in the total time. The total
+time of binary search barely changes, because sorting dominates it (see
+below). In memory, v1 needs a few hundred bytes more at its query peak (see
+the memory section).
 
 ## Runtime measurement
 
@@ -217,3 +290,18 @@ cue. All colours are defined in `dashboard/theme.py`.
 * Memory: `tracemalloc` sees only Python-level allocations. Process memory
   (RSS, e.g. with `psutil`) was not measured. The recursion of v1 shows up
   only through the int objects it keeps alive, not through its frames.
+
+## Use of AI
+
+The code and this README were written with Claude Code (Anthropic), in a
+dialogue in which I set the requirements and made the design decisions, for
+example the choice of the revision and the dashboard design. `AI_LOG.md`
+lists every suggestion and whether I accepted, corrected or rejected it,
+including the cases where an AI claim was wrong and how it was found. Commits
+written with the AI carry a `Co-Authored-By: Claude` line.
+
+## Commit for the audit
+
+Reviewers should audit exactly one recorded commit and run it without editing
+any file. The commit is recorded here once the submission is final; until then
+this section is a placeholder.
