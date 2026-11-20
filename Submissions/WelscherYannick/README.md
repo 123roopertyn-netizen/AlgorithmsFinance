@@ -34,8 +34,8 @@ checked in the benchmark, not assumed.
 **Measured effect.** In all 15 scenarios the median query-batch time of v2
 binary search is 9–15 % below v1 (ratio v2/v1 between 0.850 and 0.912), and
 the ranges of the five repeats do not overlap. For comparison, linear and hash
-search run identical code in both versions; their v1/v2 medians differ by 1.3 %
-(median) and at most 6.4 %. The total time barely changes, because sorting
+search run identical code in both versions; their v1/v2 medians differ by at
+most 4.9 % in the query batch and at most 6.4 % in the total time. The total time barely changes, because sorting
 dominates it (see below).
 
 ## Runtime measurement
@@ -90,8 +90,10 @@ One query, all absent:
 | 10,000 | 5.47 ms (15.4 ns / 5.59 ms) | 605 µs (559 µs / 72.3 µs) | 110 µs (112 µs / 894 ns) |
 | 100,000 | 61.8 ms (15.3 ns / 57.9 ms) | 8.8 ms (8.88 ms / 96.4 µs) | 2.19 ms (2.18 ms / 884 ns) |
 
-* With one query, linear search is fastest overall: it prepares nothing, and
-  one scan is cheaper than sorting or building a set.
+* With one query, linear search has the lowest total time in 5 of 6
+  scenarios: it prepares nothing, and one scan is usually cheaper than sorting
+  or building a set. The exception is n = 1,000 with an absent query, where
+  the hash set is slightly faster (5.31 µs against 5.94 µs).
 * With 100 queries, hash membership is fastest; linear search grows with n·q.
 * Binary search never wins in these scenarios: sorting costs more than building
   the set, and its O(log n) queries cannot make up for that at q ≤ 100.
@@ -158,6 +160,41 @@ values.
   alive. This is the O(log n) extra space of the recursion, visible
   indirectly. The total peak is unaffected because the preparation dominates
   it.
+
+## Dashboard
+
+```bash
+.venv/bin/streamlit run dashboard/app.py
+```
+
+Opens on http://localhost:8501 (port set in `.streamlit/config.toml`). The
+dashboard only reads `results/`; it never runs a benchmark. To refresh it,
+rerun `bench/benchmark.py` and `bench/memory.py`. All medians, ratios and
+headline numbers are computed from the raw repeat values in `dashboard/data.py`;
+`tests/test_dashboard_data.py` checks them against the raw files.
+
+* **Filters** (one row, apply to all views): number of queries, hit rate,
+  versions shown, log or linear time axis. The line below the filters always
+  states q, the generated hit rate, the duplicate rate and the units.
+* **Runtime:** time against n with one curve per method, preparation, query
+  batch and total in separate charts; v2 solid, v1 dashed; markers are medians,
+  whiskers the min–max of the five repeats.
+* **Revision v1 → v2:** v2/v1 ratio of the binary query batch for every
+  scenario, with the noise band measured on identical code, and binary
+  search over n for the selected scenario.
+* **Memory:** prepared structure and peak per method, plus a table of all
+  memory columns for the selected scenario.
+* **Raw data:** every repeat for the selected scenario, and the full CSV files
+  for download.
+* **Environment:** machine, Python, clock, commits and generator settings for
+  both runs, the generated data per scenario and the full metadata.
+
+Design: dark navy with rounded glass cards, loosely inspired by the base tones
+of Roberts Space Industries (approximated; no official colour codes, logo or
+name). The three data colours were checked with a palette validator against
+the card background, including colour-blind separation. Lines are also
+distinguished by labels and version by line style, so colour is never the only
+cue. All colours are defined in `dashboard/theme.py`.
 
 ## Known measurement shortcomings
 
