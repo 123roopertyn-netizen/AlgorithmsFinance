@@ -40,3 +40,9 @@ For each step: what the AI suggested, and whether it was accepted, corrected or 
 | 7 | Claim "for q = 1 linear search wins at every n" | Corrected | The official run shows the hash set slightly ahead at n = 1,000, q = 1, all-absent (24 vs. 28-33 us): a full scan of 1,000 elements costs about as much as building the set. Statement narrowed in the checkpoint and REVISION.md. |
 | 7 | Keep the development run files (committed by accident) instead of deleting them | Accepted | They are labeled `git_dirty = true` with their parent commit, so they are honest; deleting would not remove them from history. The official run is the clean one. |
 | 7 | Use identical v1/v2 code of linear and hash as an A/A noise estimate | Accepted | Gives a measured noise level (typically 5-15%) for judging other differences. |
+| 8 | Three traced phases per method (prepare, query, total) with explicit flags `includes_input/prepared/output` | Accepted | MEM6 asks to state what each number includes; one phase alone would mix the sorted copy with v1's temporary slices. |
+| 8 | Build input before tracing; keep `state` and `result` alive while reading | Accepted | Required by MEM1 and MEM4. |
+| 8 | Save `sys.getsizeof(state)` as cross-check | Accepted | Matches tracemalloc: 800,056 bytes for the sorted list at n = 100,000 (= 781.3 KiB). |
+| 8 | Add `state_is_input` column | Accepted (AI found its own labelling gap) | For linear search, getsizeof shows the caller's list (782 KiB) while tracemalloc shows 0: without the flag a reader could think linear search allocates memory. |
+| 8 | Trial run written to the scratchpad, not `results/memory/` | Accepted | Avoids committing results of uncommitted code again (Step 7 lesson); the official run follows on a clean commit. |
+| 8 | Skip the psutil RSS run | Accepted | Optional (MEM5); psutil is not installed and would need approval. |

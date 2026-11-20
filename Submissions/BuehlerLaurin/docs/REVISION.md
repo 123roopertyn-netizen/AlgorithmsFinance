@@ -139,3 +139,29 @@ repeats, a few slow outliers can move the median. In theory, v1 hits and misses 
 almost the same amount: the first slices (n/2 + n/4 + ...) dominate, and a hit stops
 on average only 2.4 recursion levels earlier (14.3 vs. 16.7), where the slices are
 tiny. Lesson: look at the raw repeats before explaining a difference between medians.
+
+## 7. Memory effect of the revision (Step 8)
+
+Script: `python -m bench.memory` (tracemalloc, separate from timing). Input is never
+counted; "prepare" counts the prepared structure, "query" the output plus temporaries,
+"total" both. Values in KiB (1 KiB = 1,024 bytes), n = 100,000, q = 100, hit rate 0.5.
+tracemalloc values are deterministic here (0 bytes spread between 3 repeats).
+Official result file: added after the run on a clean commit.
+
+| phase | measure | binary v1 | binary v2 | linear | hash |
+|---|---|---:|---:|---:|---:|
+| prepare | current | 781.2 | 781.2 | 0.0 | 4,096.2 |
+| prepare | peak | 1,171.8 | 1,171.8 | 0.0 | 6,144.3 |
+| query | peak | **782.3** | **1.1** | 0.9 | 0.9 |
+| total | peak | **1,563.5** | **1,171.8** | 0.9 | 6,144.3 |
+
+- **Query peak: v1 782 KiB vs. v2 1.1 KiB.** v1's slices along one recursion path are all
+  alive at the same time: n/2 + n/4 + ... ≈ n references × 8 bytes ≈ 781 KiB, i.e. O(n)
+  extra memory per query. v2 needs O(1) besides the output list (100 × 8 bytes + 56 ≈ 0.9 KiB).
+- **Total peak: −25%** (1,563 → 1,172 KiB). What remains is the sort itself.
+- **Prepare is unchanged** by the revision: the sorted copy is 8n bytes + 56 (781 KiB);
+  its peak of 1.5× comes from the temporary merge buffer of Python's sort (Timsort, up to
+  n/2 references).
+- For comparison: the hash set needs about 5x the sorted list (4 MiB for about 79,000
+  distinct IDs: a hash table of 2^18 slots × 16 bytes) and peaks at 6 MiB while it resizes
+  (old and new table alive together). Linear search needs no extra memory at all.

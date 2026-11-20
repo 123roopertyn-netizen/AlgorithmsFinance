@@ -1,4 +1,4 @@
-"""Smoke tests for the measurement code (bench/timing.py, bench/env.py).
+"""Smoke tests for the measurement code (bench/timing.py, bench/memory.py, bench/env.py).
 
 They run a tiny grid into a temporary folder and check the saved files: required columns,
 units, positive times, one row per repeat, identical inputs for every method, and
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from bench import timing
+from bench import memory, timing
 from bench.env import collect_env
 from membership import METHODS, MethodSpec
 
@@ -70,6 +70,51 @@ def test_wrong_method_is_detected(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
             n_values=[10], q_values=[5], hit_rates=[1.0], methods=[broken],
             repeats=1, out_dir=tmp_path,
         )
+
+
+@pytest.fixture
+def tiny_memory_run(tmp_path: Path) -> dict[str, Path]:
+    return memory.run_grid(
+        n_values=[1_000], q_values=[1, 100], hit_rates=[0.5], repeats=1, out_dir=tmp_path
+    )
+
+
+def test_memory_rows_have_flags_units_and_cover_all_phases(
+    tiny_memory_run: dict[str, Path],
+) -> None:
+    rows = read_csv(tiny_memory_run["raw"])
+    assert len(rows) == 1 * 2 * 1 * len(METHODS) * 3  # n x q x hit x methods x phases
+    expected_flags = {
+        "prepare": ("False", "True", "False"),
+        "query": ("False", "False", "True"),
+        "total": ("False", "True", "True"),
+    }
+    for row in rows:
+        assert row["unit"] == "bytes" and row["tool"] == "tracemalloc"
+        flags = (row["includes_input"], row["includes_prepared"], row["includes_output"])
+        assert flags == expected_flags[row["phase"]]
+        assert int(row["peak_bytes"]) >= int(row["current_bytes"]) >= 0
+
+
+def test_memory_values_are_plausible(tiny_memory_run: dict[str, Path]) -> None:
+    """Rough sanity bounds only (n = 1,000): linear prepares nothing, a sorted copy holds
+    n references (>= 8n bytes), the hash set is larger than n references."""
+    rows = read_csv(tiny_memory_run["raw"])
+
+    def current(label: str, phase: str, q: int) -> int:
+        (row,) = [r for r in rows if r["label"] == label and r["phase"] == phase
+                  and int(r["q"]) == q]
+        return int(row["current_bytes"])
+
+    assert current("linear-original", "prepare", 100) < 1_000
+    assert current("binary-original", "prepare", 100) >= 8 * 1_000
+    assert current("hash-original", "prepare", 100) > 8 * 1_000
+    assert current("hash-original", "query", 100) >= 8 * 100  # output list kept alive
+
+    linear_prep = [r for r in rows if r["method"] == "linear" and r["phase"] == "prepare"]
+    assert all(r["state_is_input"] == "True" for r in linear_prep)
+    binary_prep = [r for r in rows if r["method"] == "binary" and r["phase"] == "prepare"]
+    assert all(r["state_is_input"] == "False" for r in binary_prep)
 
 
 def test_collect_env_is_json_serializable() -> None:
