@@ -57,11 +57,17 @@ Everything here is what actually happened; commit hashes can be checked with `gi
   repeat spread is not established (see README).
 * The README commands were run in the existing venv, not on a clean checkout.
 
-## 5. Bastian's own checks (fill in before handing in)
+## 5. Bastian's own checks
 
-The AI cannot know what was checked by hand. Replace each line with what was actually done.
-
-* [ ] Hand trace of binary search on a second example: ...
-* [ ] Read `membership.py` and can explain the invariant `low <= position <= high`: ...
-* [ ] Ran the commands from the README on his own machine: ...
-* [ ] Questions he can answer in class (the 2 questions after each step): ...
+- Traced the slide example by hand: ids [7, 11, 7], queries [11, 9, 7], sorted copy [7, 7, 11].
+  Query 9: low=0, high=2, middle=1 (7 < 9, so low=2); middle=2 (11 > 9, so high=1);
+  low > high, so False. Result [True, False, True]; ids still [7, 11, 7].
+- Ran `pytest` myself in the project's .venv (Python 3.11.0) in VS Code: all tests passed.
+- Opened the dashboard (`streamlit run dashboard/app.py`): for q = 1 linear search is fastest
+  because it needs no preparation; v2 is faster than v1 only in the query phase, while the total
+  is dominated by sorting.
+- Reviewed each step's commit in a separate chat with Claude. That review found tests that
+  depended on the Python version (recursion limit, exact tracemalloc bytes), and I had them
+  rewritten to compare growth instead of absolute values.
+- Would do differently: give the AI the Python-version constraint from the start, so it never
+  writes tests that compare exact bytes or depend on interpreter internals.
