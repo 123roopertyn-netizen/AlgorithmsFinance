@@ -1,0 +1,11 @@
+{
+  "name": "both_empty",
+  "ids": [],
+  "queries": [],
+  "expected": [],
+  "metadata": {
+    "n_ids": 0,
+    "n_queries": 0,
+    "category": "correctness"
+  }
+}

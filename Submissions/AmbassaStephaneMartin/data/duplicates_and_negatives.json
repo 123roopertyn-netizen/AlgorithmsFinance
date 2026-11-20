@@ -1,0 +1,28 @@
+{
+  "name": "duplicates_and_negatives",
+  "ids": [
+    4,
+    -2,
+    4,
+    0
+  ],
+  "queries": [
+    -2,
+    3,
+    4,
+    -2,
+    0
+  ],
+  "expected": [
+    true,
+    false,
+    true,
+    true,
+    true
+  ],
+  "metadata": {
+    "n_ids": 4,
+    "n_queries": 5,
+    "category": "correctness"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "empty_ids",
+  "ids": [],
+  "queries": [
+    1,
+    -1,
+    1
+  ],
+  "expected": [
+    false,
+    false,
+    false
+  ],
+  "metadata": {
+    "n_ids": 0,
+    "n_queries": 3,
+    "category": "correctness"
+  }
+}
