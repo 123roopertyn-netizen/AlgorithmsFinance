@@ -1,0 +1,12 @@
+{
+  "astra": {
+    "filter_combinations_checked": 45,
+    "table_values_verified": true
+  },
+  "working": {
+    "filter_combinations_checked": 180,
+    "table_values_verified": true
+  },
+  "javascript_errors": [],
+  "screenshot": "results/dashboard-check.png"
+}
