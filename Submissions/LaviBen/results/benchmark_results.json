@@ -1,0 +1,228 @@
+{
+  "metadata": {
+    "seed": 2026,
+    "hit_rate": 0.5,
+    "clock": "time.perf_counter_ns",
+    "summary_statistic": "median",
+    "data_generation_timed": false,
+    "algorithm_setup_timed": true
+  },
+  "results": [
+    {
+      "algorithm": "Linear search",
+      "array_size": 0,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.000459,
+      "minimum_ms": 0.000458,
+      "maximum_ms": 0.000667
+    },
+    {
+      "algorithm": "Binary search recursive v1",
+      "array_size": 0,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.0005,
+      "minimum_ms": 0.000458,
+      "maximum_ms": 0.000875
+    },
+    {
+      "algorithm": "Binary search iterative v2",
+      "array_size": 0,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.000542,
+      "minimum_ms": 0.0005,
+      "maximum_ms": 0.00075
+    },
+    {
+      "algorithm": "Hash set membership",
+      "array_size": 0,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.000333,
+      "minimum_ms": 0.000291,
+      "maximum_ms": 0.000542
+    },
+    {
+      "algorithm": "Linear search",
+      "array_size": 10,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.001083,
+      "minimum_ms": 0.000959,
+      "maximum_ms": 0.001208
+    },
+    {
+      "algorithm": "Binary search recursive v1",
+      "array_size": 10,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.002625,
+      "minimum_ms": 0.0025,
+      "maximum_ms": 0.003
+    },
+    {
+      "algorithm": "Binary search iterative v2",
+      "array_size": 10,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.00225,
+      "minimum_ms": 0.002208,
+      "maximum_ms": 0.002459
+    },
+    {
+      "algorithm": "Hash set membership",
+      "array_size": 10,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.000375,
+      "minimum_ms": 0.000333,
+      "maximum_ms": 0.000417
+    },
+    {
+      "algorithm": "Linear search",
+      "array_size": 100,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.0055,
+      "minimum_ms": 0.005416,
+      "maximum_ms": 0.005625
+    },
+    {
+      "algorithm": "Binary search recursive v1",
+      "array_size": 100,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.007375,
+      "minimum_ms": 0.007208,
+      "maximum_ms": 0.008542
+    },
+    {
+      "algorithm": "Binary search iterative v2",
+      "array_size": 100,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.006625,
+      "minimum_ms": 0.006541,
+      "maximum_ms": 0.00675
+    },
+    {
+      "algorithm": "Hash set membership",
+      "array_size": 100,
+      "query_count": 10,
+      "repeats": 7,
+      "median_ms": 0.000916,
+      "minimum_ms": 0.000833,
+      "maximum_ms": 0.001125
+    },
+    {
+      "algorithm": "Linear search",
+      "array_size": 1000,
+      "query_count": 100,
+      "repeats": 7,
+      "median_ms": 0.612,
+      "minimum_ms": 0.60125,
+      "maximum_ms": 0.644459
+    },
+    {
+      "algorithm": "Binary search recursive v1",
+      "array_size": 1000,
+      "query_count": 100,
+      "repeats": 7,
+      "median_ms": 0.109875,
+      "minimum_ms": 0.106834,
+      "maximum_ms": 0.127125
+    },
+    {
+      "algorithm": "Binary search iterative v2",
+      "array_size": 1000,
+      "query_count": 100,
+      "repeats": 7,
+      "median_ms": 0.09575,
+      "minimum_ms": 0.095292,
+      "maximum_ms": 0.097333
+    },
+    {
+      "algorithm": "Hash set membership",
+      "array_size": 1000,
+      "query_count": 100,
+      "repeats": 7,
+      "median_ms": 0.010833,
+      "minimum_ms": 0.009834,
+      "maximum_ms": 0.015083
+    },
+    {
+      "algorithm": "Linear search",
+      "array_size": 5000,
+      "query_count": 500,
+      "repeats": 7,
+      "median_ms": 15.563542,
+      "minimum_ms": 15.220209,
+      "maximum_ms": 18.173042
+    },
+    {
+      "algorithm": "Binary search recursive v1",
+      "array_size": 5000,
+      "query_count": 500,
+      "repeats": 7,
+      "median_ms": 0.894375,
+      "minimum_ms": 0.831708,
+      "maximum_ms": 0.999292
+    },
+    {
+      "algorithm": "Binary search iterative v2",
+      "array_size": 5000,
+      "query_count": 500,
+      "repeats": 7,
+      "median_ms": 0.7905,
+      "minimum_ms": 0.77725,
+      "maximum_ms": 0.892667
+    },
+    {
+      "algorithm": "Hash set membership",
+      "array_size": 5000,
+      "query_count": 500,
+      "repeats": 7,
+      "median_ms": 0.094625,
+      "minimum_ms": 0.084208,
+      "maximum_ms": 0.186917
+    },
+    {
+      "algorithm": "Linear search",
+      "array_size": 10000,
+      "query_count": 500,
+      "repeats": 7,
+      "median_ms": 28.62675,
+      "minimum_ms": 28.455667,
+      "maximum_ms": 29.767125
+    },
+    {
+      "algorithm": "Binary search recursive v1",
+      "array_size": 10000,
+      "query_count": 500,
+      "repeats": 7,
+      "median_ms": 1.279875,
+      "minimum_ms": 1.272584,
+      "maximum_ms": 1.292959
+    },
+    {
+      "algorithm": "Binary search iterative v2",
+      "array_size": 10000,
+      "query_count": 500,
+      "repeats": 7,
+      "median_ms": 1.200667,
+      "minimum_ms": 1.193041,
+      "maximum_ms": 1.276625
+    },
+    {
+      "algorithm": "Hash set membership",
+      "array_size": 10000,
+      "query_count": 500,
+      "repeats": 7,
+      "median_ms": 0.151958,
+      "minimum_ms": 0.150125,
+      "maximum_ms": 0.163834
+    }
+  ]
+}

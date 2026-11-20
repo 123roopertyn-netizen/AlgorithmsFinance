@@ -1,0 +1,25 @@
+algorithm,array_size,query_count,repeats,median_ms,minimum_ms,maximum_ms
+Linear search,0,10,7,0.000459,0.000458,0.000667
+Binary search recursive v1,0,10,7,0.0005,0.000458,0.000875
+Binary search iterative v2,0,10,7,0.000542,0.0005,0.00075
+Hash set membership,0,10,7,0.000333,0.000291,0.000542
+Linear search,10,10,7,0.001083,0.000959,0.001208
+Binary search recursive v1,10,10,7,0.002625,0.0025,0.003
+Binary search iterative v2,10,10,7,0.00225,0.002208,0.002459
+Hash set membership,10,10,7,0.000375,0.000333,0.000417
+Linear search,100,10,7,0.0055,0.005416,0.005625
+Binary search recursive v1,100,10,7,0.007375,0.007208,0.008542
+Binary search iterative v2,100,10,7,0.006625,0.006541,0.00675
+Hash set membership,100,10,7,0.000916,0.000833,0.001125
+Linear search,1000,100,7,0.612,0.60125,0.644459
+Binary search recursive v1,1000,100,7,0.109875,0.106834,0.127125
+Binary search iterative v2,1000,100,7,0.09575,0.095292,0.097333
+Hash set membership,1000,100,7,0.010833,0.009834,0.015083
+Linear search,5000,500,7,15.563542,15.220209,18.173042
+Binary search recursive v1,5000,500,7,0.894375,0.831708,0.999292
+Binary search iterative v2,5000,500,7,0.7905,0.77725,0.892667
+Hash set membership,5000,500,7,0.094625,0.084208,0.186917
+Linear search,10000,500,7,28.62675,28.455667,29.767125
+Binary search recursive v1,10000,500,7,1.279875,1.272584,1.292959
+Binary search iterative v2,10000,500,7,1.200667,1.193041,1.276625
+Hash set membership,10000,500,7,0.151958,0.150125,0.163834
