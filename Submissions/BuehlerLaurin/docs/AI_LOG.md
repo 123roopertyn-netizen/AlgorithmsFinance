@@ -53,3 +53,7 @@ For each step: what the AI suggested, and whether it was accepted, corrected or 
 | 9 | Test that the saved summary medians equal the medians recomputed from the raw repeats | Accepted | Phase 2 checklist A3 ("dashboard agrees with raw results") as an automatic test. |
 | 9 | Headless `AppTest` runs of the app for all q / hit-rate filters and an empty selection | Accepted | Reviewers get a crash check without opening a browser. |
 | 9 | First version of the filter test mixed display labels and values | Corrected | AI rewrote it before running: widgets got keys, and the test sets real values (q, hit rate). |
+| 10 | README numbers taken from the official runs only (not the development run) | Accepted | Every number in the README can be traced to a clean, committed result file. |
+| 10 | Fresh-checkout check: copy the files git will commit (`git ls-files -co --exclude-standard`) to a temp folder, new venv, `pip install -r requirements.txt`, run every README command unchanged | Accepted | Simulates a reviewer without using `git clone` (forbidden for the agent). Result: 598 passed, all scripts and the dashboard ran; no edits needed. |
+| 10 | Time estimate "~30 s" for `bench.binary_variants` in the README | Corrected | Was a guess; the fresh run took 22 s. README now states "< 1 min". |
+| 10 | Skip Docker | Accepted | Optional (decision Q6). |
