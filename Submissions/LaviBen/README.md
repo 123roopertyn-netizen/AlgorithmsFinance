@@ -1,5 +1,9 @@
 # Search Algorithms — LaviBen
 
+**Student:** Ben Lavi  
+**Required folder name:** `LastnameFirstname` -> `LaviBen`  
+**Language:** Python 3.10+
+
 Tests-first implementation and runtime comparison of three ways to answer
 ordered membership queries over integer IDs:
 
@@ -74,7 +78,10 @@ The shared cases cover:
 - unchanged list and tuple inputs.
 
 See [`DEVELOPMENT_LOG.md`](DEVELOPMENT_LOG.md) for the failing baseline, manual
-trace, revision record, and AI-use disclosure.
+trace, revision record, and AI-use disclosure. See
+[`SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md) for the complete
+requirement-to-evidence mapping and correctness arguments. Passing tests provide
+evidence of expected behavior, not a proof of correctness.
 
 ## Synthetic data and measurement
 
@@ -111,6 +118,7 @@ making environment-independent performance claims.
 | `tests/` | Shared algorithm, generator, and pipeline tests |
 | `results/` | Recorded measurements and generated dashboard |
 | `DEVELOPMENT_LOG.md` | Test-first, trace, revision, and AI-use evidence |
+| `SUBMISSION_CHECKLIST.md` | Requirement mapping and correctness reasoning |
 
 ## Phase 2 — Audit
 
