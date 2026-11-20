@@ -75,7 +75,7 @@ The total is what to compare; the per-file counts are the numbers at the time of
 | `dashboard/app.py`, `dashboard/loaders.py` | Streamlit page; loads saved results only |
 | `results/` | saved measurements (CSV and JSON) |
 | `REVISIONS.md` | what changed from v1 to v2 and why |
-| `AI_LOG.md` | how the AI assistant was used (written in step 9) |
+| `AI_LOG.md` | which AI suggestions were accepted, corrected or rejected, and why |
 
 ## Data
 
