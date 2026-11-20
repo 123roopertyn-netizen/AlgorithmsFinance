@@ -15,8 +15,9 @@ def generate_synthetic_data(
 
     ``hit_rate`` controls the requested share of queries sampled from the ID
     array. If the ID array is empty, every generated query is necessarily a
-    miss. A local random-number generator makes equal seeds reproducible and
-    avoids changing Python's global random state.
+    miss. ``allow_duplicates`` records whether repeated IDs are permitted.
+    A local random-number generator makes equal seeds reproducible and avoids
+    changing Python's global random state.
     """
     if num_ids < 0:
         raise ValueError("num_ids must be non-negative")
