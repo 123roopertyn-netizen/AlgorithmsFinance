@@ -24,3 +24,10 @@ For each step: what the AI suggested, and whether it was accepted, corrected or 
 | 5 | Name the helper `binary_contains_recursive` (no leading underscore) | Accepted | The static F6 test only inspects functions starting with `linear_`/`binary_`; a `_helper` would have escaped the check. |
 | 5 | Linear `prepare` returns the caller's list itself (no copy) | Accepted | No preparation cost; safe because `linear_query` only reads it. |
 | 5 | `hash_query` as a list comprehension with `x in state` | Accepted | `in` on a set is allowed (F6); the ban applies to lists inside the searches. |
+| 6 | Write two v2 candidates (classic three-way, lower bound) and choose by measurement | Accepted | Decision Q3: "fastest correct algorithm". Theory alone does not settle it: classic stops early on hits, lower bound has a shorter loop. |
+| 6 | Inline the search loop into the query loop (no helper call per query) | Accepted | Saves one Python function call per query; v1 keeps its helper unchanged. |
+| 6 | Keep the sorted copy in `binary_prepare` | Accepted | It is the one *necessary* copy: sorting in place would break F4. The removed copies are the slices. |
+| 6 | `BINARY_V2_CANDIDATES` registry, included in the test fixture but not in `METHODS` | Accepted | Both candidates must pass the same tests (F5), while the benchmark grid keeps exactly one v1 and one v2 per method. |
+| 6 | New tests: boundary cases with duplicate min/max, power-of-two lengths, exhaustive arrays of length 0..5 over {0,1,2} | Accepted | Cases the lower-bound form makes risky (`lo == n`, first copy in a duplicate run). Added, nothing weakened (R4). |
+| 6 | Write `bench/env.py` and `bench/binary_variants.py` already in Step 6 | Accepted | The choice of v2 needs saved, reproducible evidence with environment metadata (I6). |
+| 6 | Choose `lower_bound` as v2 | Accepted | Lower median in all 9 cells; clearly faster on absent and mixed queries, a tie within noise on all-present queries. |

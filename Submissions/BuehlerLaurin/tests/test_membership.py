@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import itertools
 import random
 from collections.abc import Sequence
 from pathlib import Path
@@ -18,12 +19,15 @@ from pathlib import Path
 import pytest
 
 from datagen.generator import make_case
-from membership import METHODS, MethodSpec
+from membership import BINARY_V2_CANDIDATES, METHODS, MethodSpec
 
 MEMBERSHIP_DIR = Path(__file__).resolve().parent.parent / "membership"
 
+# All registered methods/versions plus both v2 binary-search candidates (Step 6).
+ALL_SPECS: list[MethodSpec] = list(METHODS.values()) + list(BINARY_V2_CANDIDATES.values())
 
-@pytest.fixture(params=list(METHODS.values()), ids=lambda spec: spec.label)
+
+@pytest.fixture(params=ALL_SPECS, ids=lambda spec: spec.label)
 def spec(request: pytest.FixtureRequest) -> MethodSpec:
     return request.param
 
@@ -164,6 +168,44 @@ def test_large_sorted_array_edges(spec: MethodSpec) -> None:
     queries = [0, 199_998, 100_000, 2, 199_996, -1, 1, 99_999, 199_999, 200_000]
     expected = [True, True, True, True, True, False, False, False, False, False]
     check(spec, ids, queries, expected)
+
+
+# --- Added in Step 6 (R4): cases found while writing the v2 candidates ----------
+# The lower-bound search ends with ``lo == n`` when x is larger than every element and
+# then must not read ``state[n]``. It also lands on the *first* copy of a duplicate run.
+# The classic search moves ``hi`` to -1 for x below the minimum.
+
+STEP6_CASES: list[tuple[str, list[int], list[int], list[bool]]] = [
+    ("above_max_with_duplicate_max", [5, 9, 9, 9], [9, 10, 100], [True, False, False]),
+    ("below_min_with_duplicate_min", [1, 1, 1, 4], [1, 0, -7], [True, False, False]),
+    ("query_inside_duplicate_run", [1, 2, 2, 2, 2, 3], [2, 1, 3], [True, True, True]),
+    ("absent_next_to_duplicate_run", [1, 2, 2, 2, 2, 5], [3, 4, 0, 6], [False] * 4),
+    ("single_element_above_and_below", [3], [2, 3, 4], [False, True, False]),
+    ("power_of_two_length", list(range(16)), [0, 15, 7, 8, 16, -1], [True] * 4 + [False] * 2),
+    ("power_of_two_minus_one", list(range(15)), [0, 14, 7, 15], [True, True, True, False]),
+]
+
+
+@pytest.mark.parametrize(
+    ("ids", "queries", "expected"),
+    [case[1:] for case in STEP6_CASES],
+    ids=[case[0] for case in STEP6_CASES],
+)
+def test_step6_boundary_cases(
+    spec: MethodSpec, ids: list[int], queries: list[int], expected: list[bool]
+) -> None:
+    check(spec, ids, queries, expected)
+
+
+def test_exhaustive_small_arrays(spec: MethodSpec) -> None:
+    """Every array of length 0..5 over the values {0, 1, 2} (364 arrays, in every order),
+    each queried for -1..3. Covers all patterns of duplicates and boundaries on small n."""
+    queries = [-1, 0, 1, 2, 3]
+    for length in range(6):
+        for ids_tuple in itertools.product(range(3), repeat=length):
+            ids = list(ids_tuple)
+            oracle = set(ids)
+            check(spec, ids, queries, [x in oracle for x in queries])
 
 
 # --- Registry and hand-written-search rules (F1, F5, F6) ----------------------

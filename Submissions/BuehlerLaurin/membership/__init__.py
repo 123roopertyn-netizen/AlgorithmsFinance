@@ -78,3 +78,18 @@ METHODS: dict[tuple[str, str], MethodSpec] = {
         "hash", "revised", revised.hash_prepare, revised.hash_query
     ),
 }
+
+# Both v2 binary-search candidates (decision Q3). They are not separate versions in the
+# benchmark grid; they exist so that the test suite checks both and
+# bench/binary_variants.py can measure which one becomes ``revised.binary_query``.
+BINARY_V2_CANDIDATES: dict[str, MethodSpec] = {
+    "classic": MethodSpec(
+        "binary", "revised-classic", revised.binary_prepare, revised.binary_query_classic
+    ),
+    "lower_bound": MethodSpec(
+        "binary",
+        "revised-lower_bound",
+        revised.binary_prepare,
+        revised.binary_query_lower_bound,
+    ),
+}
