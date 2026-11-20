@@ -362,7 +362,11 @@ is never the only cue. All colours are defined in `dashboard/theme.py`.
   search. Two explanations were tested and rejected: (1) the previous structure
   staying alive while the next one is built in the preparation loop, and (2) a
   cold cache for the first measurement of each method (an untimed warm-up call
-  did not remove the gap). The cause is open. Differences of this size between
+  did not remove the gap). A third explanation is untested: the Apple M4 Pro
+  has performance and efficiency cores, and macOS may move the process between
+  them during a run; Python on macOS cannot pin a process to one core, so this
+  could only be checked indirectly. It could also explain why the noise varies
+  between runs. The cause is open. Differences of this size between
   separately timed runs should therefore not be interpreted. The version
   comparisons are not affected: they compare the same column of the same
   scenario.
