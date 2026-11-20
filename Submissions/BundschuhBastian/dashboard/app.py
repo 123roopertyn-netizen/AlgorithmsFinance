@@ -1,28 +1,36 @@
-"""Streamlit dashboard: shows the SAVED results of the membership lab. It measures nothing.
+"""Report page for the saved results of the membership lab. It measures nothing.
 
-    .venv/bin/streamlit run dashboard/app.py
+    .venv/bin/streamlit run dashboard/app.py          (run from the lab folder)
 
-Reads results/ (timing_*.csv|json, memory_*.csv|json) written by bench_time.py and
-bench_memory.py. If a file is missing, the page says which command creates it.
+Reads results/ (written by bench_time.py, bench_memory.py, check_total.py). If a file is
+missing, the page says which commands create it.
 """
+import math
+
 import altair as alt
 import pandas as pd
 import streamlit as st
 
 import loaders
+import report
+from report import HIT_LABEL, METHOD_LABEL, METHOD_ORDER
 
-st.set_page_config(page_title="Membership lab results", layout="wide")
+st.set_page_config(page_title="Membership search", layout="wide")
+st.markdown(
+    "<style>.block-container{max-width:1000px;padding-top:2.5rem}"
+    "[data-testid=stHeading] h1{font-size:1.6rem !important;font-weight:600 !important}"
+    "[data-testid=stHeading] h2,[data-testid=stHeading] h3{font-size:1.05rem !important;"
+    "font-weight:600 !important}</style>",
+    unsafe_allow_html=True)
 
-METHOD_ORDER = ["linear_v1", "binary_v1", "binary_v2", "hash_v1"]
-METHOD_COLORS = ["#1b6ca8", "#d95f02", "#9b4dca", "#2a9d3c"]     # distinct, colour-blind safe
-METHOD_LABEL = {"linear_v1": "linear v1", "binary_v1": "binary v1 (recursive)",
-                "binary_v2": "binary v2 (iterative)", "hash_v1": "hash set v1"}
-PHASE_TEXT = {
-    "prepare": "Preparation: sorting a copy (binary) or building the set (hash). "
-               "Linear search has none (value = call overhead only).",
-    "query": "Query batch: all q queries answered, prepared state already built.",
-    "total": "Total: method(ids, queries) measured on its own (NOT the sum of the other two).",
-}
+COLORS = {"linear_v1": "#8c8c8c", "binary_v1": "#4d4d4d", "binary_v2": "#4d4d4d",
+          "hash_v1": "#1f4e79"}
+COLOR = alt.Color("method:N", legend=None, scale=alt.Scale(
+    domain=METHOD_ORDER, range=[COLORS[m] for m in METHOD_ORDER]))
+DASH = alt.StrokeDash("version:N", legend=None, scale=alt.Scale(
+    domain=["v1", "v2"], range=[[1, 0], [5, 3]]))       # v1 solid, v2 dashed
+SIZES = [1000, 10000, 100000]
+CHART_HEIGHT = 210
 
 
 @st.cache_data
@@ -35,11 +43,54 @@ def signature():
                  for name in loaders.REQUIRED if (loaders.RESULTS_DIR / name).exists())
 
 
+def plain_table(frame, formats):
+    """Static, quiet table: no index, numbers right-aligned, formatted by `formats`."""
+    numeric = [c for c in frame.columns if c in formats]
+    styled = (frame.style.hide(axis="index").format(formats)
+              .set_properties(subset=numeric, **{"text-align": "right"})
+              .set_table_styles([{"selector": "th", "props": [("text-align", "left")]}]))
+    st.table(styled)
+
+
+def line_chart(frame, y_domain, y_title, show_y, labels=None):
+    """Thin lines, small points, direct labels at the right end, no legend, no title."""
+    n_max = float(frame["n"].max())
+    x_scale = alt.Scale(type="log", domain=[min(SIZES) / 1.25, n_max * 4], nice=False)
+    y_scale = alt.Scale(type="log", domain=y_domain, nice=False)
+    x = alt.X("n:Q", scale=x_scale, title="n (number of IDs)",
+              axis=alt.Axis(values=SIZES, format="~s", grid=True))
+    y = alt.Y("value:Q", scale=y_scale, title=y_title if show_y else None,
+              axis=alt.Axis(format=",~g", grid=True, labels=show_y, ticks=show_y))
+    base = alt.Chart(frame).encode(x=x, y=y, color=COLOR)
+    line = base.mark_line(strokeWidth=1.5).encode(strokeDash=DASH)
+    points = base.mark_point(filled=True, size=16, opacity=1)
+    ends = frame[frame["n"] == frame["n"].max()]
+    span = math.log10(y_domain[1] / y_domain[0])
+    gap = 11.0 / (CHART_HEIGHT - 45) * span
+    adjusted = report.spread_labels(dict(zip(ends["method"], ends["value"])), gap,
+                                    math.log10(y_domain[0]), math.log10(y_domain[1]))
+    names = labels or METHOD_LABEL
+    label_frame = pd.DataFrame({"method": list(adjusted), "n": float(frame["n"].max()),
+                                "y": list(adjusted.values()),
+                                "label": [names[m] for m in adjusted]})
+    text = alt.Chart(label_frame).mark_text(
+        align="left", baseline="middle", dx=6, fontSize=10).encode(
+        x=alt.X("n:Q", scale=x_scale), y=alt.Y("y:Q", scale=y_scale), text="label:N",
+        color=COLOR)
+    return (alt.layer(line, points, text).properties(height=CHART_HEIGHT)
+            .configure_view(stroke=None)
+            .configure_axis(labelFontSize=10, titleFontSize=10, labelColor="#444444",
+                            titleColor="#444444", gridColor="#e6e6e6", gridWidth=0.6,
+                            domainColor="#bbbbbb", tickColor="#bbbbbb",
+                            labelFont="sans-serif", titleFont="sans-serif"))
+
+
+# ---- missing results ----------------------------------------------------------------
 missing = loaders.missing_files()
 if missing:
-    st.title("Membership lab results")
-    st.error("Saved results not found: " + ", ".join(missing))
-    st.markdown("Create them from the lab folder first:")
+    st.title("Membership search: Linear, Binary, Hash set")
+    st.markdown("Saved results not found: " + ", ".join(missing) + ". Create them from the "
+                "lab folder first:")
     st.code(".venv/bin/python bench_time.py\n.venv/bin/python bench_memory.py", language="bash")
     st.stop()
 
@@ -49,224 +100,129 @@ mem_summary, mem_raw = data["mem_summary"], data["mem_raw"]
 time_meta, mem_meta = data["time_meta"], data["mem_meta"]
 env = time_meta["environment"]
 
-# ---- sidebar ----------------------------------------------------------------------
-st.sidebar.header("Settings")
+# ---- header -------------------------------------------------------------------------
+st.title("Membership search: Linear, Binary, Hash set")
+st.caption(f"Bastian Bundschuh · Algorithms in Finance · commit {env['git_commit'][:7]} · "
+           f"Python {env['python_version'].split()[0]} · "
+           f"{env.get('cpu_model') or env['machine']}")
+
+# ---- findings -----------------------------------------------------------------------
+st.subheader("Findings")
+st.write(" ".join(report.findings(time_summary, mem_summary)))
+
+# ---- controls -----------------------------------------------------------------------
 q_options = sorted(int(v) for v in time_summary["q"].unique())
-q = st.sidebar.radio("Query count q", q_options, index=len(q_options) - 1, horizontal=True)
-hit_rate = st.sidebar.selectbox(
-    "Hit rate", ["mixed", "all-present", "all-absent"],
-    help="Share of queries found in the array. mixed = (q + 1) // 2 queries present.")
-unit_name = st.sidebar.selectbox("Time unit", list(loaders.UNITS), index=2)
-factor = loaders.UNITS[unit_name]
-per_query = st.sidebar.radio(
-    "Time per", ["batch", "query"], horizontal=True,
-    help="batch = all q queries together. Per query = batch time / q; it exists for the "
-         "phases query and total only, preparation is always per batch.") == "query"
-log_y = st.sidebar.checkbox("Logarithmic y axis", value=True)
-st.sidebar.caption(f"Units: time in {unit_name}; memory in bytes. Medians of "
-                   f"{time_meta['protocol']['repeats']} repeats; bars show min to max.")
+left, middle, right = st.columns([1, 2, 1.3])
+q = left.radio("Queries q", q_options, index=len(q_options) - 1, horizontal=True)
+hit = middle.radio("Hit rate", ["mixed", "all-present", "all-absent"],
+                   format_func=HIT_LABEL.get, horizontal=True)
+per_query = right.radio("Time per", ["batch", "query"], horizontal=True) == "query"
+selection = time_summary[(time_summary["q"] == q) & (time_summary["hit_rate"] == hit)]
 
-st.title("Membership lab: linear, binary and hash set")
-st.caption(f"Saved results, seed {time_meta['seed']}, "
-           f"Python {env['python_version'].split()[0]}, {env.get('cpu_model', env['machine'])}, "
-           f"code commit {env['git_commit'][:7]}. Duplicates: "
-           f"{time_meta['generator']['duplicates']}. Showing q = {q}, hit rate = {hit_rate}.")
+# ---- figure 1 -----------------------------------------------------------------------
+st.subheader("Time by phase")
+frames = {}
+for phase in loaders.PHASES:
+    frame = loaders.scaled_times(selection, phase, per_query, 1.0)       # seconds
+    frames[phase] = frame[frame["method"] != "linear_v1"] if phase == "prepare" else frame
+unit, factor = report.pick_unit(max(f["value"].max() for f in frames.values()))
+for frame in frames.values():
+    frame["value"] = frame["value"] * factor
+domain = report.log_domain(min(f["value"].min() for f in frames.values()),
+                           max(f["value"].max() for f in frames.values()))
+titles = {"prepare": "Preparation", "query": "Query batch", "total": "Total"}
+columns = st.columns(3)
+for index, (phase, column) in enumerate(zip(loaders.PHASES, columns)):
+    per_text = frames[phase]["per"].iloc[0]
+    # the tick labels are shared when all panels have the same unit per ...
+    show_y = index == 0 or per_query
+    with column:
+        st.write(titles[phase])
+        st.altair_chart(line_chart(frames[phase], domain, f"{unit} {per_text}", show_y),
+                        theme=None, width="stretch")
+unit_text = "per batch" if not per_query else "per query (preparation: per batch)"
+st.caption(f"Figure 1. Median time of preparation, query batch and total for q = {q} and "
+           f"{HIT_LABEL[hit]} hits in {unit} {unit_text}, one y scale for all three panels; "
+           f"linear search has no preparation, and the total is measured on its own.")
 
-color = alt.Color("method:N", sort=METHOD_ORDER, title="Method",
-                  scale=alt.Scale(domain=METHOD_ORDER, range=METHOD_COLORS))
-x_axis = alt.X("n:Q", scale=alt.Scale(type="log"), title="n (number of IDs)",
-               axis=alt.Axis(values=[1000, 10000, 100000], format="~s"))
+# ---- figure 2 -----------------------------------------------------------------------
+st.subheader("Binary search: v1 and v2")
+frame2 = loaders.scaled_times(selection[selection["algorithm"] == "binary"], "query",
+                              per_query, 1.0)
+unit2, factor2 = report.pick_unit(frame2["value"].max())
+frame2["value"] = frame2["value"] * factor2
+domain2 = report.log_domain(frame2["value"].min(), frame2["value"].max())
+chart_col, text_col = st.columns([3, 2])
+with chart_col:
+    st.altair_chart(line_chart(frame2, domain2, f"{unit2} {frame2['per'].iloc[0]}", True,
+                               labels={"binary_v1": "v1 recursive",
+                                       "binary_v2": "v2 iterative"}),
+                    theme=None, width="stretch")
+with text_col:
+    st.write(report.version_sentence(time_summary, q, hit))
+st.caption(f"Figure 2. Query batch of binary search for q = {q} and {HIT_LABEL[hit]} hits, "
+           f"v1 solid and v2 dashed, in {unit2} {frame2['per'].iloc[0]}.")
 
+# ---- figure 3 -----------------------------------------------------------------------
+st.subheader("Total and preparation plus query")
+comparison = loaders.total_vs_sum(time_summary)
+shown = comparison[(comparison["q"] == q) & (comparison["hit_rate"] == hit)].copy()
+shown["method"] = shown["method"].map(METHOD_LABEL)
+for column in ("measured_total", "prepare_plus_query"):
+    shown[column] = (shown[column] * 1e3).map(report.round3)
+table3 = shown.rename(columns={
+    "measured_total": "total (ms)", "prepare_plus_query": "prepare + query (ms)",
+    "ratio": "ratio", "spread_prepare": "spread prepare", "spread_query": "spread query",
+    "spread_total": "spread total"})[
+    ["method", "n", "total (ms)", "prepare + query (ms)", "ratio", "spread prepare",
+     "spread query", "spread total"]].reset_index(drop=True)
+plain_table(table3, {"n": "{:,.0f}", "total (ms)": report.sig3,
+                    "prepare + query (ms)": report.sig3, "ratio": "{:.2f}",
+                    "spread prepare": "{:.2f}", "spread query": "{:.2f}",
+                    "spread total": "{:.2f}"})
+ratios = comparison["ratio"]
+st.caption(f"Figure 3. Measured total next to preparation plus query (medians) for q = {q} "
+           f"and {HIT_LABEL[hit]} hits, with ratio = total / (preparation + query) and "
+           f"spread = max / min of the repeats; over all {len(comparison)} settings the "
+           f"ratio is {ratios.min():.2f} to {ratios.max():.2f}.")
 
-def y_axis(title):
-    return alt.Y("value:Q", scale=alt.Scale(type="log" if log_y else "linear",
-                                            zero=not log_y), title=title)
+# ---- table 1 ------------------------------------------------------------------------
+st.subheader("Memory")
+memory = mem_summary[(mem_summary["q"] == q) & (mem_summary["hit_rate"] == hit)]
+rows = []
+for method in METHOD_ORDER:
+    for n in sorted(int(v) for v in memory["n"].unique()):
+        part = memory[(memory["method"] == method) & (memory["n"] == n)]
+        prepared = float(part[part["phase"] == "prepare"]["median_current_bytes"].iloc[0])
+        peak = float(part[part["phase"] == "total"]["median_peak_bytes"].iloc[0])
+        rows.append({"method": METHOD_LABEL[method], "n": n,
+                     "prepared structure (kB)": report.round3(prepared / 1e3),
+                     "peak during the call (kB)": report.round3(peak / 1e3)})
+plain_table(pd.DataFrame(rows), {"n": "{:,.0f}", "prepared structure (kB)": report.sig3,
+                                 "peak during the call (kB)": report.sig3})
+st.caption(f"Table 1. Memory allocated by each method for q = {q} and {HIT_LABEL[hit]} hits "
+           f"(tracemalloc, kB = 1,000 bytes, input not counted, output kept alive).")
 
-
-def time_chart(frame, title):
-    base = alt.Chart(frame).encode(x=x_axis, color=color)
-    bars = base.mark_rule(opacity=0.45).encode(
-        y=alt.Y("low:Q", scale=alt.Scale(type="log" if log_y else "linear", zero=not log_y)),
-        y2="high:Q")
-    line = base.mark_line(point=alt.OverlayMarkDef(size=60)).encode(
-        y=y_axis(title), strokeDash=alt.StrokeDash("version:N", legend=None),
-        tooltip=[alt.Tooltip("method:N"), alt.Tooltip("n:Q"),
-                 alt.Tooltip("value:Q", format=".4g", title="median"),
-                 alt.Tooltip("low:Q", format=".4g", title="min"),
-                 alt.Tooltip("high:Q", format=".4g", title="max"),
-                 alt.Tooltip("calls_per_repeat:Q", title="calls per repeat")])
-    return (bars + line).properties(height=300)
-
-
-tab_time, tab_total, tab_versions, tab_memory, tab_raw, tab_env = st.tabs(
-    ["Time vs n", "Total vs prepare + query", "v1 vs v2", "Memory", "Raw repeats",
-     "Environment"])
-
-# ---- time vs n --------------------------------------------------------------------
-with tab_time:
-    st.markdown("One curve per method. **Preparation, query batch and total are shown "
-                "separately.** Binary v1 and v2 are the solid orange (v1) and dashed purple (v2) "
-                "curves. The vertical bar at each point is the min to max of the repeats.")
-    selection = time_summary[(time_summary["q"] == q) & (time_summary["hit_rate"] == hit_rate)]
-    for phase in loaders.PHASES:
-        frame = loaders.scaled_times(selection, phase, per_query, factor)
-        unit_text = f"{unit_name.split(' ')[1].strip('()')} {frame['per'].iloc[0]}"
-        st.subheader(phase.capitalize())
-        st.caption(PHASE_TEXT[phase] + f" Unit: {unit_text}; q = {q}; hit rate = {hit_rate}.")
-        st.altair_chart(time_chart(frame, f"{phase} ({unit_text})"), width="stretch")
-
-# ---- total vs prepare + query -----------------------------------------------------
-with tab_total:
-    comparison = loaders.total_vs_sum(time_summary)
-    selected = comparison[(comparison["q"] == q) & (comparison["hit_rate"] == hit_rate)]
+# ---- appendix -----------------------------------------------------------------------
+with st.expander("Appendix: protocol, raw repeats, environment and metadata", expanded=False):
+    protocol = time_meta["protocol"]
     st.markdown(
-        "`total` is measured **on its own**; `prepare + query` is the sum of two other "
-        "measurements. Both are shown, with the **spread** (max / min of the repeats). "
-        "They can differ because the phases run as separate blocks at different moments "
-        "(see the explanation below).")
-    long = pd.concat([
-        selected.assign(measure="measured total", value=selected["measured_total"] * factor,
-                        low=selected["total_low"] * factor, high=selected["total_high"] * factor),
-        selected.assign(measure="prepare + query", value=selected["prepare_plus_query"] * factor,
-                        low=selected["sum_low"] * factor, high=selected["sum_high"] * factor)])
-    long["method_label"] = long["method"].map(METHOD_LABEL)
-    measure_color = alt.Color("measure:N", title="Measure", scale=alt.Scale(
-        domain=["measured total", "prepare + query"], range=["#1b6ca8", "#e08a00"]))
-    base = alt.Chart(long).encode(
-        x=alt.X("n:O", title="n (number of IDs)", axis=alt.Axis(labelAngle=0, format="~s")),
-        xOffset=alt.XOffset("measure:N"), color=measure_color)
-    scale = alt.Scale(type="log" if log_y else "linear", zero=not log_y)
-    layers = (
-        base.mark_rule(opacity=0.8, strokeWidth=3).encode(
-            y=alt.Y("low:Q", scale=scale), y2="high:Q")
-        + base.mark_point(size=70, filled=True).encode(
-            y=alt.Y("value:Q", scale=scale, title=f"time per batch ({unit_name})"),
-            tooltip=["method", "n", "measure", alt.Tooltip("value:Q", format=".4g"),
-                     alt.Tooltip("low:Q", format=".4g", title="min"),
-                     alt.Tooltip("high:Q", format=".4g", title="max")])
-    ).properties(width=105, height=300)
-    chart = layers.facet(column=alt.Column(
-        "method_label:N", title=None, sort=[METHOD_LABEL[m] for m in METHOD_ORDER])
-    ).resolve_scale(y="independent")
-    st.caption("One panel per method, own y axis. Point = median, bar = min to max of the "
-               "repeats (the spread). Blue = measured total, orange = prepare + query.")
-    st.altair_chart(chart, width="stretch")
-    table = selected[["method", "n", "measured_total", "prepare_plus_query", "ratio",
-                      "spread_prepare", "spread_query", "spread_total", "ranges_overlap"]].copy()
-    table["measured_total"] *= factor
-    table["prepare_plus_query"] *= factor
-    st.dataframe(
-        table, hide_index=True, width="stretch",
-        column_config={
-            "measured_total": st.column_config.NumberColumn(f"measured total ({unit_name})",
-                                                            format="%.4g"),
-            "prepare_plus_query": st.column_config.NumberColumn(
-                f"prepare + query ({unit_name})", format="%.4g"),
-            "ratio": st.column_config.NumberColumn("total / (prepare + query)", format="%.3f"),
-            "spread_prepare": st.column_config.NumberColumn("spread prepare", format="%.2f"),
-            "spread_query": st.column_config.NumberColumn("spread query", format="%.2f"),
-            "spread_total": st.column_config.NumberColumn("spread total", format="%.2f"),
-            "ranges_overlap": st.column_config.CheckboxColumn(
-                "ranges overlap", help="[min, max] of total overlaps the summed ranges")})
-    ratios = comparison["ratio"]
-    st.markdown(
-        f"**All {len(comparison)} configurations (every n, q, hit rate, method):** ratio from "
-        f"{ratios.min():.2f} to {ratios.max():.2f}; {int(((ratios >= 0.97) & (ratios <= 1.03)).sum())}"
-        f" within 3 %, {int((ratios < 0.97).sum())} below 0.97, {int((ratios > 1.03).sum())} above "
-        f"1.03; ranges overlap in {int(comparison['ranges_overlap'].sum())}, "
-        f"not in {int((~comparison['ranges_overlap']).sum())}.")
-    note = time_meta.get("total_vs_prepare_plus_query", {}).get("explanation")
-    if note:
-        with st.expander("Why total and prepare + query differ", expanded=True):
-            st.write(note)
-
-# ---- v1 vs v2 ---------------------------------------------------------------------
-with tab_versions:
-    st.markdown("Binary search v1 (recursive) against v2 (iterative), same data and same "
-                "sorted copy. v2 / v1 below 1 means v2 is faster.")
-    versions = loaders.version_comparison(time_summary)
-    chosen = versions[(versions["q"] == q) & (versions["hit_rate"] == hit_rate)].copy()
-    for column in ("v1_recursive", "v2_iterative"):
-        chosen[column] = chosen[column] * factor
-    st.dataframe(
-        chosen[["phase", "n", "v1_recursive", "v2_iterative", "v2_over_v1"]],
-        hide_index=True, width="stretch",
-        column_config={
-            "v1_recursive": st.column_config.NumberColumn(f"v1 median ({unit_name})",
-                                                          format="%.4g"),
-            "v2_iterative": st.column_config.NumberColumn(f"v2 median ({unit_name})",
-                                                          format="%.4g"),
-            "v2_over_v1": st.column_config.NumberColumn("v2 / v1", format="%.3f")})
-    query_ratio = versions[versions["phase"] == "query"]["v2_over_v1"]
-    total_ratio = versions[versions["phase"] == "total"]["v2_over_v1"]
-    st.markdown(
-        f"Over all configurations the **query phase** ratio is {query_ratio.min():.2f} to "
-        f"{query_ratio.max():.2f}; the **total** ratio is {total_ratio.min():.2f} to "
-        f"{total_ratio.max():.2f}, because sorting the copy dominates the total.")
-
-# ---- memory -----------------------------------------------------------------------
-with tab_memory:
-    st.markdown("Bytes allocated while the method runs (`tracemalloc`, fresh trace per "
-                "method and phase, input built before tracing, output kept alive). "
-                "**Not included: the input.** "
-                f"Repeats: {mem_meta['repeats']}. Exact byte counts are from "
-                f"Python {env['python_version'].split()[0]}.")
-    field = st.radio("Value", ["median_current_bytes", "median_peak_bytes"], horizontal=True,
-                     format_func=lambda f: "current (still allocated after the call)"
-                     if "current" in f else "peak (largest at any moment)")
-    memory_view = loaders.memory_table(mem_summary, q, hit_rate, field)
-    st.dataframe(memory_view, hide_index=True, width="stretch",
-                 column_config={c: st.column_config.NumberColumn(c, format="%d")
-                                for c in memory_view.columns[2:]})
-    phase_mem = st.selectbox("Phase for the chart", loaders.PHASES, index=0)
-    st.caption("Binary v1 and v2 sort the same copy, so their curves lie on top of each "
-               "other in the prepare phase. The y axis is symmetric-log so that 0 bytes "
-               "(linear search has no structure) can be shown.")
-    chart_frame = mem_summary[(mem_summary["q"] == q) & (mem_summary["hit_rate"] == hit_rate)
-                              & (mem_summary["phase"] == phase_mem)].rename(
-        columns={field: "value"})
-    st.altair_chart(
-        alt.Chart(chart_frame).mark_line(point=True).encode(
-            x=x_axis, color=color, strokeDash=alt.StrokeDash("version:N", legend=None),
-            y=alt.Y("value:Q", scale=alt.Scale(type="symlog" if log_y else "linear"),
-                    title=f"{phase_mem}: bytes"),
-            tooltip=["method", "n", alt.Tooltip("value:Q", format=",.0f")]).properties(
-                height=300), width="stretch")
-    for key, text in mem_meta["included"].items():
-        st.markdown(f"- **{key}**: {text}")
-
-# ---- raw repeats ------------------------------------------------------------------
-with tab_raw:
-    st.markdown("Every saved repeat (seconds, not converted). `seconds_per_batch` = repeat "
-                "time / `calls_per_repeat`. `seconds_per_query` is empty for preparation.")
-    methods = st.multiselect("Methods", METHOD_ORDER, default=METHOD_ORDER)
-    phases = st.multiselect("Phases", loaders.PHASES, default=loaders.PHASES)
-    raw_view = time_raw[(time_raw["q"] == q) & (time_raw["hit_rate"] == hit_rate)
-                        & time_raw["method"].isin(methods) & time_raw["phase"].isin(phases)]
-    st.caption(f"{len(raw_view)} timing repeats for q = {q}, hit rate = {hit_rate}")
-    st.dataframe(raw_view, hide_index=True, width="stretch")
-    st.caption("Memory repeats (bytes)")
-    st.dataframe(mem_raw[(mem_raw["q"] == q) & (mem_raw["hit_rate"] == hit_rate)
-                         & mem_raw["method"].isin(methods) & mem_raw["phase"].isin(phases)],
-                 hide_index=True, width="stretch")
-
-# ---- environment ------------------------------------------------------------------
-with tab_env:
-    left, right = st.columns(2)
-    with left:
-        st.subheader("Timing run")
-        st.json({"seed": time_meta["seed"], "generator": time_meta["generator"],
-                 "units": time_meta["units"], "protocol": time_meta["protocol"],
-                 "phases": time_meta["phases"], "started_utc": time_meta["started_utc"],
-                 "finished_utc": time_meta["finished_utc"]}, expanded=1)
-    with right:
-        st.subheader("Machine, Python, git")
-        st.json(env, expanded=1)
-        st.subheader("Memory run")
-        st.json({k: v for k, v in mem_meta.items() if k != "environment"}, expanded=1)
-        mem_env = mem_meta["environment"]
-        if mem_env.get("git_commit") != env.get("git_commit"):
-            st.info(f"Memory results were produced at code commit {mem_env['git_commit'][:7]}, "
-                    f"timing results at {env['git_commit'][:7]}.")
-    st.subheader("Datasets")
-    st.dataframe(pd.DataFrame(time_meta["datasets"]), hide_index=True, width="stretch")
+        f"- Timer {protocol['timer']}; median of {protocol['repeats']} repeats; "
+        f"seed {time_meta['seed']}; same data for every method.\n"
+        f"- Preparation, query batch and total are separate measurements; the total is "
+        f"its own run, not the sum.\n"
+        f"- {protocol['calibration']}; one untimed warm-up repeat; new prepared state "
+        f"before every repeat; garbage collector off during a repeat.\n"
+        f"- Not timed: data generation, correctness checks, printing.\n"
+        f"- Memory: tracemalloc, fresh trace per method and phase, input built before "
+        f"tracing, output kept alive.")
+    st.write("Raw timing repeats (seconds)")
+    st.dataframe(time_raw, hide_index=True, height=260, width="stretch")
+    st.write("Raw memory repeats (bytes)")
+    st.dataframe(mem_raw, hide_index=True, height=260, width="stretch")
+    st.write("Environment")
+    st.json(env, expanded=False)
+    st.write("Timing metadata")
+    st.json({k: v for k, v in time_meta.items() if k != "environment"}, expanded=False)
+    st.write("Memory metadata")
+    st.json({k: v for k, v in mem_meta.items() if k != "environment"}, expanded=False)
