@@ -5,6 +5,10 @@ from __future__ import annotations
 from random import Random
 
 
+GENERATOR_VERSION = 2
+DUPLICATE_POLICY = "sample_with_replacement_from_pool_max_1_array_size_div_3"
+
+
 def generate_search_case(
     array_size: int,
     query_count: int,
@@ -15,10 +19,9 @@ def generate_search_case(
     """Return an unsorted ID list and ordered queries of requested sizes.
 
     The generator intentionally draws IDs from a smaller value pool so that
-    larger inputs contain duplicates. ``int(query_count * hit_rate)`` queries
-    are guaranteed hits when the ID list is nonempty; all remaining queries
-    are guaranteed misses. A local random-number generator prevents changes to
-    global random state.
+    larger inputs contain duplicates. The requested hit count is rounded to the
+    nearest representable integer, with halves rounded up. A local
+    random-number generator prevents changes to global random state.
     """
 
     if array_size < 0:
@@ -32,7 +35,9 @@ def generate_search_case(
     value_pool_size = max(1, array_size // 3)
     ids = [random.randrange(value_pool_size) for _ in range(array_size)]
 
-    hit_count = int(query_count * hit_rate) if ids else 0
+    # A one-query 50% scenario cannot literally be mixed. Rounding half up
+    # selects one hit; the benchmark records both requested and realized rates.
+    hit_count = int(query_count * hit_rate + 0.5) if ids else 0
     hits = [random.choice(ids) for _ in range(hit_count)]
 
     # IDs are always below value_pool_size, so this disjoint range guarantees

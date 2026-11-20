@@ -58,7 +58,7 @@ hit rates. No expected result was weakened.
 
 After the revision, all eight core/generator tests passed. Two additional
 pipeline tests verify that every implementation is measured and that JSON, CSV,
-and HTML artifacts can be regenerated. The final result is ten passing tests.
+and HTML artifacts can be regenerated.
 
 In the recorded 10,000-ID benchmark, the iterative median was `1.200667 ms`
 versus `1.279875 ms` for the recursive version. That result supports the local
@@ -102,3 +102,30 @@ Rejected suggestions:
   to remain separate from algorithm measurement; and
 - adding NumPy, pandas, or a charting package, because the standard library is
   sufficient and keeps the submission easier to reproduce.
+
+## 5. Fixed-input benchmark revision
+
+New benchmark tests were written before the measurement refactor. The baseline
+run exited with code `1`: `SCENARIOS` did not exist in the old benchmark, and a
+single 50% query used floor rounding and became absent. This confirmed the new
+tests rejected the previous design.
+
+The revised benchmark now:
+
+- generates every `(n, q, scenario)` case once before timing;
+- converts IDs and queries to immutable tuples and stores an input SHA-256;
+- gives all methods and both binary versions the identical tuple objects;
+- separates preparation from the complete query batch and directly brackets
+  their combined elapsed time;
+- includes sorting and set construction in preparation;
+- rotates algorithm order between repeats to reduce fixed-order bias;
+- saves every raw repetition plus median summaries;
+- records units, seeds, requested and realized hit rates, duplicate policy,
+  generator version, Python/machine details, Git commit, and source hash; and
+- records why a one-query mixed case realizes either zero or one hit (the
+  selected nearest-integer half-up policy realizes one).
+
+One dashboard integration test then exposed an assumption that `q=100` was
+always present. The dashboard was corrected to select the largest available
+query count, allowing reduced test matrices without changing full-run behavior.
+The expanded final suite contains eleven passing tests.
