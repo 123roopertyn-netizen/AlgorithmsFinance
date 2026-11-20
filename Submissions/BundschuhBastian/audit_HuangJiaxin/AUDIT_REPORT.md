@@ -24,6 +24,8 @@ The problems are in the **measurement inputs and one performance claim**:
 | 1 | Bug (reproduced) | For q = 1, "hit rate 0.5 (mixed)" contains no present query, so it is the same input as "hit rate 0.0" | Medium: three result groups are mislabelled (timing, memory, break-even at q = 1) |
 | 2 | Unsupported claim (reproduced) | "q = 1: `linear_v2` has the smallest total time" does not hold at n = 1,000. The saved data contradicts it for identical inputs, and a re-run does too | Medium |
 | 3 | Bug (reproduced) | `make_queries` returns more than q queries when the hit rate is outside [0, 1] | Low: not used by any saved result |
+| 4 | Bug (reproduced) | `make_queries`' "absent" queries can be present (odd IDs), and the function crashes for all-negative IDs | Low: her own IDs are even and ≥ 0 |
+| 5 | Bug (reproduced) | The dashboard crashes with a raw traceback if one results file is missing | Low: robustness, for example in Docker with an empty results volume |
 
 The other weaknesses are listed separately in "Shortcomings". They are not reproduced bugs.
 
@@ -133,6 +135,49 @@ would get wrong batch sizes without any error.
 
 **Suggested correction:** `if not 0 <= hit_rate <= 1 or q < 0: raise ValueError(...)`, plus a test.
 
+## Bug 4: "guaranteed absent" queries are not always absent
+
+**Target:** `data.py`, `make_queries`. The docstring says "round(q * hit_rate) are present in ids,
+the rest absent", and the README says absent queries are "guaranteed absent".
+
+**Smallest example:**
+`.venv/bin/python -m pytest -q audit_HuangJiaxin/reproducers/repro_4_absent_queries_not_absent.py`
+fails 2 of 2 cases (`logs/repro_4.txt`).
+- `make_queries([1, 3, 5, 7, 9, 11], 10, 0.0, seed=1)` returns `[21, 25, 3, 9, 3, 23, 5, 1, 11, 9]`.
+  Hit rate 0.0 is requested, but **7 of 10** queries are present.
+- `make_queries([-10, -4], 10, 0.5, seed=1)` raises `ValueError: empty range for randrange()`.
+  Negative IDs are valid input under her own specification ("integer trade IDs").
+
+**Explanation:** absent queries are drawn as odd numbers between 1 and `2 * max(ids) + 3`. That
+guarantees absence only if every ID is even. If `max(ids)` is negative, the range is empty. The
+function takes any ID list but relies silently on how `make_ids` builds its IDs.
+
+**Impact:** low. Her saved results use only `make_ids` output (even and ≥ 0), so they are not
+affected. The "exact hit rate" property is not a property of `make_queries` itself.
+
+**Suggested correction:** draw absent candidates and reject the ones in `set(ids)` (as in a
+rejection loop), with a range that also covers negative IDs. Alternatively, assert in
+`make_queries` that all IDs are even and ≥ 0, and document that.
+
+## Bug 5 (robustness): dashboard crashes when a results file is missing
+
+**Target:** `dashboard.py`, lines 20–25 (five `pd.read_csv` calls without a check).
+
+**Smallest example:**
+`.venv/bin/python -m pytest -q audit_HuangJiaxin/reproducers/repro_5_dashboard_missing_file.py`
+fails (`logs/repro_5.txt`). The test runs on a temporary copy of her folder, with
+`results/breakeven_curve.csv` removed.
+
+**Actual:** the page shows a Python traceback (`FileNotFoundError ... breakeven_curve.csv`), and
+none of the other tabs render.
+
+**Expected:** a message saying which file is missing and which script creates it. This
+situation happens, for example, with her own Docker command
+`docker run -v "$(pwd)/results:/app/results"` when the mounted folder lacks one file.
+
+**Suggested correction:** check that the files exist at the top of `dashboard.py`. If one is
+missing, show `st.error` with the command, then `st.stop()`.
+
 ## Shortcomings (documented, not reproduced as failures)
 
 1. **The timed answers are not checked.** `benchmark.py` and `breakeven.py` only check that `ids`
@@ -195,8 +240,9 @@ would get wrong batch sizes without any error.
 - I re-ran the full break-even grid and the quick benchmark grid, but not the full benchmark grid
   with n = 100,000 and all hit rates.
 - The dashboard was checked headless (no exceptions, same numbers). I did not review the layout visually.
-- Inputs outside the specification (non-integers, `bool`, `NaN`) were not tested, because the spec
-  only allows integers.
+- Inputs outside the specification were not counted as bugs. One example: passing an iterator
+  instead of a list makes the linear methods raise `TypeError` (`len()` of an iterator), while
+  binary and hash work. The spec says `ids` is a list.
 
 ## Files in this audit
 
@@ -206,12 +252,14 @@ would get wrong batch sizes without any error.
 | `reproducers/repro_2_identical_input_timings.py` | reads the saved results; exit code 1 shows Bug 2 |
 | `reproducers/repro_2b_rerun_protocol.py` | reruns the unmodified timing protocol on one fixed input |
 | `reproducers/repro_3_generator_validation.py` | failing test for Bug 3 |
+| `reproducers/repro_4_absent_queries_not_absent.py` | failing tests for Bug 4 |
+| `reproducers/repro_5_dashboard_missing_file.py` | failing test for Bug 5 (runs on a temporary copy) |
 | `reproducers/test_edge_cases.py` | 180 passing independent checks (cases checked) |
 | `reproducers/_target.py`, `conftest.py` | import the audited folder without copying or editing it |
 | `logs/` | saved outputs of every command above, plus my environment |
 
 All commands run from `Submissions/BundschuhBastian/` with that folder's `.venv`
-(pytest and pandas are enough). The audited folder must be at commit `47ec3ae`.
+(pytest and pandas; Bug 5 also needs streamlit). The audited folder must be at commit `47ec3ae`.
 
 ## Use of AI
 
