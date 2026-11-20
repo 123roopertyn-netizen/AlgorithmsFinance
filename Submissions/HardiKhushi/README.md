@@ -175,5 +175,12 @@ This is one seed on one machine. Original and revised versions run sequentially;
 cache warmth, allocator state, and system scheduling can affect ratios. No
 universal fastest method is claimed. The checkpoint's clean staged export passed
 all tests, saved-results verification, and a deterministic dashboard rebuild.
-The local checkpoint commit is authorized; pushing, a full benchmark rerun from
-a fresh clone, and the Phase 2 audit remain separate steps. Docker is optional.
+The checkpoint is published at
+<https://github.com/khushihardi/AlgorithmsFinance/tree/submission/hardi-khushi/Submissions/HardiKhushi>.
+Direct writes to the course repository were denied, so `origin` remains the
+course repository and `fork` points to this student-owned fork. The local
+`submission/hardi-khushi` branch tracks `fork/submission/hardi-khushi`.
+The published branch includes checkpoint `3ba5b42`; see progress entry 7 for
+publication details. A pull request is still needed for course integration.
+A full benchmark rerun from a fresh clone and the Phase 2 audit remain separate
+steps. Docker is optional.

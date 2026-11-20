@@ -35,5 +35,10 @@ The interactive offline dashboard passed 72 filter combinations in Chrome at
 desktop and narrow widths. See `PROGRESS.md`, `REVISIONS.md`, and the generated
 `results/SUMMARY.md` before proposing more work. The user authorized one local
 checkpoint commit after final checks; this checkpoint includes that approval
-and the verification record in progress entry 6. No push or Phase 2 audit is
-authorized. Further commands or additional commits require a new approved batch.
+and the verification record in progress entry 6. The user then authorized
+publication. Direct push to `origin` was denied by GitHub (HTTP 403). A verified
+fork was created at `khushihardi/AlgorithmsFinance`; checkpoint `3ba5b42` was
+pushed on `submission/hardi-khushi`, which tracks `fork/submission/hardi-khushi`.
+`origin` remains the course repository. Progress entry 7 records publication
+and this documentation update. No course pull request or Phase 2 audit has
+been performed. Further work/pushes require a new approved batch.
