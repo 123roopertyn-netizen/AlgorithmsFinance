@@ -1,8 +1,8 @@
 # Search Algorithms — LaviBen
 
-**Student:** Ben Lavi  
-**Required folder name:** `LastnameFirstname` -> `LaviBen`  
-**Language:** Python 3.10+
+- **Student:** Ben Lavi
+- **Required folder name:** `LastnameFirstname` -> `LaviBen`
+- **Language:** Python 3.10+
 
 Tests-first implementation and runtime comparison of three ways to answer
 ordered membership queries over integer IDs:

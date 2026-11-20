@@ -1,8 +1,8 @@
 # Submission checklist and correctness notes
 
-Student: **Ben Lavi**  
-Submission folder: **`Submissions/LaviBen/`**  
-Implementation language: **Python 3.10+**
+- Student: **Ben Lavi**
+- Submission folder: **`Submissions/LaviBen/`**
+- Implementation language: **Python 3.10+**
 
 ## Requirement-to-evidence map
 
