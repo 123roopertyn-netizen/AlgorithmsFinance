@@ -87,9 +87,17 @@ def noise_bound(ratios, column="query_batch_s_ratio"):
 
 
 def step_gain(ratios, step, method="binary", column="query_batch_s_ratio"):
-    """(smallest, largest) relative time saving of one revision step."""
+    """Relative time saving of one revision step across scenarios:
+    (smallest, largest, number of scenarios, median, scenarios that got faster)."""
     r = ratios[(ratios["method"] == method) & (ratios["step"] == step)][column]
-    return 1 - r.max(), 1 - r.min(), len(r)
+    return 1 - r.max(), 1 - r.min(), len(r), 1 - r.median(), int((r < 1).sum())
+
+
+def ranges_separated(summary, new, old, method="binary", column="query_batch_s"):
+    """Scenarios in which every repeat of `new` is faster than every repeat of `old`."""
+    s = summary[summary["method"] == method].set_index(["scenario", "version"])
+    scenarios = sorted(summary["scenario"].unique())
+    return [sc for sc in scenarios if s.loc[(sc, new), f"{column}_max"] < s.loc[(sc, old), f"{column}_min"]]
 
 
 def headline(timing_sum, memory_sum, ratios):

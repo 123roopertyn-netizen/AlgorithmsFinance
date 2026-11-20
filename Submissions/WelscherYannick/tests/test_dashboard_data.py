@@ -5,7 +5,7 @@ import statistics
 import pytest
 from data import (
     fmt_bytes, fmt_seconds, headline, load_memory, load_metadata, load_timing,
-    memory_summary, noise_bound, relative_to_first, revision_ratios, timing_summary,
+    memory_summary, noise_bound, ranges_separated, relative_to_first, revision_ratios, timing_summary,
 )
 from registry import VERSIONS
 
@@ -65,9 +65,21 @@ def test_headline_matches_readme_claims(timing, memory):
     h = headline(summary, memory_summary(memory), ratios)
     assert set(h["steps"]) == {"v2/v1", "v3/v2"}
     assert h["noise"] == pytest.approx(noise_bound(ratios))
-    for step, (low, high, count) in h["steps"].items():
-        assert count == 15
-        assert low > h["noise"], f"{step}: smallest gain does not exceed measurement noise"
+
+    # README: v2 is faster than v1 in all 15 scenarios, and the repeat ranges never overlap.
+    *_, count, _, faster = h["steps"]["v2/v1"]
+    assert faster == count == 15
+    assert len(ranges_separated(summary, "v2", "v1")) == 15
+
+    # README: v3 is faster than v2 in 14 of 15 scenarios (ranges separated in 11);
+    # clearly for absent and mixed queries, not consistently when every query hits.
+    low, _, count, _, faster = h["steps"]["v3/v2"]
+    assert count == 15 and faster == 14 and low < 0
+    assert len(ranges_separated(summary, "v3", "v2")) == 11
+    r = ratios[(ratios["method"] == "binary") & (ratios["step"] == "v3/v2")]
+    assert (r[r["hit_rate_target"] == 0.0]["query_batch_s_ratio"] < 0.87).all()  # 14-15 % faster
+    assert (r[r["hit_rate_target"] == 0.5]["query_batch_s_ratio"] < 0.95).all()  # 6-10 % faster
+    assert r[r["hit_rate_target"] == 1.0]["query_batch_s_ratio"].max() > 1.0  # one case slower
     assert h["fastest_q1"][0] == "linear"
     assert h["fastest_q100"][0] == "hash"
     assert 4.5 < h["hash_vs_sorted"] < 5.5

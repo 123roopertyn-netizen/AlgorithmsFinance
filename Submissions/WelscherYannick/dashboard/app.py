@@ -78,15 +78,17 @@ st.markdown(
 # --- KPI tiles ------------------------------------------------------------------
 f1, f100 = H["fastest_q1"], H["fastest_q100"]
 ALL_VERSIONS = H["versions"]
-step_tiles = [
-    (f"Revision {new} vs {old}", f"{lo:.0%}–{hi:.0%}",
-     f"lower binary query-batch time in all {count} scenarios", T.METHOD_COLORS["binary"])
-    for (new, old), (lo, hi, count) in ((tuple(s.split("/")), g) for s, g in H["steps"].items())
-]
-ov_lo, ov_hi, _ = H["overall"]
+def gain_tile(label, gain, accent):
+    lo, hi, count, median, faster = gain
+    return (label, f"{median:.0%} faster",
+            f"median binary query batch · faster in {faster} of {count} scenarios · range {lo:+.0%} to {hi:+.0%}",
+            accent)
+
+
+step_tiles = [gain_tile(f"Revision {s.replace('/', ' vs ')}", g, T.METHOD_COLORS["binary"])
+              for s, g in H["steps"].items()]
 tiles = step_tiles + [
-    (f"{ALL_VERSIONS[-1]} vs {ALL_VERSIONS[0]} overall", f"{ov_lo:.0%}–{ov_hi:.0%}",
-     "lower binary query-batch time after both revisions", T.TINTS["binary"]),
+    gain_tile(f"{ALL_VERSIONS[-1]} vs {ALL_VERSIONS[0]} overall", H["overall"], T.TINTS["binary"]),
     ("Measurement noise", f"±{H['noise']:.1%}",
      "largest query-batch gap between versions for identical code (linear, hash)", T.INK_3),
     ("Fastest with 1 query", T.METHOD_LABELS[f1[0]],
