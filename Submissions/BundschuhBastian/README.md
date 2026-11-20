@@ -51,7 +51,7 @@ the metadata file). Run the timing and memory scripts one after the other, not a
 time, and with no other heavy program running. Re-running them gives new numbers (see
 "Limits").
 
-**Expected test result:** `348 passed` (no failures, no skips) when `results/` is present.
+**Expected test result:** `363 passed` (no failures, no skips) when `results/` is present.
 Without `results/`, the tests that read saved results are skipped. Breakdown:
 
 | File | Tests | What it checks |
@@ -61,7 +61,7 @@ Without `results/`, the tests that read saved results are skipped. Breakdown:
 | `tests/test_bench_time.py` | 6 | the timing script (rows, medians, wrong answers are detected) |
 | `tests/test_bench_memory.py` | 12 | the memory script (growth of bytes, not exact bytes) |
 | `tests/test_check_total.py` | 6 | total vs prepare + query check |
-| `tests/test_dashboard.py` | 8 | dashboard data helpers and a headless run |
+| `tests/test_dashboard.py` | 23 | dashboard data helpers, number formatting, computed sentences, and a headless run of the page for every setting |
 
 The total is what to compare; the per-file counts are the numbers at the time of writing.
 
@@ -72,7 +72,8 @@ The total is what to compare; the per-file counts are the numbers at the time of
 | `membership.py` | the methods; each is `answer(prepare(ids), queries)`; registries `METHODS` and `PHASES` |
 | `datagen.py` | synthetic data: `generate(n, q, hit_rate, duplicates, seed)`; no algorithms, no timing |
 | `bench_time.py`, `bench_memory.py`, `check_total.py` | measurement and checks |
-| `dashboard/app.py`, `dashboard/loaders.py` | Streamlit page; loads saved results only |
+| `dashboard/app.py`, `dashboard/loaders.py`, `dashboard/report.py` | Streamlit report page; loads saved results only |
+| `.streamlit/config.toml` | page theme (light, white, dark blue accent) and minimal toolbar; read when `streamlit run` is started from this folder |
 | `results/` | saved measurements (CSV and JSON) |
 | `REVISIONS.md` | what changed from v1 to v2 and why |
 | `AI_LOG.md` | which AI suggestions were accepted, corrected or rejected, and why |
@@ -176,6 +177,30 @@ Linear grows about 10x when n grows 10x, binary grows slowly (log n), hash is fl
 at n = 100,000: sorted copy 800,056 bytes (8 bytes per ID), set 4,194,520 bytes (hash table
 of 262,144 slots x 16 bytes); the peak while sorting is 1.5x the copy and while building the
 set 1.5x the table.
+
+## Dashboard
+
+```bash
+.venv/bin/streamlit run dashboard/app.py
+```
+
+Start it from this folder (the theme in `.streamlit/config.toml` is read from the current
+folder). It is one scrolling report page that only loads `results/` and measures nothing;
+without the result files it prints the two commands that create them. The controls are
+q, hit rate and time per batch / per query. The sentences under "Findings" are computed
+from the saved results.
+
+| Part | What it shows |
+|---|---|
+| Findings | at n = 100,000, q = 100: total time of hash set, binary search (and its sorting share) and linear search; the q = 1 case in which linear search is fastest; memory of the sorted copy and the set |
+| Figure 1 | median time of preparation, query batch and total against n, log-log, one curve per method (linear and binary in grey, hash set in dark blue, labels at the line ends), one y scale for the three panels |
+| Figure 2 | query batch of binary search, v1 (solid) against v2 (dashed), with the measured v2 / v1 ratio |
+| Figure 3 | table: measured total next to preparation + query, their ratio, and the spread (max / min of the repeats) |
+| Table 1 | memory: prepared structure and peak during the call, in kB |
+| Appendix (collapsed) | protocol, raw timing and memory repeats, environment and metadata |
+
+Units: milliseconds, or microseconds when all values of a figure are below 1 ms; the unit is
+written on the axis. In per-query mode preparation stays per batch.
 
 ## Limits
 
