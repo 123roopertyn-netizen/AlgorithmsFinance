@@ -72,6 +72,20 @@ def verify(folder):
             merged = {**row, **sample}
             expected_raw.append({key: str(merged[key]) for key in columns})
     assert csv_raw == expected_raw
+    reuse_path = folder / "reuse.json"
+    if reuse_path.exists():
+        reuse = json.loads(reuse_path.read_text(encoding="utf-8"))
+        for name, digest in reuse["metadata"]["source_sha256"].items():
+            assert hashlib.sha256((HERE / name).read_bytes()).hexdigest() == digest, name
+        assert set(reuse["scenarios"]) == {"rebuild_each_batch", "build_once"}
+        for scenario in reuse["scenarios"].values():
+            samples = scenario["raw_repeats"]
+            assert len(samples) == reuse["metadata"]["repeats"] >= 5
+            assert [sample["repeat"] for sample in samples] == list(range(1, len(samples) + 1))
+            assert scenario["median_ms"] == statistics.median(sample["ms"] for sample in samples)
+            assert all(math.isfinite(sample["ms"]) and sample["ms"] >= 0 and 1 <= sample["calls"] <= 20000 for sample in samples)
+        for index in range(reuse["metadata"]["repeats"]):
+            assert sorted(s["raw_repeats"][index]["position"] for s in reuse["scenarios"].values()) == [1, 2]
     with tempfile.NamedTemporaryFile(dir=folder, suffix=".html", delete=False) as f:
         temporary = Path(f.name)
     try:
@@ -82,7 +96,8 @@ def verify(folder):
     report = {"summary_rows": len(rows), "raw_repeat_rows": len(csv_raw),
               "independent_phase_samples": len(csv_raw) * len(TIME_KEYS),
               "coverage_csv_medians_order_and_hashes": "PASS",
-              "dashboard_byte_identical_rebuild": True}
+              "dashboard_byte_identical_rebuild": True,
+              "reuse_scenarios_verified": reuse_path.exists()}
     (folder / "verification.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2))
 

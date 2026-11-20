@@ -117,3 +117,8 @@ is retained. `presentation_sha256` separately identifies the final exporter
 and template used to build the delivered dashboard. Both sets are checked by
 `python -B verify_results.py`; this avoids silently changing recorded hashes
 or suggesting that a presentation fix required new algorithm timings.
+
+The preceding paragraph describes the initial integration at commit `564a43d`.
+After the later hash-batch optimization, the complete dataset was regenerated
+from the final sources. Its hashes now point directly to current files;
+the older metadata and template remain historical audit evidence.

@@ -17,6 +17,7 @@ py -3.13 -m venv .venv
 cd Submissions\YildirimTolgahan
 python -B -m unittest discover -v
 python -B benchmark.py
+python -B benchmark_reuse.py
 python -B dashboard.py
 python -B verify_results.py
 Start-Process .\results\dashboard.html
@@ -28,7 +29,7 @@ If the project environment already exists, start with activation. Check
 with any modern browser. No web server, internet connection, dashboard port or
 API key is needed to run this project.
 
-Expected test result: **17 tests, OK**, including shared subtests for every
+Expected test result: **21 tests, OK**, including shared subtests for every
 method/version. The course's `Class1-2` demonstration is a separate project.
 
 For a quick end-to-end run without replacing the submitted measurements:
@@ -64,7 +65,7 @@ index 2 → `True`. The caller's original `[7, 11, 7]` remains unchanged.
 |---|---|---|
 | Linear | Copy the input once, then scan for every query | Scan the existing input without a redundant copy |
 | Binary | Sort a copy, then recurse over index intervals | Sort a copy, then search iteratively |
-| Hash set | Construct a set, then use membership | Same implementation, retained as a control |
+| Hash set | Construct a set; Python wrapper call per query | Construct a set; grouped native membership using `map` |
 
 Linear and both binary search procedures are implemented here. Library sorting
 and sets are explicitly permitted. No `bisect`, library search procedure or
@@ -86,6 +87,28 @@ membership is expected O(1), with collision-dependent worst cases. Every
 method additionally builds an O(q) output list. Total costs must include
 preparation. These bounds do not predict exact timings or guarantee that a
 revision wins every measured case.
+
+The revised hash batch binds the built-in set membership method once and uses
+`list(map(prepared.__contains__, queries))`, avoiding a Python wrapper function
+per query. It preserves Boolean output and query order. The standard-library
+set is allowed by the lab; the linear and binary searches remain our own code.
+
+For multiple batches against unchanged IDs, use an explicit snapshot:
+
+```python
+from algorithms import HashIndex
+
+index = HashIndex([7, 11, 7])       # build once
+print(index.answer([11, 9, 7]))    # [True, False, True]
+print(index.answer([9, 11]))       # [False, True], reuse the index
+```
+
+The snapshot owns a copy of the IDs. Later changes to the original list do not
+silently change its meaning: construct a new `HashIndex` for updated data.
+`benchmark_reuse.py` separately compares five batches with five index builds
+against the same five batches with one build. Both measured totals include
+index construction and all queries. Raw rounds and source hashes are saved in
+`results/reuse.json`; this is separate from the one-batch comparison.
 
 ## Fixed workloads and measurement definitions
 
@@ -139,6 +162,7 @@ duplicate policy and distinct-ID counts are saved and shown in the dashboard.
 | `data.py` | Seeded synthetic data, separate from measurement |
 | `test_lab.py` | Contract, generator, measurement and export tests |
 | `benchmark.py` | Timing, independent memory measurement, JSON/CSV export |
+| `benchmark_reuse.py` | Fair multi-batch comparison: build per batch versus build once |
 | `dashboard.py` | Generate an interactive standalone HTML file from saved JSON |
 | `dashboard_template.html` | Offline dashboard layout and browser interactions |
 | `verify_results.py` | Check complete coverage, CSV/JSON agreement, medians, order seeds, source hashes and byte-identical HTML export |
@@ -149,9 +173,12 @@ duplicate policy and distinct-ID counts are saved and shown in the dashboard.
 | `audit/AUDIT.md` | Audit of the supplied Astra ZIP and integration decisions |
 | `audit/verify_astra.py` | Reproduce CSV/hash, export and Git-history checks |
 
-The dashboard plots one curve per method/version and includes timing, current
-and peak memory tables, raw repeats and environment details. Select both or
-individual versions and a logarithmic or linear time axis. It embeds saved
+The German dashboard starts with three optimized methods, the fastest measured
+candidate, a compact timing/memory table and four controls: ID count, query
+count, hit rate and time component. A checkbox adds the original versions.
+The input-size curves, duplicate policy, raw repeats and environment details
+are available in expandable sections. A separate panel shows the multi-batch
+reuse experiment when `reuse.json` is beside `measurements.json`. It embeds saved
 JSON; filtering does not rerun measurements. Rerun `dashboard.py` after updating
 measurements. Keep HTML, JSON and CSV together for the download links. The
 export fixes UTF-8/LF output for identical bytes across operating systems when
@@ -162,14 +189,15 @@ the saved measurement file and template are the same.
 Current observations are recorded in `results/observations.md`, based solely
 on the regenerated Windows results. All workloads and repeats remain in the
 dashboard and CSV files. Timings describe this machine and experiment;
-identical controls may have different medians, and a revision does not win
-every case. Removing the linear copy reduces preparation storage; replacing
+measurement noise remains, and a revision does not win every case. Removing
+the linear copy reduces preparation storage; replacing
 recursion removes recursive search frames, but sorting still dominates many
 binary-search total timings.
 
-Validation: 17 tests pass under CPython 3.13.12. Chrome checks all 45 supplied
+Validation: 21 tests pass under CPython 3.13.12. Chrome checks all 45 supplied
 Astra dashboard selections and all 180 selections of the working dashboard,
-including exact agreement between table values and embedded data. The report
+including bar/table/winner agreement with embedded data. The working view also
+fits a 390-pixel mobile viewport without page overflow. The report
 is `results/dashboard_browser_check.json`. Optional browser QA requires Node
 22+ and Chrome, and can be repeated with `node audit/check_dashboards.cjs`;
 these tools are not needed to run the Python lab or open its dashboard.
@@ -208,3 +236,5 @@ Phase 2 requires another student's chosen commit. This directory implements
 Phase 1 and documents the review of the supplied alternative implementation;
 that comparison does not replace the separate Phase 2 peer audit.
 The final submission review is documented in `audit/FINAL_REVIEW.md`.
+The subsequent hash-batch/index-reuse optimization and simpler dashboard are
+documented in `audit/OPTIMIZATION_REVIEW.md`.

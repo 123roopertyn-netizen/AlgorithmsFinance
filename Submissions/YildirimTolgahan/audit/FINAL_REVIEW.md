@@ -1,6 +1,9 @@
 # Final submission review
 
 Reviewed on 20 November 2026, before publishing the Phase 1 submission.
+This is the historical initial-publication review (commits `94ec0bf` and
+`564a43d`). For the later performance and dashboard changes, see
+`OPTIMIZATION_REVIEW.md` and `optimization_validation.json`.
 
 ## Findings corrected
 

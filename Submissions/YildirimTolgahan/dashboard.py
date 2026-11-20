@@ -11,6 +11,9 @@ def build(source, output):
     data = json.loads(source.read_text(encoding="utf-8"))
     if not data.get("rows"):
         raise ValueError("No saved measurements to display")
+    reuse_path = source.parent / "reuse.json"
+    if reuse_path.exists():
+        data["reuse"] = json.loads(reuse_path.read_text(encoding="utf-8"))
     payload = json.dumps(data, ensure_ascii=True).replace("<", "\\u003c")
     import os
     link = Path(os.path.relpath(source, output.parent)).as_posix()
