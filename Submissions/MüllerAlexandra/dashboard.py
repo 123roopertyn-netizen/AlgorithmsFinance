@@ -94,7 +94,7 @@ for tab, metric_name in zip(metric_tabs, metric_names, strict=True):
         st.dataframe(
             frame.sort_values(["n", "method/version"]),
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
         )
 
 st.subheader("Traced Python memory")
@@ -102,13 +102,13 @@ st.caption(payload["definitions"]["tracemalloc"] + ". Units in the table: KiB.")
 memory_frame = pd.DataFrame(memory_rows(selected)).sort_values(
     ["n", "method/version"]
 )
-st.dataframe(memory_frame, hide_index=True, use_container_width=True)
+st.dataframe(memory_frame, hide_index=True, width="stretch")
 
 with st.expander("Raw timing repeats and batching details"):
     raw_frame = pd.DataFrame(raw_repeat_rows(selected)).sort_values(
         ["n", "method/version", "repeat"]
     )
-    st.dataframe(raw_frame, hide_index=True, use_container_width=True)
+    st.dataframe(raw_frame, hide_index=True, width="stretch")
 
 with st.expander("Measurement definitions and saved settings"):
     st.subheader("Definitions")

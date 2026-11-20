@@ -46,3 +46,21 @@ not change sorting, output order, or the original input.
 
 The same parametrized behavioral tests are applied to both binary-search
 versions. No expected result was weakened or changed for the revision.
+
+After adding benchmark and dashboard tests, the final suite contained 58 tests
+and all passed on Python 3.12.10 with pytest 9.2.0.
+
+## Measurement review
+
+The complete benchmark saved 60 records for measured code commit
+`810f7db47cee7139bd585ce712e1f5218b19e129`. Validation confirmed five raw
+repeats for every record, matching JSON and CSV record counts, non-negative
+timings, and no requested/actual hit-rate mismatches. The Streamlit dashboard
+was then launched and inspected successfully from the saved result file.
+
+The revision improved the binary-search query-batch median in 14 of 15 measured
+configurations, but it did not improve every independently timed total because
+sorting dominates total time and normal measurement noise remains. For that
+reason, the accepted conclusion is limited to lower observed query-phase
+overhead in this run. A stronger claim that iteration always makes the complete
+operation faster was rejected by the recorded evidence.

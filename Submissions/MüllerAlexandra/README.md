@@ -114,6 +114,41 @@ Raw output is written to:
 - `results/benchmark_summary.csv` — one flattened summary row per
   configuration and method/version.
 
+### Results from the recorded run
+
+The committed result files measure code version
+`810f7db47cee7139bd585ce712e1f5218b19e129` with Python 3.12.10 on Windows 11.
+They contain 60 records, five raw repeats per record, and no requested/actual
+hit-rate mismatches.
+
+For all-absent batches with `q=100`, median total time increased as follows:
+
+| Method/version | n=1,000 | n=10,000 | n=100,000 |
+|---|---:|---:|---:|
+| Linear, original | 1.48 ms | 13.16 ms | 151.75 ms |
+| Binary, recursive | 0.10 ms | 1.03 ms | 13.95 ms |
+| Binary, iterative | 0.08 ms | 1.01 ms | 13.59 ms |
+| Hash set | 0.01 ms | 0.14 ms | 2.74 ms |
+
+The hash-set method had the lowest total median in every `q=100`
+configuration. With only one query, the preparation cost changes the result:
+linear search had the lowest total median in five of the six cases at
+`n >= 10,000`, while the hash set narrowly won the `n=1,000` all-absent case.
+This illustrates why both preparation and query count must be reported.
+
+The iterative revision had a lower query-batch median than recursive binary
+search in 14 of 15 configurations. It did not win every independently measured
+total: for the `n=100,000`, `q=100`, mixed case, iterative query time was about
+0.10 ms versus 0.12 ms recursively, but the recorded total was 15.69 ms versus
+12.51 ms because sorting dominated and timing noise affected the independent
+preparation/total measurements. The data therefore supports a narrower claim
+about query-phase overhead, not a universal total-time speedup.
+
+At `n=100,000`, peak traced memory was about 1,172 KiB for either binary
+version, about 2,560 KiB for the hash set, and below 1 KiB for linear search in
+these runs. These figures exclude the pre-existing input and queries but
+include prepared structures and output as defined below.
+
 ## Memory measurement
 
 Memory measurement is a separate run and is never mixed with timing. The input
