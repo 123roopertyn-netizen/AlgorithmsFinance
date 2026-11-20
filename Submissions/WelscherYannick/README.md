@@ -382,6 +382,17 @@ is never the only cue. All colours are defined in `dashboard/theme.py`.
   (RSS, e.g. with `psutil`) was not measured. The recursion of v1 shows up
   only through the int objects it keeps alive, not through its frames.
 
+## Phase 2: audit of LaviBen
+
+The audit of Ben Lavi's submission (commit `4777c48`) is in
+[`audit/AUDIT_REPORT.md`](audit/AUDIT_REPORT.md), with runnable reproducers in
+`audit/reproducers/` and saved outputs in `audit/evidence/`. Summary: his
+algorithms are correct; two measurement bugs were reproduced (preparation time
+includes freeing the previous algorithm's state; repeated sizes mix different
+inputs), memory measurement and parts of the required dashboard are missing,
+and six weaker points are listed as suspected weaknesses. The reproducers need
+a checkout of his commit and are not part of this folder's test suite.
+
 ## Use of AI
 
 The code and this README were written with Claude Code (Anthropic), in a
