@@ -231,7 +231,7 @@ def test_binary_v2_call_depth_is_constant():
     queries = [0, 199_999, 100_000, -1, 200_000]   # present at both ends/middle, absent outside
     result, depth = max_python_call_depth(METHODS["binary_v2"], ids, queries)
     assert result == [True, True, True, False, False]
-    assert depth < 3        # only the method itself; no helper, no recursion
+    assert depth < 3        # method + its answer phase; no per-query helper, no recursion
 
 
 def test_binary_v1_call_depth_grows_with_log_n():
@@ -243,6 +243,38 @@ def test_binary_v1_call_depth_grows_with_log_n():
     # and the depth grows with n: a 1000 times smaller input is much shallower
     _, small_depth = max_python_call_depth(METHODS["binary_v1"], list(range(200)), queries)
     assert small_depth < depth - 5
+
+
+# ---- prepare / answer phases (used by the timing script) ---------------------------
+
+from membership import PHASES  # noqa: E402
+
+
+@pytest.mark.parametrize("name", sorted(PHASES))
+def test_phases_match_public_method(name):
+    prepare, answer = PHASES[name]
+    ids = [9, 3, 7, 3, 1]
+    queries = [3, 4, 9, 0]
+    assert answer(prepare(ids), queries) == METHODS[name](ids, queries)
+
+
+@pytest.mark.parametrize("name", sorted(PHASES))
+def test_one_state_serves_many_batches_and_inputs_stay_unchanged(name):
+    prepare, answer = PHASES[name]
+    ids = [9, 3, 7, 3, 1]
+    ids_before = list(ids)
+    state = prepare(ids)
+    assert ids == ids_before
+    first = answer(state, [3, 4, 9])
+    state_snapshot = list(state) if not isinstance(state, set) else set(state)
+    assert answer(state, [3, 4, 9]) == first == [True, False, True]
+    assert answer(state, [0, 1]) == [False, True]
+    assert (list(state) if not isinstance(state, set) else set(state)) == state_snapshot
+    assert ids == ids_before
+
+
+def test_every_method_has_phases():
+    assert set(PHASES) == set(METHODS)
 
 
 # ---- random tests against the oracle ----------------------------------------------
