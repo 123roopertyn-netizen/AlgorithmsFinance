@@ -11,15 +11,19 @@
 
 ## Summary
 
-**No reproduced bug.** All four methods returned the correct answer on every input I tried,
-never changed their input, and his 363 tests pass in a clean environment. His saved numbers
-are internally consistent, and every number quoted in his README matches his raw data.
+**The algorithms are correct.** All four methods returned the correct answer on every input
+I tried, never changed their input, and his 363 tests pass in a clean environment. His saved
+numbers are internally consistent, and every number quoted in his README matches his raw data.
 
-I found **four documented shortcomings** (claims that do not fully match the code or the data)
-and **one environment-dependent observation**. None of them changes a correct answer.
+I found **two small reproduced bugs** outside the algorithms (dashboard number formatting and
+the code-version metadata), **four shortcomings** (claims that do not fully match the code or
+the data) and **one environment-dependent observation**. None of them changes a membership
+answer.
 
 | # | Type | Where | Severity |
 |---|---|---|---|
+| B1 | Bug: 4 instead of 3 significant digits | `dashboard/report.py`, `sig3` | low (display) |
+| B2 | Bug: unknown code version reported as "no uncommitted changes" | `bench_time.py`, `environment` | low to medium (reproducibility) |
 | S1 | Claim does not match code | `membership.py` docstring, `REVISIONS.md` refactor note | low |
 | S2 | Number does not match data | `REVISIONS.md`, "Measured effect" | low |
 | S3 | Duplicate workload presented as a separate setting | `datagen.py`, README, dashboard | low to medium |
@@ -43,6 +47,7 @@ All outputs are in `logs/`.
 |---|---|---|
 | `fuzz_methods.py` | correctness against Python's `in`; inputs and prepared state unchanged; data generator | `logs/fuzz_methods.txt` |
 | `finding_1_public_method.py` | reproducer for S1 and S4 | `logs/finding_1_public_method.txt` |
+| `finding_2_bugs.py` | reproducer for B1, B2 and the dashboard sentence in S2 | `logs/finding_2_bugs.txt` |
 | `check_claims.py` | summaries recomputed from raw repeats; every README / REVISIONS number; S2, S3 | `logs/check_claims.txt` |
 | `compare_rerun.py` | his conclusions after a fresh rerun on my machine; O1 | `logs/compare_rerun.txt` |
 
@@ -72,6 +77,41 @@ In the logs, `FAIL` marks a claim that did not hold, not a crash of the script.
   the hash set is fastest for q = 100, hash query time is flat in n, and `binary_v2` is
   faster than `binary_v1` in the query phase in **all 18 configurations** (v2/v1 0.66 to
   0.93). His qualitative conclusions reproduce.
+
+## Reproduced bugs
+
+### B1. `sig3` shows four significant digits when rounding crosses a power of ten
+
+* **Target:** `dashboard/report.py`, function `sig3` (used for all numbers in the
+  dashboard's text and tables).
+* **Smallest example:** `python finding_2_bugs.py`
+* **Evidence:** the docstring promises "3 significant digits". Actual output:
+  `sig3(0.9996)` gives `'1.000'`, `sig3(9.996)` gives `'10.00'`, `sig3(99.96)` gives
+  `'100.0'`; expected `'1.00'`, `'10.0'`, `'100'`. Values that do not round up, such as
+  `0.1769` and `133.39`, are correct.
+* **Explanation:** the number of decimals is computed from the value **before** rounding.
+  When rounding moves the value to the next power of ten, one decimal too many is kept.
+  His tests only use values that do not round up.
+* **Impact:** low; only the display of some numbers, never the stored results.
+* **Suggestion:** after rounding, recompute the number of decimals from the rounded value,
+  and add a test for 0.9996 and 99.96.
+
+### B2. An unknown code version is recorded as "no uncommitted changes"
+
+* **Target:** `bench_time.py`, function `environment` (`_run` returns `""` on any error).
+* **Smallest example:** `python finding_2_bugs.py` inside the audit container (no git), or
+  `logs/rerun_results/timing_metadata.json` from my rerun.
+* **Evidence:** without git, `environment()` returns `git_commit = ''` and
+  `git_uncommitted_changes_outside_results = False`. The second field therefore claims a
+  clean checkout even though the code version could not be determined.
+* **Explanation:** an empty `git status` output is treated as "clean", but an empty output
+  also results from git being missing or the folder not being a repository. Slide 59 asks
+  to save the code version with the results; a reviewer running his project in Docker, from
+  a copy or from a ZIP download gets misleading metadata.
+* **Impact:** low to medium for reproducibility; his own saved run is not affected (it shows
+  commit `dfc2968`, which matches the code).
+* **Suggestion:** record `None` or `"unknown"` for both fields when `git rev-parse HEAD`
+  fails, and allow the commit to be passed in (for example through an environment variable).
 
 ## Shortcomings
 
@@ -103,6 +143,10 @@ In the logs, `FAIL` marks a claim that did not hold, not a crash of the script.
 * **Explanation:** the sentence presents the sort as a fixed 20 ms share of the total.
   His own README section on `total` vs `prepare + query` explains that the blocks run at
   different moments and vary by up to 1.33×; this sentence does not reflect that.
+* **Same issue on the dashboard:** the first "Findings" sentence reads "binary search in
+  21.8 ms (99 % of it is sorting)". The 21.8 ms is the measured `total`, but the 99 % is
+  computed from `prepare / (prepare + query)` of different runs; the sorting median in the
+  same setting is 22.49 ms, more than the quoted total (`logs/finding_2_bugs.txt`).
 * **Impact:** low; the conclusion "sorting dominates the total" still holds.
 * **Suggestion:** quote the range (about 20 to 26 ms) or refer to the variation section.
 

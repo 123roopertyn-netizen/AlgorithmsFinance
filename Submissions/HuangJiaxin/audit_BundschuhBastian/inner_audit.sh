@@ -21,4 +21,5 @@ python check_claims.py > /dev/null && tail -1 "$LOGS/check_claims.txt"
 (cd /tmp/bastian && python bench_time.py && python check_total.py) > "$LOGS/rerun_bench_time.txt" 2>&1
 mkdir -p "$LOGS/rerun_results" && cp /tmp/bastian/results/timing_*.* /tmp/bastian/results/total_consistency.csv "$LOGS/rerun_results/"
 python compare_rerun.py "$LOGS/rerun_results" > /dev/null && tail -1 "$LOGS/compare_rerun.txt"
+python finding_2_bugs.py > /dev/null && tail -1 "$LOGS/finding_2_bugs.txt"
 echo "done: see logs/"
