@@ -6,6 +6,7 @@ import json
 import pytest
 from benchmark import COLUMNS, BenchConfig, measure_pair, run_benchmark, scenarios
 from interface import Method
+from registry import VERSIONS
 
 TINY = BenchConfig(
     sizes=(10, 50), query_counts=(1, 5), hit_rates=(1.0, 0.0, 0.6),
@@ -52,7 +53,8 @@ def test_run_writes_one_raw_row_per_repeat_and_metadata(tmp_path):
 
     with open(tmp_path / "timing_raw.csv", newline="") as f:
         saved = list(csv.DictReader(f))
-    n_scenarios, n_pairs = 10, 6  # 2 versions x 3 methods
+    n_scenarios = 10
+    n_pairs = sum(len(methods) for methods in VERSIONS.values())  # versions x methods
     assert len(saved) == len(rows) == n_scenarios * n_pairs * TINY.repeats
     assert list(saved[0]) == COLUMNS
     assert all(float(r[c]) > 0 for r in saved for c in ("prepare_s", "query_batch_s", "total_s"))

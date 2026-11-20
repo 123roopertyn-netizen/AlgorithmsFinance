@@ -8,6 +8,7 @@ import pytest
 from benchmark import BenchConfig
 from interface import Method
 from memory import COLUMNS, measure_method, run_memory
+from registry import VERSIONS
 from search_v1 import METHODS as V1
 
 TINY = BenchConfig(sizes=(10, 50), query_counts=(1, 5), hit_rates=(1.0, 0.0, 0.6))
@@ -63,7 +64,8 @@ def test_run_writes_rows_and_metadata(tmp_path):
     rows, _ = run_memory(TINY, tmp_path, repeats=2, log=_silent)
     with open(tmp_path / "memory_raw.csv", newline="") as f:
         saved = list(csv.DictReader(f))
-    assert len(saved) == len(rows) == 10 * 6 * 2  # scenarios x pairs x repeats
+    n_pairs = sum(len(methods) for methods in VERSIONS.values())
+    assert len(saved) == len(rows) == 10 * n_pairs * 2  # scenarios x pairs x repeats
     assert list(saved[0]) == COLUMNS
     assert all(int(r["prepare_peak_B"]) >= int(r["prepare_current_B"]) for r in saved)
     with open(tmp_path / "memory_metadata.json") as f:
