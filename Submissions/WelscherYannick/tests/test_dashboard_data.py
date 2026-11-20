@@ -58,8 +58,9 @@ def test_headline_matches_readme_claims(timing, memory):
     summary = timing_summary(timing)
     ratios = revision_ratios(summary)
     h = headline(summary, memory_summary(memory), ratios)
-    assert 0.08 < h["speedup_min"] <= h["speedup_max"] < 0.16
-    assert h["noise"] == pytest.approx(noise_bound(ratios)) and h["noise"] < 0.07
+    assert 0.06 < h["speedup_min"] <= h["speedup_max"] < 0.16  # README: 7-15 %
+    assert h["noise"] == pytest.approx(noise_bound(ratios)) and h["noise"] < 0.03  # README: 2.6 %
+    assert h["speedup_min"] > h["noise"]  # the revision gain exceeds measurement noise
     assert h["fastest_q1"][0] == "linear"
     assert h["fastest_q100"][0] == "hash"
     assert 4.5 < h["hash_vs_sorted"] < 5.5

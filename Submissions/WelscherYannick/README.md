@@ -14,7 +14,7 @@ Python 3.11 or newer.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m pytest                    # expected: 146 passed
+.venv/bin/python -m pytest                    # expected: 172 passed
 .venv/bin/python bench/benchmark.py           # timing, about 1-2 minutes, writes results/
 .venv/bin/python bench/memory.py              # memory, a few seconds, writes results/
 .venv/bin/streamlit run dashboard/app.py      # dashboard on http://localhost:8501
@@ -46,25 +46,28 @@ to `results/quick/` instead (ignored by git). No file needs to be edited.
 Input: an integer array `ids` (may be empty, unsorted, with duplicates) and
 an ordered list `queries`. Output: one `bool` per query, in query order;
 entry i is `True` exactly when `queries[i]` occurs in `ids`. Neither input is
-modified. Each method is split into `prepare(ids)` and `query(state, queries)`
+modified. Any sequence of ints is accepted (list or tuple, ints beyond 64
+bits). Each method is split into `prepare(ids)` and `query(state, queries)`
 so that preparation and the query batch can be timed separately;
-`contains_all` runs both. Full text: docstring of `src/interface.py`.
+`contains_all` runs both. `query` never changes the prepared state, and the
+state does not follow later changes to `ids`. Full text: docstring of
+`src/interface.py`.
 Example from the slides: array `[7, 11, 7]`, queries `[11, 9, 7]` →
 `[True, False, True]`.
 
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest        # expected: 146 passed, in about 10 seconds
+.venv/bin/python -m pytest        # expected: 172 passed, in about 10 seconds
 ```
 
 | File | Tests | What it checks |
 |---|---|---|
-| `tests/test_search.py` | 86 | 14 contract checks for each of the 3 methods in both versions (84), plus agreement of the methods within each version (2) |
-| `tests/test_mutants.py` | 9 | Eight deliberately broken methods must each fail a check; a correct reference must pass all |
+| `tests/test_search.py` | 110 | 18 contract checks for each of the 3 methods in both versions (108), plus agreement of the methods within each version (2) |
+| `tests/test_mutants.py` | 10 | Nine deliberately broken methods must each fail a check; a correct reference must pass all |
 | `tests/test_datagen.py` | 23 | Generator: determinism, sizes, exact hit and duplicate rates, invalid settings |
 | `tests/test_benchmark.py` | 4 | Timing code: fresh state per repeat, output schema, result check |
-| `tests/test_memory.py` | 7 | Memory code counts a known allocation, the sorted copy and the output, but not the input |
+| `tests/test_memory.py` | 8 | Memory code counts a known allocation, the sorted and the tuple copy and the output, but not the input |
 | `tests/test_dashboard_data.py` | 11 | Dashboard numbers agree with the raw result files |
 | `tests/test_dashboard_app.py` | 6 | The dashboard renders without exceptions, also after changing each filter |
 
@@ -72,9 +75,34 @@ The contract checks (`tests/contract.py`) cover the cases from the slides:
 empty array and queries, one entry, duplicates, unsorted input, first and last
 matches, absent queries, negative ids, output order, return type, unchanged
 input, repeated calls on one prepared state, and comparison with an
-independent reference (`q in ids`) on generated data. The tests were written
-before the implementation and failed against stubs (43 failures) before v1
-existed. Passing tests are evidence, not a proof of correctness.
+independent reference (`q in ids`) on generated data. Four checks were added
+in my review: ints beyond 64 bits, tuples as input, a prepared state that
+must not follow later changes to `ids`, and binary-search boundaries for
+sorted arrays of every length from 0 to 8, queried at each element and in
+each gap. The tests were written before the implementation and failed against
+stubs (43 failures) before v1 existed; the state check failed against linear
+search (2 failures) before it was fixed (see below). Passing tests are
+evidence, not a proof of correctness.
+
+## Synthetic data
+
+`src/datagen.py` builds `(ids, queries)` from `n`, `q`, `hit_rate`,
+`duplicate_rate` and `seed`, with its own random generator:
+
+* **Ids:** distinct integers from a range of 10·(n + q) + 10 values around
+  zero, so negative ids occur. The array is shuffled, so it is unsorted.
+* **Duplicates:** `int(n · duplicate_rate)` entries repeat an earlier id; at
+  least one id stays unique. The benchmarks use 0.1.
+* **Hits:** `round(hit_rate · q)` queries are drawn with replacement from the
+  array's ids, so a hit may be queried more than once. The other queries are
+  distinct ids that are guaranteed to be absent. Query order is shuffled.
+* **Position of hits:** hits sit at random positions in the array, so linear
+  search needs about n/2 comparisons per hit on average and n per miss.
+  Querying only the first or last element would make linear search look much
+  better or worse.
+* **Reproducibility:** the same settings give the same data within one Python
+  version; Python's `random` module does not guarantee the same stream across
+  versions.
 
 ## Revision: v1 to v2
 
@@ -94,8 +122,8 @@ limit, although that limit is far from reached at these sizes.
 **Correctness after the revision.** The full test suite ran unchanged against
 both versions: 118 tests passed at that point (14 contract checks for each
 method of each version, one cross-method check per version, generator tests
-and mutant tests; the later tests for measurement and dashboard code bring the
-total to 146). No expected result was changed. The revision did not reveal any new
+and mutant tests; the later tests bring the total to 172). No expected result
+was changed. The revision did not reveal any new
 case that needed an additional test. Passing tests are evidence, not a proof of
 correctness.
 
@@ -104,13 +132,23 @@ preparation time, since `sorted()` is shared. Whether the gain is measurable is
 checked in the benchmark, not assumed.
 
 **Measured effect.** In all 15 scenarios the median query-batch time of v2
-binary search is 9–15 % below v1 (ratio v2/v1 between 0.850 and 0.912), and
+binary search is 7–15 % below v1 (ratio v2/v1 between 0.848 and 0.933), and
 the ranges of the five repeats do not overlap. For comparison, linear and hash
 search run identical code in both versions; their v1/v2 medians differ by at
-most 4.9 % in the query batch and at most 6.4 % in the total time. The total
+most 2.6 % in the query batch and at most 7.0 % in the total time. The total
 time of binary search barely changes, because sorting dominates it (see
 below). In memory, v1 needs a few hundred bytes more at its query peak (see
-the memory section).
+the memory section). The first measurement, before the fix below, gave
+9–15 %.
+
+**Later fix found in review: linear search copies.** My review added a check
+that the prepared state must not follow later changes to `ids`. In v1, linear
+`prepare` returned the given array itself, so the check failed (for v1, and
+for v2, which imports linear search). `prepare` now copies the array into a
+tuple. This is a correction of v1, not part of the v1 → v2 revision: it
+changes both versions in the same way. Cost: about 2 ns and 8 bytes per entry
+(214 µs and 800,040 bytes at n = 100,000). All measurements below were rerun
+after the fix.
 
 ## Runtime measurement
 
@@ -141,9 +179,9 @@ Definitions are in the docstring of `bench/benchmark.py`. In short:
   overhead per call, git commit of the measured code, generator settings and
   the generated data per scenario.
 
-The committed results were measured at commit `09dafe7` without uncommitted
-changes, on an Apple M4 Pro (macOS 26.5.1, Python 3.13.15). Timings depend on
-the machine.
+The committed results were measured at commit `302dc8f` (after the linear
+fix) without uncommitted changes, on an Apple M4 Pro (macOS 26.5.1, Python
+3.13.15). Timings depend on the machine.
 
 **Results (v2, medians).** Total time, with preparation / query batch in
 brackets.
@@ -152,27 +190,27 @@ One query, all absent:
 
 | n | linear | binary | hash |
 |---|---|---|---|
-| 1,000 | 5.94 µs (15.1 ns / 6.06 µs) | 25.7 µs (25.3 µs / 586 ns) | 5.31 µs (5.4 µs / 46.1 ns) |
-| 10,000 | 66.9 µs (15.5 ns / 69.3 µs) | 482 µs (499 µs / 761 ns) | 100 µs (104 µs / 46.1 ns) |
-| 100,000 | 798 µs (15.1 ns / 795 µs) | 8.58 ms (8.63 ms / 930 ns) | 2.2 ms (2.17 ms / 45.9 ns) |
+| 1,000 | 6.55 µs (702 ns / 5.91 µs) | 26 µs (25.6 µs / 590 ns) | 5.45 µs (5.48 µs / 45.2 ns) |
+| 10,000 | 92.2 µs (20.2 µs / 71.5 µs) | 515 µs (527 µs / 781 ns) | 111 µs (114 µs / 45.2 ns) |
+| 100,000 | 997 µs (214 µs / 755 µs) | 8.93 ms (8.92 ms / 956 ns) | 2.29 ms (2.25 ms / 44.4 ns) |
 
 100 queries, hit rate 0.5:
 
 | n | linear | binary | hash |
 |---|---|---|---|
-| 1,000 | 446 µs (15.5 ns / 473 µs) | 79.2 µs (25.3 µs / 52.9 µs) | 6.2 µs (5.34 µs / 938 ns) |
-| 10,000 | 5.47 ms (15.4 ns / 5.59 ms) | 605 µs (559 µs / 72.3 µs) | 110 µs (112 µs / 894 ns) |
-| 100,000 | 61.8 ms (15.3 ns / 57.9 ms) | 8.8 ms (8.88 ms / 96.4 µs) | 2.19 ms (2.18 ms / 884 ns) |
+| 1,000 | 451 µs (721 ns / 445 µs) | 80 µs (26 µs / 54.2 µs) | 6.38 µs (5.3 µs / 948 ns) |
+| 10,000 | 5.2 ms (19.7 µs / 5.17 ms) | 565 µs (537 µs / 73.2 µs) | 112 µs (141 µs / 882 ns) |
+| 100,000 | 56.9 ms (214 µs / 55.1 ms) | 8.99 ms (8.84 ms / 100 µs) | 2.23 ms (2.22 ms / 900 ns) |
 
 * With one query, linear search has the lowest total time in 5 of 6
-  scenarios: it prepares nothing, and one scan is usually cheaper than sorting
-  or building a set. The exception is n = 1,000 with an absent query, where
-  the hash set is slightly faster (5.31 µs against 5.94 µs).
+  scenarios: its preparation is only a copy, and one scan is usually cheaper
+  than sorting or building a set. The exception is n = 1,000 with an absent
+  query, where the hash set is slightly faster (5.45 µs against 6.55 µs).
 * With 100 queries, hash membership is fastest; linear search grows with n·q.
 * Binary search never wins in these scenarios: sorting costs more than building
   the set, and its O(log n) queries cannot make up for that at q ≤ 100.
-* Linear "preparation" (about 15 ns) is only the call overhead of returning the
-  array.
+* Linear preparation is the tuple copy, about 2 ns per entry (214 µs at
+  n = 100,000); before the fix it was only the call overhead (about 15 ns).
 
 ## Memory measurement
 
@@ -198,24 +236,27 @@ is always excluded, the output is part of query and total. Unit: bytes.
 
 Saved in `results/memory_raw.csv` (270 rows: 15 scenarios × 6 method/version
 pairs × 3 repeats) and `results/memory_metadata.json`, measured at commit
-`6b79fc8` without uncommitted changes. All three repeats gave identical
-values.
+`302dc8f` (after the linear fix) without uncommitted changes. All three
+repeats gave identical values.
 
 **Results (100 queries, hit rate 0.5, medians, bytes):**
 
 | n | method | prepare current | prepare peak | query current | query peak v1 / v2 | total peak |
 |---|---|---|---|---|---|---|
-| 1,000 | linear | 0 | 0 | 920 | 1,016 / 1,016 | 1,016 |
+| 1,000 | linear | 8,040 | 8,040 | 920 | 1,016 / 1,016 | 9,056 |
 | 1,000 | binary | 8,056 | 12,088 | 920 | 1,540 / 1,128 | 12,088 |
 | 1,000 | hash | 32,984 | 41,224 | 920 | 968 / 968 | 41,224 |
-| 10,000 | linear | 0 | 0 | 920 | 1,016 / 1,016 | 1,016 |
+| 10,000 | linear | 80,040 | 80,040 | 920 | 1,016 / 1,016 | 81,056 |
 | 10,000 | binary | 80,056 | 120,096 | 920 | 1,732 / 1,128 | 120,096 |
 | 10,000 | hash | 524,504 | 655,624 | 920 | 968 / 968 | 655,624 |
-| 100,000 | linear | 0 | 0 | 920 | 1,016 / 1,016 | 1,016 |
+| 100,000 | linear | 800,040 | 800,040 | 920 | 1,016 / 1,016 | 801,056 |
 | 100,000 | binary | 800,056 | 1,199,960 | 920 | 1,860 / 1,128 | 1,199,960 |
 | 100,000 | hash | 4,194,520 | 6,291,720 | 920 | 968 / 968 | 6,291,720 |
 
-* **Linear** allocates nothing in preparation: it keeps the given array.
+* **Linear:** the tuple copy is 8 bytes per entry plus a 40-byte header
+  (800,040 = 8 · 100,000 + 40). Its peak equals its final size, because a
+  tuple is built without temporary buffers. Before the fix, linear allocated
+  nothing in preparation.
 * **Binary:** the sorted copy is 8 bytes per entry plus a 56-byte list header
   (800,056 = 8 · 100,000 + 56); it holds references to the existing int
   objects, not new ints. The peak is about 1.5 times that, consistent with
@@ -273,9 +314,11 @@ cue. All colours are defined in `dashboard/theme.py`.
 ## Known measurement shortcomings
 
 * **Total below preparation.** For binary and hash search, `total_s` is in
-  many repeats smaller than `prepare_s` alone (e.g. binary, n = 10,000, q = 1:
-  preparation 499 µs, total 482 µs), although the total includes the
-  preparation. The gap is up to about 10 %, mostly at n = 10,000. Two
+  many repeats smaller than `prepare_s` alone (e.g. hash, n = 10,000,
+  q = 100, mixed: preparation 141 µs, total 112 µs), although the total
+  includes the preparation. The median gap reaches 21 % in the current run
+  (about 10 % in the first run), mostly at n = 10,000. It never occurs for
+  linear search. Two
   explanations were tested and rejected: (1) the previous structure staying
   alive while the next one is built in the preparation loop, and (2) a cold
   cache for the first measurement of each method (an untimed warm-up call did

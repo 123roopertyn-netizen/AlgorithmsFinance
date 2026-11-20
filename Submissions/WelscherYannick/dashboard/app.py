@@ -170,7 +170,7 @@ with tab_time:
     st.markdown(legend_html(METHODS, versions), unsafe_allow_html=True)
     cols = st.columns(3)
     subs = {
-        "prepare_s": "sorting the copy or building the set; linear prepares nothing",
+        "prepare_s": "copying (linear), sorting a copy (binary) or building the set (hash)",
         "query_batch_s": f"all {q} {'query' if q == 1 else 'queries'} on a prepared state",
         "total_s": "preparation and query batch, timed together",
     }
@@ -249,8 +249,8 @@ with tab_mem:
     st.markdown(legend_html(METHODS, ["v2"]), unsafe_allow_html=True)
     a, b = st.columns(2)
     with a, card("mem-prep"):
-        memory_bars("prepare_current_B", ["binary", "hash"], "Prepared structure",
-                    "held after prepare (v2) · linear keeps the given array: 0 B")
+        memory_bars("prepare_current_B", METHODS, "Prepared structure",
+                    "held after prepare (v2): tuple copy, sorted copy, hash set")
     with b, card("mem-peak"):
         memory_bars("total_peak_B", METHODS, "Peak during prepare + query",
                     "includes temporaries such as sort buffers and set resizes (v2)")
