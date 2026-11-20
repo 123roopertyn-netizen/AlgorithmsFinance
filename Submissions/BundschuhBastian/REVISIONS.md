@@ -46,9 +46,30 @@ have no v2.
   `sys.setrecursionlimit` and depended on the Python version): `max_python_call_depth`
   uses `sys.setprofile` to count the deepest nesting of Python-level `call` events
   (restored in a `finally` block; C calls such as `sorted()` are not counted).
-  On 200,000 sorted IDs: `binary_v2` has depth 1 (the method itself; asserted `< 3`),
-  `binary_v1` has depth 21 (asserted `>= 15`, about log2(n) plus the method and the list
-  comprehension). On 200 IDs `binary_v1` has depth 11, so its depth grows with n.
+  On 200,000 sorted IDs: `binary_v2` has depth 2 (the method and its answer phase; asserted `< 3`),
+  `binary_v1` has depth 22 (asserted `>= 15`, about log2(n) plus the method, the answer
+  phase and the list comprehension). On 200 IDs `binary_v1` has depth 12, so its depth grows with n.
   Depth was measured on Python 3.11.0 only; the test does not use the recursion limit.
 
-Result: 307 passed.
+Result: 322 passed (step 5 added tests for the prepare/answer phases and the timing script).
+
+### Measured effect (step 5, `results/timing_summary.csv`, Apple M4, Python 3.11.0)
+
+Query phase only (sorted copy already built), median of 5 repeats, n = 100,000:
+
+| q | v1 recursive | v2 iterative | v2 / v1 |
+|---|---|---|---|
+| 1 | 1.9 us per batch | 1.2 us per batch | about 0.65 |
+| 100 | 0.177 to 0.188 ms per batch | 0.128 to 0.133 ms per batch | about 0.72 |
+
+v2 is faster in the query phase, as expected from the removed calls. Preparation (the
+sort) and the total for large n are about equal for v1 and v2, because the sort
+dominates: about 20 ms of the 21 to 25 ms total at n = 100,000, q = 100. The difference
+in `total` there is smaller than the spread between repeats.
+
+### Refactor note (step 5)
+
+To time preparation and queries separately, each method was split into
+`prepare(ids)` and `answer(state, queries)`. The public method is
+`answer(prepare(ids), queries)`, so the tested code is the timed code. Behaviour and
+expected results did not change.
