@@ -20,8 +20,15 @@ def _silent(*args, **kwargs):
 
 def test_input_is_not_counted():
     ids = list(range(100_000))
-    res = measure_method(V1["linear"], ids, [5])
-    assert res["prepare_current_B"] < 1_000  # linear keeps the given array, no copy
+    keeps_input = Method("keeps_input", lambda ids: ids, lambda state, queries: [q in state for q in queries])
+    res = measure_method(keeps_input, ids, [5])
+    assert res["prepare_current_B"] < 1_000  # the state is the input itself: nothing new
+
+
+def test_linear_tuple_copy_is_counted():
+    n = 100_000
+    res = measure_method(V1["linear"], list(range(n)), [5])
+    assert n * POINTER <= res["prepare_current_B"] <= n * POINTER + 1_024
 
 
 def test_sorted_copy_is_counted_once():
