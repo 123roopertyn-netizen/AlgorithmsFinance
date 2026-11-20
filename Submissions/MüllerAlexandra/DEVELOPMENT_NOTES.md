@@ -64,3 +64,11 @@ sorting dominates total time and normal measurement noise remains. For that
 reason, the accepted conclusion is limited to lower observed query-phase
 overhead in this run. A stronger claim that iteration always makes the complete
 operation faster was rejected by the recorded evidence.
+
+## Optional Docker validation
+
+The optional image was built from `python:3.12.10-slim` using the pinned direct
+dependencies. A clean container run collected and passed all 58 tests on Linux
+with Python 3.12.10. The image's default Streamlit command was also run with
+host port 8501 mapped to the container, and the saved dashboard charts rendered
+successfully. No files were edited inside the running container.

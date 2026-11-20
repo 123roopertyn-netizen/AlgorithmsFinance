@@ -17,7 +17,8 @@ given ID array unchanged.
 - Python 3.12 (measurements were developed with Python 3.12.10)
 - Dependencies pinned in `requirements.txt`
 
-Docker was not used because packaging is optional for this lab.
+Docker packaging is optional for this lab. A `Dockerfile` is provided for a
+reproducible Python 3.12.10 environment; local Python setup remains supported.
 
 ## Setup on Windows PowerShell
 
@@ -176,6 +177,57 @@ benchmark. It shows separate preparation, query-batch, and total charts with
 one curve per method/version, plus the memory table, raw repeats, loop counts,
 seeds, settings, definitions, code version, and machine/Python details.
 
+## Docker (optional)
+
+Docker commands must be run from `Submissions/MüllerAlexandra`. The image uses
+Python 3.12.10 and installs the exact direct dependency versions from
+`requirements.txt`.
+
+Build the image:
+
+```powershell
+docker build --tag algorithms-finance-mueller:phase1 .
+```
+
+Run all tests without editing files in the container:
+
+```powershell
+docker run --rm algorithms-finance-mueller:phase1 python -m pytest
+```
+
+Run the dashboard using the saved results packaged in the image:
+
+```powershell
+docker run --rm --publish 8501:8501 algorithms-finance-mueller:phase1
+```
+
+Open `http://localhost:8501` and stop the container with `Ctrl+C`.
+
+To display host-side saved results instead, mount them read-only:
+
+```powershell
+$savedResults = (Resolve-Path .\results).Path
+docker run --rm --publish 8501:8501 --mount "type=bind,source=$savedResults,target=/app/results,readonly" algorithms-finance-mueller:phase1
+```
+
+To run a new benchmark and save its output outside the temporary container,
+create a host directory and bind-mount it at `/app/results`. Replace
+`<CODE_VERSION>` with the commit hash being measured:
+
+```powershell
+New-Item -ItemType Directory -Force .\docker-results | Out-Null
+$dockerResults = (Resolve-Path .\docker-results).Path
+docker run --rm --mount "type=bind,source=$dockerResults,target=/app/results" algorithms-finance-mueller:phase1 python benchmark.py --code-version <CODE_VERSION>
+```
+
+Timing still describes the host machine and Docker resource limits. The
+container does not make timings portable across machines.
+
+The submitted Docker configuration was validated with Docker Desktop's Linux
+engine: the image built successfully, all 58 tests passed inside the container
+on Python 3.12.10, and the packaged dashboard rendered the saved results on
+port 8501.
+
 ## Project files
 
 - `algorithms.py` — original methods, preserved recursive binary search, and
@@ -188,6 +240,7 @@ seeds, settings, definitions, code version, and machine/Python details.
 - `DEVELOPMENT_NOTES.md` — trace, revision rationale, and AI-use record
 - `requirements.txt` — pinned direct dependencies
 - `results/` — generated raw JSON and CSV measurements
+- `Dockerfile` and `.dockerignore` — optional container packaging
 
 ## Interpretation limits
 
