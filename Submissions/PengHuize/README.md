@@ -138,6 +138,8 @@ Git workflow.
 
 ## Reproducible audit version
 
-The final commit hash to be audited will be recorded here after the full
-results are generated and committed. Reviewers should be able to run tests,
-the benchmark, and the dashboard without editing source files.
+The measured source snapshot to audit is commit
+`b7289538b761aceb086c921a190fb874f1f2331d`. It contains the full algorithms,
+tests, benchmark, dashboard, dependencies, and saved results. The source hash
+and run-time Git state are retained in `results/environment.json`. Reviewers
+can run tests, the benchmark, and the dashboard without editing source files.

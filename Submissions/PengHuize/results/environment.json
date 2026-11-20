@@ -1,5 +1,6 @@
 {
   "allow_duplicates": true,
+  "audited_source_commit": "b7289538b761aceb086c921a190fb874f1f2331d",
   "array_sizes": [
     1000,
     10000,
