@@ -36,7 +36,12 @@ TINTS = {
 }
 NEUTRAL_BAND = "rgba(159, 179, 200, 0.12)"  # e.g. measurement-noise band
 
-VERSION_DASH = {"v1": "dash", "v2": "solid"}  # version is encoded by line style
+# Version is encoded by line style (latest = solid) and, in the revision chart,
+# by marker shape; colour stays with the method.
+VERSION_DASH = {"v1": "dash", "v2": "dot", "v3": "solid"}
+VERSION_LABELS = {"v1": "v1 (original, recursive)", "v2": "v2 (iterative)", "v3": "v3 (lower bound)"}
+VERSION_SYMBOL = {"v2": "circle", "v3": "diamond"}
+VERSION_MARKER = {"v2": TINTS["binary"], "v3": METHOD_COLORS["binary"]}
 METHOD_LABELS = {"linear": "Linear search", "binary": "Binary search", "hash": "Hash set"}
 
 FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif'
@@ -124,6 +129,7 @@ html, body, .stApp, button, input, textarea {{ font-family: {FONT} !important; }
 .legend {{ display: flex; flex-wrap: wrap; gap: 16px; align-items: center; font-size: 0.84rem; color: var(--ink-2); margin: 2px 0 12px; }}
 .legend .sw {{ display: inline-block; width: 22px; height: 0; border-top: 2.5px solid; vertical-align: middle; margin-right: 7px; border-radius: 2px; }}
 .legend .sw.dash {{ border-top-style: dashed; }}
+.legend .sw.dot {{ border-top-style: dotted; }}
 .legend .dot {{ display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }}
 
 /* Context line under the filters */

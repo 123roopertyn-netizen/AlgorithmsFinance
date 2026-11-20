@@ -1,6 +1,6 @@
 """Version 1 of the three search methods (contract: see interface.py).
 
-linear  no preparation; each query scans the array until the first match.
+linear  preparation copies ids into a tuple; each query scans it until the first match.
 binary  preparation sorts a copy; each query runs a recursive binary search.
 hash    preparation builds a built-in set; each query is a set lookup.
 
@@ -15,9 +15,10 @@ from interface import Method
 # --- Linear search -----------------------------------------------------------
 
 def linear_prepare(ids):
-    # Nothing to prepare. The state is the given array itself; query() only
-    # reads it, so the array stays unchanged.
-    return ids
+    # Linear search needs no ordering, but the state must not follow later
+    # changes to ids (see interface.py). An immutable tuple copy guarantees
+    # that; it costs O(n) time and 8 bytes per entry.
+    return tuple(ids)
 
 
 def linear_query(ids, queries):

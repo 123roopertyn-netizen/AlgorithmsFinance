@@ -5,8 +5,9 @@ import statistics
 import pytest
 from data import (
     fmt_bytes, fmt_seconds, headline, load_memory, load_metadata, load_timing,
-    memory_summary, noise_bound, revision_ratios, timing_summary,
+    memory_summary, noise_bound, ranges_separated, relative_to_first, revision_ratios, timing_summary,
 )
+from registry import VERSIONS
 
 
 @pytest.fixture(scope="module")
@@ -20,8 +21,10 @@ def memory():
 
 
 def test_saved_results_are_complete(timing, memory):
-    assert len(timing) == 15 * 6 * 5
-    assert len(memory) == 15 * 6 * 3
+    n_pairs = sum(len(methods) for methods in VERSIONS.values())
+    assert sorted(timing["version"].unique()) == sorted(VERSIONS)
+    assert len(timing) == 15 * n_pairs * 5
+    assert len(memory) == 15 * n_pairs * 3
     assert load_metadata("timing")["code"]["uncommitted_changes_in_src_or_bench"] is False
     assert load_metadata("memory")["code"]["uncommitted_changes_in_src_or_bench"] is False
 
@@ -45,21 +48,38 @@ def test_memory_summary_matches_raw(memory):
     assert row["prepare_current_B"] == statistics.median(raw["prepare_current_B"])
 
 
-def test_revision_ratio_is_v2_over_v1(timing):
+@pytest.mark.parametrize("new,old,func", [("v2", "v1", "steps"), ("v3", "v2", "steps"), ("v3", "v1", "first")])
+def test_ratios_are_new_over_old(timing, new, old, func):
     summary = timing_summary(timing)
-    ratios = revision_ratios(summary)
-    r = ratios[(ratios["scenario"] == 0) & (ratios["method"] == "binary")].iloc[0]
+    ratios = revision_ratios(summary) if func == "steps" else relative_to_first(summary)
+    r = ratios[(ratios["scenario"] == 0) & (ratios["method"] == "binary") & (ratios["step"] == f"{new}/{old}")]
     s = summary[(summary["scenario"] == 0) & (summary["method"] == "binary")].set_index("version")
-    assert r["query_batch_s_ratio"] == pytest.approx(
-        s.loc["v2", "query_batch_s_median"] / s.loc["v1", "query_batch_s_median"])
+    assert len(r) == 1
+    assert r.iloc[0]["query_batch_s_ratio"] == pytest.approx(
+        s.loc[new, "query_batch_s_median"] / s.loc[old, "query_batch_s_median"])
 
 
 def test_headline_matches_readme_claims(timing, memory):
     summary = timing_summary(timing)
     ratios = revision_ratios(summary)
     h = headline(summary, memory_summary(memory), ratios)
-    assert 0.08 < h["speedup_min"] <= h["speedup_max"] < 0.16
-    assert h["noise"] == pytest.approx(noise_bound(ratios)) and h["noise"] < 0.07
+    assert set(h["steps"]) == {"v2/v1", "v3/v2"}
+    assert h["noise"] == pytest.approx(noise_bound(ratios))
+
+    # README: v2 is faster than v1 in all 15 scenarios, and the repeat ranges never overlap.
+    *_, count, _, faster = h["steps"]["v2/v1"]
+    assert faster == count == 15
+    assert len(ranges_separated(summary, "v2", "v1")) == 15
+
+    # README: v3 is faster than v2 in 14 of 15 scenarios (ranges separated in 11);
+    # clearly for absent and mixed queries, not consistently when every query hits.
+    low, _, count, _, faster = h["steps"]["v3/v2"]
+    assert count == 15 and faster == 14 and low < 0
+    assert len(ranges_separated(summary, "v3", "v2")) == 11
+    r = ratios[(ratios["method"] == "binary") & (ratios["step"] == "v3/v2")]
+    assert (r[r["hit_rate_target"] == 0.0]["query_batch_s_ratio"] < 0.87).all()  # 14-15 % faster
+    assert (r[r["hit_rate_target"] == 0.5]["query_batch_s_ratio"] < 0.95).all()  # 6-10 % faster
+    assert r[r["hit_rate_target"] == 1.0]["query_batch_s_ratio"].max() > 1.0  # one case slower
     assert h["fastest_q1"][0] == "linear"
     assert h["fastest_q100"][0] == "hash"
     assert 4.5 < h["hash_vs_sorted"] < 5.5

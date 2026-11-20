@@ -15,10 +15,10 @@ def app():
 
 def test_renders_all_tabs(app):
     assert not app.exception
-    assert [t.label for t in app.tabs] == ["Runtime", "Revision v1 → v2", "Memory", "Raw data", "Environment"]
+    assert [t.label for t in app.tabs] == ["Runtime", "Revisions", "Memory", "Raw data", "Environment"]
 
 
-@pytest.mark.parametrize("key,value", [("q", 1), ("q", 100), ("scale", "Linear"), ("versions", ["v1"]), ("versions", [])])
+@pytest.mark.parametrize("key,value", [("q", 1), ("q", 100), ("scale", "Linear"), ("versions", ["v1"]), ("versions", ["v3"]), ("versions", [])])
 def test_filters_do_not_break_the_page(app, key, value):
     app.segmented_control(key=key).set_value(value).run()
     assert not app.exception

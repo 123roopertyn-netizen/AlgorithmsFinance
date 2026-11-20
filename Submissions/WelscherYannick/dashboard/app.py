@@ -70,18 +70,27 @@ chips = [
 st.markdown(
     "<div class='hero'><div><h1>Search Lab</h1>"
     "<div class='sub'>Linear search, binary search and hash-set membership: runtime and memory, "
-    "original (v1) against revision (v2)</div></div>"
+    "original (v1) against two revisions (v2, v3)</div></div>"
     f"<div class='chips'>{''.join(chips)}</div></div>",
     unsafe_allow_html=True,
 )
 
 # --- KPI tiles ------------------------------------------------------------------
 f1, f100 = H["fastest_q1"], H["fastest_q100"]
-tiles = [
-    ("Revision gain", f"{H['speedup_min']:.0%}–{H['speedup_max']:.0%}",
-     f"lower binary query-batch time, v2 vs v1, in all {H['scenarios']} scenarios", T.METHOD_COLORS["binary"]),
+ALL_VERSIONS = H["versions"]
+def gain_tile(label, gain, accent):
+    lo, hi, count, median, faster = gain
+    return (label, f"{median:.0%} faster",
+            f"median binary query batch · faster in {faster} of {count} scenarios · range {lo:+.0%} to {hi:+.0%}",
+            accent)
+
+
+step_tiles = [gain_tile(f"Revision {s.replace('/', ' vs ')}", g, T.METHOD_COLORS["binary"])
+              for s, g in H["steps"].items()]
+tiles = step_tiles + [
+    gain_tile(f"{ALL_VERSIONS[-1]} vs {ALL_VERSIONS[0]} overall", H["overall"], T.TINTS["binary"]),
     ("Measurement noise", f"±{H['noise']:.1%}",
-     "largest v1/v2 query-batch gap for identical code (linear, hash)", T.INK_3),
+     "largest query-batch gap between versions for identical code (linear, hash)", T.INK_3),
     ("Fastest with 1 query", T.METHOD_LABELS[f1[0]],
      f"lowest total time in {f1[1]} of {f1[2]} scenarios", T.METHOD_COLORS[f1[0]]),
     ("Fastest with 100 queries", T.METHOD_LABELS[f100[0]],
@@ -105,8 +114,8 @@ with card("filters"):
     hit_options = [1.0, 0.0] if q == 1 else [1.0, 0.5, 0.0]
     hit = c2.segmented_control("Hit rate", hit_options, default=hit_options[-2] if q != 1 else 1.0,
                                format_func=lambda h: HIT_LABELS[h], required=True, key=f"hit_{q}")
-    versions = c3.segmented_control("Versions", ["v1", "v2"], selection_mode="multi",
-                                    default=["v1", "v2"], key="versions") or ["v2"]
+    versions = c3.segmented_control("Versions", ALL_VERSIONS, selection_mode="multi",
+                                    default=ALL_VERSIONS, key="versions") or [ALL_VERSIONS[-1]]
     scale = c4.segmented_control("Time axis", ["Log", "Linear"], default="Log", required=True, key="scale")
 
 sel = tsum[(tsum["q"] == q) & (tsum["hit_rate_target"] == hit)]
@@ -124,8 +133,8 @@ def legend_html(methods, versions):
     items = [f"<span><span class='dot' style='background:{T.METHOD_COLORS[mm]}'></span>{T.METHOD_LABELS[mm]}</span>"
              for mm in methods]
     if len(versions) > 1:
-        items += ["<span><span class='sw' style='border-color:#9FB3C8'></span>v2 (revision)</span>",
-                  "<span><span class='sw dash' style='border-color:#9FB3C8'></span>v1 (original)</span>"]
+        items += [f"<span><span class='sw {T.VERSION_DASH[v]}' style='border-color:{T.INK_2}'></span>"
+                  f"{T.VERSION_LABELS[v]}</span>" for v in sorted(versions, reverse=True)]
     return "<div class='legend'>" + "".join(items) + "</div>"
 
 
@@ -163,14 +172,14 @@ def time_chart(metric, methods=METHODS, label_end=True, decade_ticks=True):
 
 
 tab_time, tab_rev, tab_mem, tab_raw, tab_env = st.tabs(
-    ["Runtime", "Revision v1 → v2", "Memory", "Raw data", "Environment"])
+    ["Runtime", "Revisions", "Memory", "Raw data", "Environment"])
 
 # --- Runtime ----------------------------------------------------------------------
 with tab_time:
     st.markdown(legend_html(METHODS, versions), unsafe_allow_html=True)
     cols = st.columns(3)
     subs = {
-        "prepare_s": "sorting the copy or building the set; linear prepares nothing",
+        "prepare_s": "copying (linear), sorting a copy (binary) or building the set (hash)",
         "query_batch_s": f"all {q} {'query' if q == 1 else 'queries'} on a prepared state",
         "total_s": "preparation and query batch, timed together",
     }
@@ -183,26 +192,40 @@ with tab_time:
 with tab_rev:
     left, right = st.columns([1.35, 1])
     with left, card("ratios"):
-        card_header("Binary search: v2 / v1 query-batch time",
-                    "below 1 = revision faster · grey band = noise seen for identical code")
-        rb = ratios[ratios["method"] == "binary"].sort_values(["n", "q", "hit_rate_target"])
+        base = ALL_VERSIONS[0]
+        card_header(f"Binary search: query-batch time relative to {base}",
+                    f"each row runs from {base} (= 1) through the revisions · below 1 = faster · "
+                    "grey band = noise seen for identical code")
+        rel = D.relative_to_first(tsum)
+        rel = rel[rel["method"] == "binary"].sort_values(["n", "q", "hit_rate_target"])
+        later = ALL_VERSIONS[1:]
+        first = rel[rel["version"] == later[0]]
         labels = [f"n={n:,} · q={qq} · {HIT_LABELS[h].lower()}" for n, qq, h in
-                  zip(rb["n"], rb["q"], rb["hit_rate_target"])]
+                  zip(first["n"], first["q"], first["hit_rate_target"])]
         noise = H["noise"]
         fig = go.Figure()
         fig.add_vrect(x0=1 - noise, x1=1 + noise, fillcolor=T.NEUTRAL_BAND, line_width=0, layer="below")
         fig.add_vline(x=1.0, line=dict(color=T.INK_3, width=1))
-        for y, x in zip(labels, rb["query_batch_s_ratio"]):
+        last = rel[rel["version"] == later[-1]]["query_batch_s_ratio"].tolist()
+        for y, x in zip(labels, last):
             fig.add_shape(type="line", x0=1.0, x1=x, y0=y, y1=y, line=dict(color=T.METHOD_COLORS["binary"], width=2))
-        fig.add_trace(go.Scatter(
-            x=rb["query_batch_s_ratio"], y=labels, mode="markers",
-            marker=dict(size=10, color=T.METHOD_COLORS["binary"], line=dict(color=T.SURFACE, width=2)),
-            customdata=[[f"{1 - r:.1%}"] for r in rb["query_batch_s_ratio"]],
-            hovertemplate="<b>%{y}</b><br>v2/v1 = %{x:.3f}<br>%{customdata[0]} faster<extra></extra>",
-        ))
-        fig.update_xaxes(range=[0.8, 1.1], tickformat=".2f", title_text="v2 / v1 (median)")
+        for v in later:
+            rv = rel[rel["version"] == v]
+            fig.add_trace(go.Scatter(
+                x=rv["query_batch_s_ratio"], y=labels, mode="markers", name=T.VERSION_LABELS[v],
+                marker=dict(size=11, symbol=T.VERSION_SYMBOL[v], color=T.VERSION_MARKER[v],
+                            line=dict(color=T.SURFACE, width=2)),
+                customdata=[[v, f"{1 - r:.1%}"] for r in rv["query_batch_s_ratio"]],
+                hovertemplate=f"<b>%{{y}}</b><br>%{{customdata[0]}}/{base} = %{{x:.3f}}"
+                              "<br>%{customdata[1]} faster<extra></extra>",
+            ))
+        fig.update_xaxes(range=[0.7, 1.1], tickformat=".2f", title_text=f"version / {base} (median)")
         fig.update_yaxes(autorange="reversed", tickfont=dict(size=11, color=T.INK_2))
-        
+        st.markdown("<div class='legend'>" + "".join(
+            f"<span><span class='dot' style='background:{T.VERSION_MARKER[v]};"
+            f"border-radius:{'50%' if T.VERSION_SYMBOL[v] == 'circle' else '2px'};"
+            f"{'transform:rotate(45deg);' if T.VERSION_SYMBOL[v] == 'diamond' else ''}'></span>"
+            f"{T.VERSION_LABELS[v]}</span>" for v in later) + "</div>", unsafe_allow_html=True)
         show(fig, height=470)
     with right:
         with card("rev-line"):
@@ -212,10 +235,12 @@ with tab_rev:
         with card("rev-note"):
             card_header("What changed")
             st.markdown(
-                "<div class='note-text'>v1 searches recursively; v2 runs the same half-open search "
-                "<code>[lo, hi)</code> in a <code>while</code> loop. Midpoint and comparisons are identical, "
-                "so the comparison isolates the cost of Python function calls. Sorting is shared, which is why "
-                "the <b>total</b> time barely moves: preparation dominates it.</div>",
+                "<div class='note-text'><b>v1 → v2:</b> the recursive search becomes a <code>while</code> "
+                "loop over the same half-open range <code>[lo, hi)</code>; this removes the Python function "
+                "calls. <b>v2 → v3:</b> one comparison per step instead of two: the loop only asks "
+                "<code>s[mid] &lt; q</code> and finds the first position with a value ≥ q, then checks "
+                "once for equality. No early exit on a hit, but every step is cheaper, most visibly for "
+                "absent ids. Sorting is shared by all versions, so the <b>total</b> time barely moves.</div>",
                 unsafe_allow_html=True,
             )
 
@@ -228,7 +253,7 @@ def kib_label(b):
 
 
 def memory_bars(column, methods, title, sub):
-    d = msum[(msum["q"] == q) & (msum["hit_rate_target"] == hit) & (msum["version"] == "v2")]
+    d = msum[(msum["q"] == q) & (msum["hit_rate_target"] == hit) & (msum["version"] == ALL_VERSIONS[-1])]
     fig = go.Figure()
     for method in methods:
         dm = d[d["method"] == method].sort_values("n")
@@ -246,14 +271,14 @@ def memory_bars(column, methods, title, sub):
 
 
 with tab_mem:
-    st.markdown(legend_html(METHODS, ["v2"]), unsafe_allow_html=True)
+    st.markdown(legend_html(METHODS, [ALL_VERSIONS[-1]]), unsafe_allow_html=True)
     a, b = st.columns(2)
     with a, card("mem-prep"):
-        memory_bars("prepare_current_B", ["binary", "hash"], "Prepared structure",
-                    "held after prepare (v2) · linear keeps the given array: 0 B")
+        memory_bars("prepare_current_B", METHODS, "Prepared structure",
+                    f"held after prepare ({ALL_VERSIONS[-1]}): tuple copy, sorted copy, hash set")
     with b, card("mem-peak"):
         memory_bars("total_peak_B", METHODS, "Peak during prepare + query",
-                    "includes temporaries such as sort buffers and set resizes (v2)")
+                    f"includes temporaries such as sort buffers and set resizes ({ALL_VERSIONS[-1]})")
 
     with card("mem-table"):
         card_header("Memory measurements", f"q = {q}, {HIT_LABELS[hit].lower()} · medians over "

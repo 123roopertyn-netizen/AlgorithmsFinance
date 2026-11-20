@@ -12,6 +12,10 @@ Rules
     * ids and queries are never modified (not sorted in place, not emptied).
     * query() never modifies the prepared state, so one state can serve many
       query batches and repeated calls give identical results.
+    * The prepared state does not depend on later changes to ids: queries
+      answer for ids as they were when prepare() was called.
+    * Any sequence of ints is accepted (e.g. list or tuple), including ints
+      beyond 64 bits; the result is always a list.
 
 Each method is split into two stages so that preparation (sorting, building a
 hash set) and the query batch can be timed separately (slide 60):

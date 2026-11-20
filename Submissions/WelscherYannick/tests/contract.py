@@ -107,6 +107,40 @@ def check_repeated_calls(m):
     assert m.contains_all(ids, queries) == first, "fresh preparation differs"
 
 
+def check_big_integers(m):
+    big = 2 ** 70
+    ids = [big, -big, 0, 2 ** 63, 2 ** 63 - 1]
+    queries = [big, -big, 2 ** 63, 2 ** 63 + 1, 2 ** 64, -(2 ** 63), big + 1]
+    assert m.contains_all(ids, queries) == [True, True, True, False, False, False, False]
+
+
+def check_tuple_input(m):
+    ids, queries = (5, 3, 5, 1), (3, 9, 5)
+    result = m.contains_all(ids, queries)
+    assert result == [True, False, True]
+    assert isinstance(result, list)
+    assert ids == (5, 3, 5, 1) and queries == (3, 9, 5)
+
+
+def check_state_independent_of_later_changes(m):
+    ids = [4, 8, 15, 16]
+    state = m.prepare(ids)
+    ids.append(99)  # changed after preparation
+    ids[0] = -1
+    assert m.query(state, [99, -1, 4, 8]) == [False, False, True, True], (
+        "the prepared state follows later changes to ids"
+    )
+
+
+def check_binary_search_boundaries(m):
+    # Sorted arrays of every length 0..8 (odd and even), queried at every
+    # element and in every gap, including below the first and above the last.
+    for length in range(9):
+        ids = [10 * (i + 1) for i in range(length)]
+        queries = ids + [10 * i + 5 for i in range(length + 1)]
+        assert m.contains_all(ids, queries) == oracle(ids, queries), f"length {length}"
+
+
 def check_matches_oracle_on_generated(m):
     for n in (0, 1, 2, 10, 200):
         for hit_rate in (0.0, 0.5, 1.0):
@@ -135,5 +169,9 @@ ALL_CHECKS = [
     check_return_type,
     check_input_unchanged,
     check_repeated_calls,
+    check_big_integers,
+    check_tuple_input,
+    check_state_independent_of_later_changes,
+    check_binary_search_boundaries,
     check_matches_oracle_on_generated,
 ]

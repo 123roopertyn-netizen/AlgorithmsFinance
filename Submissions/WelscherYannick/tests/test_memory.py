@@ -8,6 +8,7 @@ import pytest
 from benchmark import BenchConfig
 from interface import Method
 from memory import COLUMNS, measure_method, run_memory
+from registry import VERSIONS
 from search_v1 import METHODS as V1
 
 TINY = BenchConfig(sizes=(10, 50), query_counts=(1, 5), hit_rates=(1.0, 0.0, 0.6))
@@ -20,8 +21,15 @@ def _silent(*args, **kwargs):
 
 def test_input_is_not_counted():
     ids = list(range(100_000))
-    res = measure_method(V1["linear"], ids, [5])
-    assert res["prepare_current_B"] < 1_000  # linear keeps the given array, no copy
+    keeps_input = Method("keeps_input", lambda ids: ids, lambda state, queries: [q in state for q in queries])
+    res = measure_method(keeps_input, ids, [5])
+    assert res["prepare_current_B"] < 1_000  # the state is the input itself: nothing new
+
+
+def test_linear_tuple_copy_is_counted():
+    n = 100_000
+    res = measure_method(V1["linear"], list(range(n)), [5])
+    assert n * POINTER <= res["prepare_current_B"] <= n * POINTER + 1_024
 
 
 def test_sorted_copy_is_counted_once():
@@ -56,7 +64,8 @@ def test_run_writes_rows_and_metadata(tmp_path):
     rows, _ = run_memory(TINY, tmp_path, repeats=2, log=_silent)
     with open(tmp_path / "memory_raw.csv", newline="") as f:
         saved = list(csv.DictReader(f))
-    assert len(saved) == len(rows) == 10 * 6 * 2  # scenarios x pairs x repeats
+    n_pairs = sum(len(methods) for methods in VERSIONS.values())
+    assert len(saved) == len(rows) == 10 * n_pairs * 2  # scenarios x pairs x repeats
     assert list(saved[0]) == COLUMNS
     assert all(int(r["prepare_peak_B"]) >= int(r["prepare_current_B"]) for r in saved)
     with open(tmp_path / "memory_metadata.json") as f:
