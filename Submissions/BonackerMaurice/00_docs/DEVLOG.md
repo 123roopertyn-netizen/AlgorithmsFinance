@@ -163,3 +163,14 @@ pass in the new layout.
 A flaky protocol test showed up while another benchmark ran on the same machine:
 `test_calibration_reaches_target_duration` depended on machine load. It now uses
 a fake clock, so it is deterministic. Its assertion was not weakened.
+
+## 9. Dashboard simplified; large-n exploration
+
+The first dashboard had nine tabs and was hard to read. It now has four
+(Overview, Runtime, Spot check, Details for auditors), with the same content.
+
+To test much longer lists than the slide grid, `explore/large_n.py` runs the
+unchanged timing phase on n = 100k, 1M and 10M (q = 10). Run
+`20261120-144435_2611dd1_large_quick` has the same source fingerprint as the
+official run. The findings are in the README section "Exploration: up to 10
+million IDs".

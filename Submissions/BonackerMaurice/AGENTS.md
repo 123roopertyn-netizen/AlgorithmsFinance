@@ -115,8 +115,10 @@ Submissions/BonackerMaurice/
       memory.py          memory phase (tracemalloc), run as a separate process
       run.py             orchestrator: tests, then timing, then memory, into ../02_results/<run_id>/
     dashboard/           app.py (Streamlit page), data.py (loading and derived tables)
+    explore/large_n.py   large-n exploration (n up to 10M): timing pipeline, custom grid
     tests/               pytest suite, plus mutation_check.py
-  02_results/<run_id>/   saved raw results (committed; *_quick runs are gitignored)
+  02_results/<run_id>/   saved raw results (committed; *_quick runs are gitignored, except
+                         the large-n run reported in the README)
 ```
 
 ## 4. Commands
@@ -130,6 +132,7 @@ python -m tests.mutation_check            # the tests catch deliberately buggy v
 python -m benchmarks.run                  # full run: tests, timing, memory -> ../02_results/<run_id>/
 python -m benchmarks.run --quick          # small grid for development (gitignored)
 python -m datagen.generator --n 1000 --q 100 --scenario mixed   # inspect one dataset
+python -m explore.large_n [sizes]         # exploration up to n = 10M (about 9 min; gitignored)
 python -m streamlit run dashboard/app.py  # dashboard on http://localhost:8501
 ```
 
