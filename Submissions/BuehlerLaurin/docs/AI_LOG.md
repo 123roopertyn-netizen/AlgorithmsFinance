@@ -46,3 +46,10 @@ For each step: what the AI suggested, and whether it was accepted, corrected or 
 | 8 | Add `state_is_input` column | Accepted (AI found its own labelling gap) | For linear search, getsizeof shows the caller's list (782 KiB) while tracemalloc shows 0: without the flag a reader could think linear search allocates memory. |
 | 8 | Trial run written to the scratchpad, not `results/memory/` | Accepted | Avoids committing results of uncommitted code again (Step 7 lesson); the official run follows on a clean commit. |
 | 8 | Skip the psutil RSS run | Accepted | Optional (MEM5); psutil is not installed and would need approval. |
+| 9 | `st.vega_lite_chart` with log-log axes instead of `st.line_chart` | Accepted | Times span 5 orders of magnitude (1e-7 to 3e-1 s); `st.line_chart` has no log scale. Vega-Lite is part of Streamlit, so no new dependency. |
+| 9 | Split loading (`dashboard/data.py`, pandas only) from display (`app.py`) | Accepted | Loading can be unit-tested; the app only renders. |
+| 9 | Default to the newest *clean* run; warn in the sidebar if a dirty run is selected | Accepted | The committed development run (Step 7) must not be shown as the official result by accident. |
+| 9 | Min-max bars of the repeats around each median | Accepted | Shows the noise directly (Step 7 lesson: look at the raw repeats). |
+| 9 | Test that the saved summary medians equal the medians recomputed from the raw repeats | Accepted | Phase 2 checklist A3 ("dashboard agrees with raw results") as an automatic test. |
+| 9 | Headless `AppTest` runs of the app for all q / hit-rate filters and an empty selection | Accepted | Reviewers get a crash check without opening a browser. |
+| 9 | First version of the filter test mixed display labels and values | Corrected | AI rewrote it before running: widgets got keys, and the test sets real values (q, hit rate). |

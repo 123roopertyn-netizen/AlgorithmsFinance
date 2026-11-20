@@ -146,7 +146,8 @@ Script: `python -m bench.memory` (tracemalloc, separate from timing). Input is n
 counted; "prepare" counts the prepared structure, "query" the output plus temporaries,
 "total" both. Values in KiB (1 KiB = 1,024 bytes), n = 100,000, q = 100, hit rate 0.5.
 tracemalloc values are deterministic here (0 bytes spread between 3 repeats).
-Official result file: added after the run on a clean commit.
+Official result file: `results/memory/memory_20261120T144911Z*` (commit `8b10cd7`,
+`git_dirty = false`).
 
 | phase | measure | binary v1 | binary v2 | linear | hash |
 |---|---|---:|---:|---:|---:|
