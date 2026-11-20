@@ -99,27 +99,43 @@ Interpretation:
 
 ## 6. Measured effect in the full benchmark (Step 7)
 
-Script: `python -m bench.timing`. Development run `results/raw/timing_20261120T143759Z*`
-(`git_dirty = true`; to be replaced by a run on a clean commit). Medians of 5 repeats,
-seconds. Preparation is the same `sorted(ids)` in both versions.
+Script: `python -m bench.timing`. **Official run:** `results/raw/timing_20261120T144207Z*`,
+commit `42ecde7`, `git_dirty = false`. (An earlier development run,
+`timing_20261120T143759Z*`, was made on an uncommitted tree, `git_dirty = true`; it is kept
+for transparency and gives the same picture.) Medians of 5 repeats, unit: seconds,
+"query batch" = all q queries together. Preparation is the same `sorted(ids)` in both versions.
 
 | n | q | hit | v1 prep | v1 query batch | v1 total | v2 prep | v2 query batch | v2 total |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1,000 | 100 | 0.5 | 4.3e-5 | 4.8e-4 | 5.5e-4 | 4.2e-5 | 1.6e-4 | 1.9e-4 |
-| 10,000 | 100 | 0.5 | 1.9e-3 | 3.1e-3 | 5.5e-3 | 1.9e-3 | 1.9e-4 | 2.2e-3 |
-| 100,000 | 100 | 0.5 | 2.7e-2 | 4.4e-2 | 6.7e-2 | 2.8e-2 | 2.6e-4 | 2.9e-2 |
-| 100,000 | 1 | 0.5 | 4.0e-2 | 7.9e-4 | 3.8e-2 | 3.5e-2 | 3.0e-6 | 3.7e-2 |
+| 1,000 | 100 | 0.5 | 4.3e-5 | 5.2e-4 | 5.3e-4 | 4.6e-5 | 1.6e-4 | 2.2e-4 |
+| 10,000 | 100 | 0.5 | 1.9e-3 | 2.9e-3 | 5.6e-3 | 2.1e-3 | 2.1e-4 | 2.2e-3 |
+| 100,000 | 100 | 0.5 | 2.8e-2 | 4.9e-2 | 7.6e-2 | 2.9e-2 | 2.5e-4 | 2.8e-2 |
+| 100,000 | 1 | 0.5 | 2.7e-2 | 6.0e-4 | 2.6e-2 | 2.8e-2 | 2.2e-6 | 2.8e-2 |
 
-- **Query batch:** v2 is about 3x (n = 1,000) to 170x (n = 100,000) faster. Confirmed.
-- **Total:** with q = 100 the gain shrinks to about 2.3-2.9x, because sorting is not
-  affected by the revision and takes most of v2's total time. With q = 1 the revision makes
-  no measurable difference in total time: one query is tiny next to the O(n log n) sort.
+- **Query batch:** v2 is about 3x (n = 1,000) to about 190x (n = 100,000) faster.
+  This matches O(n) per query for v1 (copying) against O(log n) for v2.
+- **Total:** with q = 100 the gain is about 2.4-2.7x, because sorting is not changed by
+  the revision and is most of v2's total time. With q = 1 the revision makes no
+  measurable difference in total time: one query is tiny next to the O(n log n) sort
+  (the q = 1 totals of v1 and v2 differ in both directions, within noise).
 - **Correctness:** unchanged; the benchmark checks every result against a `set` oracle.
-- **The v1 hit-vs-miss puzzle (section 5):** with interleaved measurement, v1 at
-  n = 100,000, q = 100 again shows a higher median for hit rate 1.0 (0.060 s) than 0.0
-  (0.045 s), but the raw repeats are bimodal (0.0475-0.0479 or 0.060-0.064 s); the fast
-  ones equal the all-absent case. Explanation: almost all of v1's copying is in the first
-  slices (n/2 + n/4 + ...), which hits and misses both make; an early hit only skips the
-  small last slices. The spread comes from allocating ~400 KB lists, not from the
-  algorithm. Lesson: a median of 5 repeats can still be pulled by noise; look at the raw
-  repeats before explaining a difference.
+
+### Noise level: an A/A comparison for free
+
+Linear search and hash set are *the same code* in v1 and v2 (decision Q4), so any
+difference between their two measurements is pure noise. In this run they differ by
+typically 5-15%, in single cells up to about 25%. Differences of that size between
+different methods should not be interpreted.
+
+### The v1 hit-vs-miss puzzle (section 5), resolved
+
+v1 at n = 100,000, q = 100 showed a higher median for hit rate 1.0 than for 0.0 in all
+three runs (Step 6, development run, official run), with large scatter (official run,
+hit rate 1.0: 0.051-0.132 s). A focused experiment with 30 interleaved repeats of the
+same query batches (not saved as a result file; method: GC off, `perf_counter`)
+gave medians of 47.4 ms (hits) vs. 49.6 ms (misses), equal minima (40.2 vs. 40.5 ms)
+and outliers around 100 ms in both groups. So there is **no real difference**: with 5
+repeats, a few slow outliers can move the median. In theory, v1 hits and misses copy
+almost the same amount: the first slices (n/2 + n/4 + ...) dominate, and a hit stops
+on average only 2.4 recursion levels earlier (14.3 vs. 16.7), where the slices are
+tiny. Lesson: look at the raw repeats before explaining a difference between medians.
