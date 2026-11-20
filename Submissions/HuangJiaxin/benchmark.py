@@ -18,6 +18,7 @@ Timing is run separately from memory tracing (see memory.py).
 import argparse
 import csv
 import json
+import os
 import platform
 import statistics
 import subprocess
@@ -72,6 +73,11 @@ def measure(method, ids, queries):
 
 
 def git_commit():
+    """Code version. Inside Docker there is no .git folder, so pass it in with
+    -e CODE_COMMIT=$(git rev-parse HEAD) (see README)."""
+    env = os.environ.get("CODE_COMMIT")
+    if env:
+        return env
     try:
         out = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
                              cwd=Path(__file__).parent)

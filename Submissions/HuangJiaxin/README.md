@@ -63,15 +63,16 @@ docker build -t huangjiaxin-membership .
 docker run --rm huangjiaxin-membership python -m pytest -q
 
 # measurements; results are written to ./results on the host through the volume
-docker run --rm -v "$(pwd)/results:/app/results" huangjiaxin-membership python benchmark.py
-docker run --rm -v "$(pwd)/results:/app/results" huangjiaxin-membership python breakeven.py
-docker run --rm -v "$(pwd)/results:/app/results" huangjiaxin-membership python memory.py
+docker run --rm -e CODE_COMMIT=$(git rev-parse HEAD) -v "$(pwd)/results:/app/results" huangjiaxin-membership python benchmark.py
+docker run --rm -e CODE_COMMIT=$(git rev-parse HEAD) -v "$(pwd)/results:/app/results" huangjiaxin-membership python breakeven.py
+docker run --rm -e CODE_COMMIT=$(git rev-parse HEAD) -v "$(pwd)/results:/app/results" huangjiaxin-membership python memory.py
 
 # dashboard on http://localhost:8501 (default command of the image)
 docker run --rm -p 8501:8501 -v "$(pwd)/results:/app/results" huangjiaxin-membership
 ```
 
-On Windows PowerShell replace `$(pwd)` with `${PWD}`. Timings inside a container
+`CODE_COMMIT` records the code version in `results/environment.json`, because the
+container has no `.git` folder. On Windows PowerShell replace `$(pwd)` with `${PWD}`. Timings inside a container
 depend on the host machine and any container resource limits.
 
 ## Tests
