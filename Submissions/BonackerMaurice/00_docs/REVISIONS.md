@@ -31,8 +31,23 @@ identical inputs. `CURRENT` names the version that represents the submission.
 
 **Evidence:**
 
-<!-- Fill from the committed full run: prepare, query and total medians at n=100,000,
-q=100 (mixed) for v1 and v2, the speed-up, and memory.csv prepare_peak_bytes. -->
+- **Source:** run `02_results/20261120-142828_8e8109a`, made from commit
+  `8e8109a` with a clean tree. Values are medians of 5 repeats.
+- **Dataset:** n = 100,000, q = 100, mixed.
+
+| | v1 | v2 | v1 / v2 |
+|---|---|---|---|
+| `prepare` | 331.3 µs | 0.1 µs (harness-overhead level, `noop_call_s` = 64 ns) | n/a |
+| `query` batch | 376.1 ms | 147.8 ms | **2.55×** |
+| `total` | 371.3 ms | 157.4 ms | 2.36× |
+| traced `prepare` peak | 781 KiB (8 bytes per ID) | 0 KiB | |
+
+- **Across all 15 datasets,** the query-batch speed-up is 1.86–2.94× (median
+  2.55), and v2 is faster in every dataset.
+- **This is well outside the noise band.** The same-code control below ranges
+  0.78–1.27.
+- **The fitted slope stays about 1** (query batch: v1 1.03, v2 0.96). The
+  revision changes the constant factor, not the complexity.
 
 ## Revision 2: BinarySearch v1 → v2
 
@@ -58,11 +73,35 @@ level, and the dashboard shows it as the "same-code control".
 
 **Evidence:**
 
-<!-- Fill from the committed full run: query-batch medians at n=100,000, q=100 for
-all_present and all_absent, v1 vs v2, and the same-code control ratio. -->
+The source is the same run as above. Query-batch medians at n = 100,000 and
+q = 100:
+
+| Scenario | v1 | v2 | v1 / v2 |
+|---|---|---|---|
+| all_present | 325.0 µs | 261.9 µs | 1.24× |
+| all_absent | 213.4 µs | 165.0 µs | 1.29× |
+| mixed | 184.6 µs | 154.3 µs | 1.20× |
+
+- **Across all 15 datasets:** the speed-up is 1.10–1.53× (median 1.26), and v2 is
+  faster in **15 of 15**.
+- **Noise caveat:** a single ratio of this size lies inside the noise band of
+  the same-code control. Binary `prepare` is identical code in v1 and v2, yet
+  its v1/v2 ratio has a median of 1.08 and a range of 0.78–1.27.
+- **Why the result still holds:** the evidence is the consistency. The revision
+  is faster in every dataset, and v1 and v2 are measured interleaved under the
+  same conditions.
+- **Early exit:** the expected benefit of v1's early exit on `all_present` is at
+  most a hint. The present speed-up is 1.24 against 1.29 for absent, which is
+  within noise.
+- **`total` does not show the revision:**
+  - At n = 100,000, sorting takes about 17–20 ms, against 0.15–0.18 ms for the
+    query batch.
+  - The total v1/v2 ratio (0.88) is therefore prepare noise.
+  - Memory is unchanged: the same sorted copy, with a 1,172 KiB traced peak
+    including timsort's merge buffer.
 
 ## Tests rerun after the revision
 
 The suite is parametrized over every registered method and version, so v1 and
-v2 always run the same tests. Result: see `02_results/<run_id>/tests.txt` of the
-committed run.
+v2 always run the same tests. Result: 674 passed, recorded in
+`02_results/20261120-142828_8e8109a/tests.txt`.

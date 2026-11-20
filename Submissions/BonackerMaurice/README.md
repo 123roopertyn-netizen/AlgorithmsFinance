@@ -5,11 +5,13 @@ hash-set membership under one specification. It includes tests written first,
 a seeded synthetic-data generator, timing and memory measurements, and a
 Streamlit dashboard for reviewers.
 
-**Commit to be audited:** `<fill in>`. This is the commit whose `01_code/` was
+**Commit to be audited:** `8e8109a`. This is the commit whose `01_code/` was
 measured. Later commits only add results and docs; `01_code/` is identical,
-which the source fingerprint in the dashboard verifies.
+which the source fingerprint `2621865bef6c…` in the dashboard verifies.
 
-**Committed results:** `02_results/<fill in>/`
+**Committed results:** `02_results/20261120-142828_8e8109a/`. The run had a
+clean tree, status `complete`, the source unchanged during the run, and 674
+tests passed.
 
 ## Run it
 
@@ -99,6 +101,40 @@ index loop with direct iteration.
 
 Both versions are kept and measured. The details and the numbers are in
 [00_docs/REVISIONS.md](00_docs/REVISIONS.md).
+
+## Results at a glance
+
+Run `20261120-142828_8e8109a`, on Windows 11 with Python 3.13.15. Values are
+medians of 5 repeats. The full data, environment and spread are in the
+dashboard.
+
+| n = 100,000, q = 100, mixed | prepare | query batch | total |
+|---|---|---|---|
+| LinearSearch v2 | 0.1 µs | 147.8 ms | 157.4 ms |
+| BinarySearch v2 | 17.5 ms | 154 µs | 19.3 ms |
+| Hash set | 8.5 ms | 2.4 µs | 7.0 ms |
+
+Fitted log–log slopes of the median against n, for q = 100 mixed:
+
+| | prepare | query batch | Expected |
+|---|---|---|---|
+| Linear v1 / v2 | 1.12 / 0.01 | 1.03 / 0.96 | copy ≈ 1, no work ≈ 0; scan ≈ 1 |
+| Binary v1 / v2 | 1.29 / 1.31 | 0.12 / 0.10 | n log n ≈ 1.1; log n ≈ 0.1 |
+| Hash | 1.30 | 0.03 | ≈ 1; ≈ 0 |
+
+Reading these results:
+
+- **Linear search vs the others:** for a single batch of 100 queries, linear
+  search costs more than binary search plus its sort, which costs more than the
+  hash set plus its construction.
+- **Prepare slopes above 1:** sorting and set construction come out at about
+  1.3 instead of 1–1.1. At n = 100,000 the structures (about 0.8–4 MiB) outgrow
+  the CPU caches, so each element costs more at large n.
+- **Measurement noise:** binary v1 and v2 share identical `prepare` code, but
+  their measured ratio still ranges 0.78–1.27. Differences below about 25%
+  between single measurements, such as hash `total` coming out below hash
+  `prepare`, are therefore within noise. Compare ratios that hold consistently
+  across datasets instead.
 
 ## Tests
 
