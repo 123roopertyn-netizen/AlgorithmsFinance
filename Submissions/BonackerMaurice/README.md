@@ -6,8 +6,10 @@ a seeded synthetic-data generator, timing and memory measurements, and a
 Streamlit dashboard for reviewers.
 
 **Commit to be audited:** `8e8109a`. This is the commit whose `01_code/` was
-measured. Later commits only add results and docs; `01_code/` is identical,
-which the source fingerprint `2621865bef6c…` in the dashboard verifies.
+measured. Later commits add results and docs and simplify the dashboard
+(`dashboard/` and its smoke test only). The measured code (`search_algos/`,
+`datagen/`, `benchmarks/`) is identical, which the source fingerprint
+`2621865bef6c…` in the dashboard verifies.
 
 **Committed results:** `02_results/20261120-142828_8e8109a/`. The run had a
 clean tree, status `complete`, the source unchanged during the run, and 674
@@ -251,22 +253,25 @@ absolute values across machines.
 ## Dashboard (`01_code/dashboard/`)
 
 `python -m streamlit run dashboard/app.py` reads saved results only and never
-runs a benchmark. It shows:
+runs a benchmark. It has four tabs:
 
-- **Provenance:** commit, warnings, source-fingerprint check, environment, and
-  the reproduce commands.
-- **Test evidence:** the counts and the per-test table.
-- **Definitions and inputs:** what each segment includes and excludes, and every
-  dataset.
-- **Runtime against n:** log–log, with prepare, query batch and total shown
-  separately.
-- **v1 against v2:** speed-ups, and a same-code control: binary v1 and v2 share
-  `prepare`, so their ratio shows the noise level.
-- **Scaling check:** fitted slopes next to the expected orders.
-- **Memory:** the tracemalloc table.
-- **Raw repeats:** every measurement, with downloads.
+- **Overview:** the measured commit, the test result, the key results table
+  (n = 100,000, q = 100, mixed), the v1 → v2 speed-ups with the noise band, and
+  the reproduce commands. Warnings appear only when something is wrong.
+- **Runtime:** time against n on log–log axes (prepare, query batch and total),
+  filtered by q and scenario in the sidebar, with a toggle to compare v1 and v2
+  and the fitted slopes next to their expected values.
 - **Spot check:** type your own IDs and queries and compare every method side by
   side.
+- **Details for auditors:** everything else, one section at a time:
+  - provenance and environment, including the source-fingerprint check
+  - the per-test results and the mutation check
+  - definitions, settings and the datasets with checksums
+  - every v1/v2 ratio and the same-code control (binary v1 and v2 share
+    `prepare`, so their ratio shows the noise level)
+  - local slopes for every q and scenario
+  - the tracemalloc memory table
+  - the raw repeats, and downloads of every file
 
 ## Dependencies
 

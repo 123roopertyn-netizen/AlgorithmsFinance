@@ -7,7 +7,7 @@
 application-control policies block streamlit.exe.)
 
 It only reads saved files (cached with st.cache_data) and never runs a benchmark.
-The spot-check tab calls the algorithms on small inputs typed by the reviewer
+The Spot check tab calls the algorithms on small inputs typed by the reviewer
 (correctness only, nothing is timed).
 """
 import sys
@@ -147,23 +147,21 @@ def legend_line(df, dash_versions):
     st.markdown("&nbsp;&nbsp;&nbsp;".join(items), unsafe_allow_html=True)
 
 
-def segment_charts(df, run, q, scenario, per_query, spread, dash_versions=False):
-    """Three charts side by side: prepare, query batch (or derived per query), total."""
+def segment_charts(df, run, q, scenario, dash_versions=False):
+    """Three charts side by side: prepare, query batch, total."""
     legend_line(df, dash_versions)
     for col, segment in zip(st.columns(3), SEGMENTS):
         d = df[df["segment"] == segment]
         d = d.assign(overhead=data.near_overhead(d, run["config"]))  # on the measured batch time
         title = TITLES[segment]
-        if segment == "query" and per_query:
-            d, title = data.per_query(d), "Per query (derived = batch / q)"
         if d.empty:
             col.info(f"No {segment} rows.")
             continue
         # Second title line instead of a subtitle: subtitles are barely legible in dark mode.
         lines = [title, f"q = {q} · {scenario} · {hit_rate_text(run, q, scenario, short=True)}"]
-        col.altair_chart(time_chart(d, lines, dash_versions, spread), width="stretch")
+        col.altair_chart(time_chart(d, lines, dash_versions), width="stretch")
     st.caption(f"Hollow points: median within {data.OVERHEAD_FACTOR}× the harness overhead of "
-               "its segment (overhead-dominated, see Definitions).")
+               "its segment (overhead-dominated, see Details → Definitions).")
 
 
 # --- sections ------------------------------------------------------------------------
@@ -229,8 +227,10 @@ def provenance_tab(run):
                     f"from the measured code's (`{source['sha256'][:12]}…`): you are not looking "
                     "at the code that produced these numbers.")
 
-    st.subheader("Reproduce")
-    tests = (cfg.get("tests") or {}).get("summary") or "see Correctness tab"
+
+def reproduce_commands(run):
+    cfg, git = run["config"], (run["env"] or {}).get("git") or {}
+    tests = (cfg.get("tests") or {}).get("summary") or "see Details → Tests"
     commit = git.get("commit") or "<commit unknown>"
     st.code(f"# from a clone of the course repository\n"
             f"git checkout {commit}\n"
@@ -390,45 +390,163 @@ def definitions_tab(run):
     st.code("python -m datagen.generator --n 1000 --q 100 --scenario mixed", language="bash")
 
 
-def runtime_tab(run, q, scenario, per_query, spread):
-    summary, current = run["summary"], run["config"].get("current", {})
-    st.markdown("Current versions only: " + ", ".join(f"**{m} {v}**" for m, v in current.items())
-                + f". Median of the repeats, log–log axes; vertical bars show min–max.")
-    sel = current_only(select(summary, q, scenario), current)
-    segment_charts(sel, run, q, scenario, per_query, spread)
-    first_hit_caption(run, q, scenario)
-    st.caption("Straight lines on log–log axes mean time ∝ n^slope (see the Scaling check tab). "
-               "Times are per complete batch of q queries unless the per-query (derived) toggle "
-               "is on.")
-    with st.expander("Values behind these charts"):
-        unit, size = data.pick_unit(sel["median_s"])
-        table = in_unit(sel, size).assign(overhead=data.near_overhead(sel, run["config"]))
-        table = data.sort_rows(table)[["label", "segment", "n", "median", "min", "max",
-                                       "repeats", "overhead"]]
-        st.dataframe(table, hide_index=True, column_config={
-            **{c: num("%.4g", label=f"{c} ({unit})") for c in ("median", "min", "max")},
-            "overhead": st.column_config.CheckboxColumn(
-                "overhead-dominated", help=f"Median within {data.OVERHEAD_FACTOR}× the harness "
-                                           "overhead of its segment.")})
+def same_code_control(speed, methods):
+    """(method, prepare rows) for a method whose v1 and v2 share the prepare function, else None.
+
+    Identical code on identical arrays: the spread of its v1/v2 ratio is the noise band.
+    """
+    for method in methods:
+        try:
+            same_code = get_method(method, "v1").prepare is get_method(method, "v2").prepare
+        except KeyError:
+            same_code = False
+        ctrl = speed[(speed["method"] == method) & (speed["segment"] == "prepare")]
+        if same_code and not ctrl.empty:
+            return method, ctrl
+    return None
 
 
-def revision_tab(run, q, scenario, per_query, spread):
+def headline(summary):
+    """The dataset the overview reports: largest n, largest q, mixed if measured."""
+    n, q = summary["n"].max(), summary["q"].max()
+    measured = set(summary.loc[summary["q"] == q, "scenario"])
+    scenario = "mixed" if "mixed" in measured else sorted(measured)[0]
+    return n, q, scenario
+
+
+def overview_tab(run):
+    cfg, env = run["config"], run["env"] or {}
+    git, tests, summary = env.get("git") or {}, run["tests"], run["summary"]
+    current = cfg.get("current", {})
+
+    cols = st.columns(4)
+    cols[0].metric("Measured commit", git.get("short") or "unknown", border=True)
+    cols[1].metric("Working tree", {True: "dirty", False: "clean"}.get(git.get("dirty"), "unknown"),
+                   border=True)
+    cols[2].metric("Run status", cfg.get("status", "not recorded"), border=True)
+    if tests is not None:
+        c = tests["counts"]
+        cols[3].metric("Tests", f"{c['passed']} / {c['total']} passed", border=True)
+        if c["failed"] or c["error"]:
+            st.error(f"{c['failed']} failed and {c['error']} errors in this run's test suite "
+                     "(Details → Tests).")
+        else:
+            st.success(f"All {c['passed']} tests passed in this run, with the same tests for every "
+                       "method and version. The mutation check (command below) shows they catch "
+                       "deliberately wrong code.")
+    else:
+        cols[3].metric("Tests", "not in run", border=True)
+
+    if summary is None:
+        st.info("timings_summary.csv is not part of this run.")
+    else:
+        n, q, scenario = headline(summary)
+        sel = current_only(select(summary, q, scenario), current)
+        sel = sel[sel["n"] == n]
+        slopes = data.scaling_table(summary, q, scenario, cfg)
+        rows = []
+        for method in METHOD_COLORS:
+            d = sel[sel["method"] == method]
+            if d.empty:
+                continue
+            t = dict(zip(d["segment"], d["median_s"]))
+            s = slopes[(slopes["method"] == method) & (slopes["version"] == current.get(method))
+                       & (slopes["segment"] == "query")] if not slopes.empty else slopes
+            rows.append({"method": d["label"].iloc[0],
+                         **{TITLES[seg]: data.format_seconds(t[seg]) if seg in t else "–"
+                            for seg in SEGMENTS},
+                         "query batch grows like": (f"n^{s['fitted_slope'].iloc[0]:.2f}"
+                                                    if len(s) else "–")})
+        st.subheader("Key results")
+        st.table(pd.DataFrame(rows), hide_index=True)
+        repeats = cfg.get("grid", {}).get("repeats", "?")
+        st.caption(f"Current versions, n = {n:,}, q = {q}, {scenario} "
+                   f"({hit_rate_text(run, q, scenario, short=True)}). Median of {repeats} "
+                   "repeats, time per call; Total = a fresh prepare plus the whole batch. "
+                   "The growth exponent is the fitted log–log slope over all n. Other n, q and "
+                   "scenarios: Runtime tab.")
+
+        methods = data.two_version_methods(cfg)
+        if methods:
+            speed = data.speedup_table(summary, methods)
+            lines = []
+            for method in methods:
+                s = speed[(speed["method"] == method) & (speed["segment"] == "query")]
+                if s.empty:
+                    continue
+                at = s[(s["n"] == n) & (s["q"] == q) & (s["scenario"] == scenario)]
+                head = f"**{at['speedup'].iloc[0]:.2f}×** here, " if len(at) else ""
+                lines.append(f"- **{method}** query batch: {head}{s['speedup'].min():.2f}–"
+                             f"{s['speedup'].max():.2f}× over all {len(s)} datasets (median "
+                             f"{s['speedup'].median():.2f}); v2 faster in "
+                             f"{int((s['speedup'] > 1).sum())} of {len(s)}.")
+            control = same_code_control(speed, methods)
+            if control:
+                m, ctrl = control
+                lines.append(f"- **Noise band:** {m} prepare is identical code in v1 and v2, yet "
+                             f"its ratio ranges {ctrl['speedup'].min():.2f}–"
+                             f"{ctrl['speedup'].max():.2f}×. A single ratio inside this band is "
+                             "not evidence on its own; consistency across datasets is.")
+            st.subheader("Revision: speed-up v1 (original) → v2 (revised)")
+            st.markdown("\n".join(lines))
+            st.caption("Speed-up = median v1 / median v2; > 1 means v2 is faster. Curves: Runtime "
+                       "tab (compare toggle). Every ratio: Details → v1 vs v2 numbers. Why: "
+                       "00_docs/REVISIONS.md.")
+
+    st.subheader("Reproduce")
+    reproduce_commands(run)
+    st.caption("Everything else (environment, per-test results, definitions, datasets and "
+               "checksums, memory, raw repeats, downloads) is in the Details tab.")
+
+
+def runtime_tab(run, q, scenario):
+    summary, cfg = run["summary"], run["config"]
+    current = cfg.get("current", {})
+    methods = data.two_version_methods(cfg)
+    compare = st.toggle("Compare original (v1) and revised (v2)", key="compare",
+                        disabled=not methods)
+    sel = select(summary, q, scenario)
+    if not compare:
+        st.markdown("Current versions: " + ", ".join(f"**{m} {v}**" for m, v in current.items())
+                    + ". Median of the repeats on log–log axes; vertical bars show the min–max "
+                    "of the repeats. Change q and the scenario in the sidebar.")
+        segment_charts(current_only(sel, current), run, q, scenario)
+        first_hit_caption(run, q, scenario)
+    else:
+        descriptions = {m["key"]: m["description"] for m in cfg.get("methods", [])}
+        for method in methods:
+            st.subheader(f"{method}: v1 (original) vs v2 (revised)")
+            st.markdown(f"- **v1**: {descriptions.get(method + '_v1', '')}\n"
+                        f"- **v2**: {descriptions.get(method + '_v2', '')}")
+            segment_charts(sel[sel["method"] == method], run, q, scenario, dash_versions=True)
+        first_hit_caption(run, q, scenario)
+
+    st.subheader("Growth with n: fitted log–log slope (time ∝ n^slope)")
+    table = data.scaling_table(summary, q, scenario, cfg)
+    if table.empty or summary["n"].nunique() < 2:
+        st.info("At least two array lengths are needed for a slope.")
+        return
+    if not compare:
+        table = current_only(table, current)
+    table["cell"] = [f"{s:.2f}   (expected {e})" for s, e in
+                     zip(table["fitted_slope"], table["expected"])]
+    pivot = table.pivot_table(index="label", columns="segment", values="cell", aggfunc="first",
+                              sort=False)
+    pivot = pivot.reindex(columns=[s for s in SEGMENTS if s in pivot.columns])
+    st.table(pivot.rename(columns=TITLES).rename_axis(None, axis=1).rename_axis("method"))
+    st.caption("About 1 means time grows linearly with n, about 0 means constant. The expected "
+               "values are bands, not pass/fail thresholds (n log n, log n and cache effects)."
+               + (" With q = 1 the query batch is a single lookup close to the call overhead, so "
+                  "its slope is unreliable; prefer q = 100." if q == 1 else "")
+               + " Local slopes and every q and scenario: Details → Scaling slopes.")
+
+
+def revision_details(run):
     summary, cfg = run["summary"], run["config"]
     methods = data.two_version_methods(cfg)
     if not methods:
         st.info("No method has both a v1 and a v2 in this run.")
         return
-    descriptions = {m["key"]: m["description"] for m in cfg.get("methods", [])}
-    for method in methods:
-        st.subheader(f"{method}: v1 (original) vs v2 (revised)")
-        st.markdown(f"- **v1**: {descriptions.get(method + '_v1', '')}\n"
-                    f"- **v2**: {descriptions.get(method + '_v2', '')}")
-        sel = select(summary, q, scenario)
-        segment_charts(sel[sel["method"] == method], run, q, scenario, per_query, spread,
-                       dash_versions=True)
-        if method == "linear":
-            first_hit_caption(run, q, scenario)
-
     speed = data.speedup_table(summary, methods)
     st.subheader("Speed-up = median v1 / median v2")
     st.caption("> 1 means v2 is faster, < 1 means v1 is faster. All q and scenarios; per "
@@ -441,16 +559,9 @@ def revision_tab(run, q, scenario, per_query, spread):
                  column_config={c: num("%.2f") for c in pivot.columns if c.startswith("n =")})
 
     band = None
-    for method in methods:
-        try:
-            same_code = get_method(method, "v1").prepare is get_method(method, "v2").prepare
-        except KeyError:
-            same_code = False
-        if not same_code:
-            continue
-        ctrl = speed[(speed["method"] == method) & (speed["segment"] == "prepare")]
-        if ctrl.empty:
-            continue
+    control = same_code_control(speed, methods)
+    if control:
+        method, ctrl = control
         band = (ctrl["speedup"].min(), ctrl["speedup"].max())
         st.subheader(f"Same-code control: {method} prepare")
         st.markdown(
@@ -633,15 +744,14 @@ def _apply_preset():
 def spot_check_tab():
     here = checked_out_git()
     st.markdown(
-        "Type an ID array and queries (integers separated by commas or spaces, at most "
-        f"{data.MAX_SPOT_ELEMENTS:,} each). Every registered method/version is called through "
-        "`Method.__call__` (input validation, then prepare and query) on its own copy of the "
-        "input and compared with the reference `[q in list(ids) for q in queries]`. Tokens that "
-        "are not integers are passed on as float, bool or str, so you can see the validation "
-        "reject them with TypeError. Nothing is timed.")
-    st.caption(f"Runs the checked-out code (commit {here.get('short') or 'unknown'}"
-               f"{', with uncommitted changes' if here.get('dirty') else ''}), which is not "
-               "necessarily the measured commit.")
+        "Try your own input: type an ID array and queries (integers separated by commas or "
+        f"spaces, at most {data.MAX_SPOT_ELEMENTS:,} each) or pick a preset, then compare every "
+        "method/version with the reference `[q in list(ids) for q in queries]`.")
+    st.caption("Each method runs through `Method.__call__` (validation, prepare, query) on its "
+               "own copy of the input. Non-integer tokens are passed on as float, bool or str, "
+               "so invalid input should raise TypeError. Nothing is timed. Runs the checked-out "
+               f"code (commit {here.get('short') or 'unknown'}"
+               f"{', with uncommitted changes' if here.get('dirty') else ''}).")
     first = next(iter(PRESETS))
     st.session_state.setdefault("spot_ids", PRESETS[first][0])
     st.session_state.setdefault("spot_queries", PRESETS[first][1])
@@ -739,14 +849,14 @@ def main():
     if git.get("dirty"):
         dirty = git.get("dirty_files", [])
         listed = (", ".join(f"`{f.strip()}`" for f in dirty) if len(dirty) <= 5
-                  else f"{len(dirty)} (listed in the Provenance tab)")
+                  else f"{len(dirty)} (listed in Details → Provenance)")
         st.warning("**Uncommitted changes at run time (git dirty).** The commit hash does not "
-                   "identify the measured code exactly; the source fingerprint (Provenance tab) "
+                   "identify the measured code exactly; the source fingerprint (Details → Provenance) "
                    f"does. Dirty files: {listed}")
     elif run["env"] and git.get("dirty", "missing") is None:
         st.warning("**Git state unknown at run time** (git unavailable or not a repository). "
                    "The commit hash cannot identify the measured code; rely on the source "
-                   "fingerprint in the Provenance tab.")
+                   "fingerprint in Details → Provenance.")
     if by_path[path]["quick"]:
         st.info("This is a quick development run (small grid, fewer repeats), not the full "
                 "measurement grid.")
@@ -763,7 +873,7 @@ def main():
     qs = sorted(summary["q"].unique().tolist()) if summary is not None else grid.get(
         "query_counts", [])
     q = st.sidebar.selectbox("Query count q", qs, index=len(qs) - 1 if qs else None, key="q",
-                             help="Applies to the runtime, revision, scaling and memory tabs.")
+                             help="Applies to the Runtime tab and to Details → Scaling slopes and Memory.")
     # Only the scenarios measured for this q (e.g. q = 1 "mixed" is not part of the grid).
     measured = set(summary.loc[summary["q"] == q, "scenario"]) if summary is not None else set()
     scenarios = ([s for s in data.SCENARIO_ORDER if s in measured]
@@ -771,36 +881,41 @@ def main():
     scenario = st.sidebar.selectbox("Scenario", scenarios, key="scenario",
                                     index=scenarios.index("mixed") if "mixed" in scenarios else 0,
                                     help="Scenarios measured for the chosen q.")
-    per_query = st.sidebar.toggle("Query segment per query (derived = batch / q)", key="per_query")
-    spread = st.sidebar.toggle("Show min–max of the repeats", value=True, key="spread")
     st.sidebar.caption(f"{len(runs)} run(s) in the results folder. Times are seconds per call, "
                        "shown in the unit named on each axis or column.")
 
-    tabs = st.tabs(["Provenance", "Correctness", "Definitions & inputs", "Runtime vs n",
-                    "Original vs revised", "Scaling check", "Memory", "Raw data", "Spot check"])
-    with tabs[0]:
-        provenance_tab(run)
-    with tabs[1]:
-        correctness_tab(run)
-    with tabs[2]:
-        definitions_tab(run)
-    timing_tabs = tabs[3:6]
-    if summary is None or q is None:
-        for tab in timing_tabs:
-            tab.info("timings_summary.csv is not part of this run.")
-    else:
-        with tabs[3]:
-            runtime_tab(run, q, scenario, per_query, spread)
-        with tabs[4]:
-            revision_tab(run, q, scenario, per_query, spread)
-        with tabs[5]:
-            scaling_tab(run, q, scenario)
-    with tabs[6]:
-        memory_tab(run, q, scenario)
-    with tabs[7]:
-        raw_tab(run)
-    with tabs[8]:
+    overview, runtime, spot, details = st.tabs(["Overview", "Runtime", "Spot check",
+                                                "Details for auditors"])
+    with overview:
+        overview_tab(run)
+    with runtime:
+        if summary is None or q is None:
+            st.info("timings_summary.csv is not part of this run.")
+        else:
+            runtime_tab(run, q, scenario)
+    with spot:
         spot_check_tab()
+    with details:
+        details_tab(run, q, scenario)
+
+
+def details_tab(run, q, scenario):
+    timed = run["summary"] is not None and q is not None
+    sections = {
+        "Provenance & environment": lambda: provenance_tab(run),
+        "Tests": lambda: correctness_tab(run),
+        "Definitions & inputs": lambda: definitions_tab(run),
+        "v1 vs v2 numbers": lambda: revision_details(run),
+        "Scaling slopes": lambda: scaling_tab(run, q, scenario),
+        "Memory": lambda: memory_tab(run, q, scenario),
+        "Raw data & downloads": lambda: raw_tab(run),
+    }
+    section = st.radio("Section", list(sections), horizontal=True, key="details",
+                       label_visibility="collapsed")
+    if section in ("v1 vs v2 numbers", "Scaling slopes") and not timed:
+        st.info("timings_summary.csv is not part of this run.")
+        return
+    sections[section]()
 
 
 main()

@@ -242,7 +242,20 @@ timestamp in UTC.
 ## 8. Dashboard (`01_code/dashboard/`)
 
 The audience is the **Phase 2 reviewer**. The dashboard loads saved results only
-and never reruns benchmarks. It has these parts:
+and never reruns benchmarks. Keep it readable: four tabs, with the main page
+showing only what a reviewer needs first.
+
+- **Overview:** measured commit, tree state, run status and test result; the key
+  results table (current versions, largest n and q, mixed); the v1 → v2
+  speed-ups with the same-code noise band; the reproduce commands. Warnings
+  appear above the tabs only when something is wrong.
+- **Runtime:** item 4 below, with a "compare v1 and v2" toggle (item 5's
+  curves) and a compact slope table (item 6).
+- **Spot check:** item 9.
+- **Details for auditors:** items 1–3, 5 (tables), 6 (full), 7 and 8, one
+  section at a time.
+
+The content these tabs must cover:
 
 1. **Provenance:**
    - commit and branch, the dirty and unknown-git warnings, and the run status
