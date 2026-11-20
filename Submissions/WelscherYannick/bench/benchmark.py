@@ -308,7 +308,8 @@ def main(argv=None):
     print_summary(rows)
     if metadata["code"]["uncommitted_changes_in_src_or_bench"]:
         print("\nWARNING: src/ or bench/ has uncommitted changes; results do not match a commit.")
-    print(f"\nWrote {len(rows)} rows to {out}")
+    shown = out.relative_to(PROJECT_DIR) if out.is_relative_to(PROJECT_DIR) else out
+    print(f"\nWrote {len(rows)} rows to {shown}")
 
 
 if __name__ == "__main__":

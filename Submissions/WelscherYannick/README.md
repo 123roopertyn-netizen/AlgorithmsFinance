@@ -14,7 +14,7 @@ Python 3.11 or newer.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m pytest                    # expected: 140 passed
+.venv/bin/python -m pytest                    # expected: 146 passed
 .venv/bin/python bench/benchmark.py           # timing, about 1-2 minutes, writes results/
 .venv/bin/python bench/memory.py              # memory, a few seconds, writes results/
 .venv/bin/streamlit run dashboard/app.py      # dashboard on http://localhost:8501
@@ -55,7 +55,7 @@ Example from the slides: array `[7, 11, 7]`, queries `[11, 9, 7]` →
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest        # expected: 140 passed, in a few seconds
+.venv/bin/python -m pytest        # expected: 146 passed, in about 10 seconds
 ```
 
 | File | Tests | What it checks |
@@ -66,6 +66,7 @@ Example from the slides: array `[7, 11, 7]`, queries `[11, 9, 7]` →
 | `tests/test_benchmark.py` | 4 | Timing code: fresh state per repeat, output schema, result check |
 | `tests/test_memory.py` | 7 | Memory code counts a known allocation, the sorted copy and the output, but not the input |
 | `tests/test_dashboard_data.py` | 11 | Dashboard numbers agree with the raw result files |
+| `tests/test_dashboard_app.py` | 6 | The dashboard renders without exceptions, also after changing each filter |
 
 The contract checks (`tests/contract.py`) cover the cases from the slides:
 empty array and queries, one entry, duplicates, unsorted input, first and last
@@ -94,7 +95,7 @@ limit, although that limit is far from reached at these sizes.
 both versions: 118 tests passed at that point (14 contract checks for each
 method of each version, one cross-method check per version, generator tests
 and mutant tests; the later tests for measurement and dashboard code bring the
-total to 140). No expected result was changed. The revision did not reveal any new
+total to 146). No expected result was changed. The revision did not reveal any new
 case that needed an additional test. Passing tests are evidence, not a proof of
 correctness.
 
