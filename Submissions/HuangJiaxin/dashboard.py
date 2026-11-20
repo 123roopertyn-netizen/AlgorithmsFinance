@@ -14,7 +14,7 @@ HIT_LABEL = {1.0: "1.0 (all present)", 0.0: "0.0 (all absent)", 0.5: "0.5 (mixed
 
 st.set_page_config(page_title="Membership runtime dashboard", layout="wide")
 st.title("Membership queries: LinearSearch vs BinarySearch vs hash set")
-st.caption("Huang Jiaxin, Algorithms in Finance, Class 3 lab. "
+st.caption("Huang Jiaxin, Algorithms in Finance, Class 2 lab. "
            "bisect_ref is a standard-library reference, not one of my implementations.")
 
 summary = pd.read_csv(RES / "timing_summary.csv")
