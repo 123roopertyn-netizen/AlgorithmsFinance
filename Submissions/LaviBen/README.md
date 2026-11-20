@@ -117,6 +117,19 @@ without external JavaScript or plotting libraries. Timings describe one
 machine and run; rerun the benchmark before making environment-independent
 performance claims.
 
+Recorded medians for `n=100,000`, `q=100`, mixed queries:
+
+| Implementation | Preparation (ms) | Query batch (ms) | Combined (ms) |
+|---|---:|---:|---:|
+| Linear search | 0.065250 | 51.143791 | 51.227500 |
+| Binary search recursive v1 | 10.468250 | 0.127834 | 10.596250 |
+| Binary search iterative v2 | 10.557000 | 0.104333 | 10.673750 |
+| Hash set membership | 1.876375 | 0.004750 | 1.882083 |
+
+This run used Python `3.14.7` on `arm64` and clean submission code commit
+`b122ea5`. Full machine fields, source SHA-256, and raw observations are in
+`results/benchmark_results.json`.
+
 ## Project layout
 
 | Path | Purpose |

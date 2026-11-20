@@ -129,3 +129,11 @@ One dashboard integration test then exposed an assumption that `q=100` was
 always present. The dashboard was corrected to select the largest available
 query count, allowing reduced test matrices without changing full-run behavior.
 The expanded final suite contains eleven passing tests.
+
+The versioned full run used code commit `b122ea5` with a clean submission tree.
+It produced 18 input cases, 360 raw observations, and 72 median summaries. For
+`n=100,000`, `q=100`, mixed queries, combined medians were `51.227500 ms`
+(linear), `10.596250 ms` (recursive binary), `10.673750 ms` (iterative binary),
+and `1.882083 ms` (hash set). The iterative binary query batch itself was
+faster than the recursive batch (`0.104333 ms` versus `0.127834 ms`), while
+sorting dominated both methods' combined time in this run.

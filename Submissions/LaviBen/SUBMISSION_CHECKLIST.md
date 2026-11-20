@@ -36,6 +36,8 @@
 | Include present, absent, and mixed queries | Complete | `SCENARIOS` and requested/realized hit-rate fields |
 | Measure preparation, query batch, and combined time | Complete | Raw and summary timing columns |
 | Save environment and code version | Complete | JSON metadata with Python, machine, Git, and source hash |
+| Save raw measurements and units | Complete | `results/raw_timings.csv` in ns; JSON and summary CSV document units |
+| Save generator settings per case | Complete | `results/input_manifest.json` with seed, rates, policy, and SHA-256 |
 
 ## Correctness reasoning
 
