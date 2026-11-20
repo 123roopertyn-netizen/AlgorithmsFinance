@@ -6,7 +6,7 @@ import statistics
 import tempfile
 import itertools
 
-from algorithms import METHODS, linear_search, binary_search_recursive, binary_search_iterative
+from algorithms import METHODS, HashIndex, linear_search, binary_search_recursive, binary_search_iterative
 from data import make_workload
 from benchmark import measure, measure_methods, workload_specs, TIME_KEYS, CALL_KEYS
 from dashboard import build
@@ -97,6 +97,40 @@ class GeneratorTests(unittest.TestCase):
                 make_workload(*args)
 
 
+class ReusableIndexTests(unittest.TestCase):
+    def test_multiple_batches_and_original_input_mutation(self):
+        items = [7, 11, 7]
+        index = HashIndex(items)
+        self.assertEqual(index.answer([11, 9, 7]), [True, False, True])
+        self.assertEqual(index.answer([9, 11, 11]), [False, True, True])
+        items[:] = [9]
+        self.assertEqual(index.answer([7, 9]), [True, False])
+        self.assertEqual(HashIndex(items).answer([7, 9]), [False, True])
+
+    def test_empty_input_queries_and_fresh_results(self):
+        index = HashIndex([])
+        self.assertEqual(index.answer([]), [])
+        self.assertEqual(index.answer([0, -1]), [False, False])
+        result = index.answer([1])
+        result[0] = True
+        self.assertEqual(index.answer([1]), [False])
+
+    def test_exhaustive_index_reuse(self):
+        queries = [-2, 1, 0, -1, 2, 1]
+        for size in range(5):
+            for items in itertools.product((-1, 0, 1), repeat=size):
+                index = HashIndex(items)
+                self.assertEqual(index.answer(queries), [q in items for q in queries])
+                self.assertEqual(index.answer(queries[::-1]), [q in items for q in queries[::-1]])
+
+    def test_colliding_and_large_integer_ids(self):
+        items = [-1, -2, 10**50, 0]
+        queries = [-2, 1, 10**50, -1, 0]
+        result = HashIndex(items).answer(queries)
+        self.assertEqual(result, [True, False, True, True, True])
+        self.assertTrue(all(type(value) is bool for value in result))
+
+
 class MeasurementTests(unittest.TestCase):
     def test_raw_repeats_and_memory_contract(self):
         for method in METHODS:
@@ -148,6 +182,11 @@ class MeasurementTests(unittest.TestCase):
             self.assertNotIn(b"\r\n", output.read_bytes())
             build(source, output)
             self.assertEqual(output.read_text(encoding="utf-8"), page)
+            reuse = {"metadata": {"batch_count": 5}, "scenarios": {}}
+            (source.parent / "reuse.json").write_text(json.dumps(reuse), encoding="utf-8")
+            build(source, output)
+            embedded = output.read_text(encoding="utf-8").split('<script type="application/json" id="dataset">', 1)[1].split('</script>', 1)[0]
+            self.assertEqual(json.loads(embedded), {**data, "reuse": reuse})
 
 
 if __name__ == "__main__":

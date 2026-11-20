@@ -48,14 +48,33 @@ def hash_contains(prepared, query):
     return query in prepared
 
 
+def hash_batch(prepared, queries):
+    """Use the built-in bound membership method without a Python wrapper per ID."""
+    return list(map(prepared.__contains__, queries))
+
+
+class HashIndex:
+    """An explicit snapshot for repeated batches. Rebuild when source IDs change."""
+    __slots__ = ("_ids",)
+
+    def __init__(self, items):
+        self._ids = set(items)
+
+    def answer(self, queries):
+        return hash_batch(self._ids, queries)
+
+
 @dataclass(frozen=True)
 class Method:
     name: str
     version: str
     prepare: Callable
     contains: Callable
+    batch: Callable | None = None
 
     def lookup(self, prepared, queries):
+        if self.batch is not None:
+            return self.batch(prepared, queries)
         return [self.contains(prepared, query) for query in queries]
 
     def answer(self, items, queries):
@@ -69,5 +88,5 @@ METHODS = (
     Method("binary", "original", sorted, binary_search_recursive),
     Method("binary", "revised", sorted, binary_search_iterative),
     Method("hash_set", "original", set, hash_contains),
-    Method("hash_set", "revised", set, hash_contains),
+    Method("hash_set", "revised", set, hash_contains, hash_batch),
 )
