@@ -82,8 +82,9 @@ pass it, and only the `type(r) is bool` test catches it.
 ## 5. Hand trace of the slide example
 
 The input is `ids = [7, 11, 7]` and `queries = [11, 9, 7]`, and the expected
-result is `[True, False, True]`. **Maurice: verify this trace yourself (slide 58,
-step 2).**
+result is `[True, False, True]`. **Verified by hand by Maurice (slide 58,
+step 2):** he traced all three methods on paper and got the same result as the
+tables below and the code.
 
 **BinarySearch v2.** `prepare` returns the new list `[7, 7, 11]`, and `ids` is
 unchanged. The invariant is `a[:lo] < x <= a[hi:]`.
@@ -166,8 +167,9 @@ a fake clock, so it is deterministic. Its assertion was not weakened.
 
 ## 9. Dashboard simplified; large-n exploration
 
-The first dashboard had nine tabs and was hard to read. It now has four
-(Overview, Runtime, Spot check, Details for auditors), with the same content.
+The first dashboard had nine tabs and was hard to read. Maurice decided to cut
+it down to four (Overview, Runtime, Spot check, Details for auditors), with the
+same content.
 
 To test much longer lists than the slide grid, `explore/large_n.py` runs the
 unchanged timing phase on n = 100k, 1M and 10M (q = 10). Run
