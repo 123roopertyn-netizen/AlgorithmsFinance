@@ -56,3 +56,76 @@ git commit -m "Assignment1 Phase 2: validated list-scan baseline, replay, trace 
 ```
 
 Checkpoint: STOP. Await Claude (chat) review and Laurin's next phase instruction.
+
+## Phase 3: B1 checkpoint (2026-11-21, base `efee8d4`, uncommitted)
+
+| Date | Agent | Suggestion / finding | Decision / evidence | Why |
+|---|---|---|---|---|
+| 2026-11-21 | Claude (chat), reported by Laurin | Version A was verified against an independent reference on all five supplied 10k streams: 0 differences. | Phase 2 committed by Laurin as `efee8d4`; independent reference verification attributed to Claude (chat), not a new Codex reference run | A remains the unchanged oracle. |
+| 2026-11-21 | Laurin / Codex | Implement B1: id index, slot-based order/level/side records, FIFO deques, signed sorted prices, lazy cancel, live/stale counts and strict threshold compaction. | Implemented per Laurin's Phase 3 request; shared validator and entire existing test suite/expected data unchanged | Replaces scans with indexed access / FIFO matching while retaining explicit O(P) price-list costs. |
+| 2026-11-21 | Codex | Standalone `lob.check_b` verifies internal invariants, both compaction thresholds on both sides, matching-triggered compaction, cancelled-id reuse, counters default off, exact hand-counted work and A/plain/counted parity on all 18 own files. | Red `05_evidence/20261121T224231Z_efee8d4-dirty_phase3-internals-red.txt` (B snapshot NotImplementedError); green `05_evidence/20261121T224429Z_efee8d4-dirty_phase3-internals-green.txt` | Adds coverage for the new data organization and counter flag without changing `02_tests/`. Rejected inputs leave counters unchanged. |
+| 2026-11-21 | Codex | Existing B contract/stateful tests first red, then green. | `05_evidence/20261121T224224Z_efee8d4-dirty_phase3-tests-red.txt`: 65 failed, 64 deselected; `05_evidence/20261121T224534Z_efee8d4-dirty_phase3-b-contract-stateful-green.txt`: 65 passed, 64 deselected | Algorithm implementation followed fresh failing tests; no expected result or test changed. No B/A divergence or algorithm fix was needed. |
+| 2026-11-21 | Codex | Record B's actual worst/expected/amortized costs, compaction credit argument and Phase 4 predictions before sanity timing. | SPEC.md Version B1 | Includes O(P) new/empty level updates, optional counter overhead and stale cleanup spikes. Logical stale bound is not a traced-memory claim; CPython dictionary capacity may retain earlier peaks. |
+| 2026-11-21 | Codex | Quick timing of the five supplied 10k streams, exactly one A and B replay each; fresh books, counters off, shared harness warmup=0/repeats=1, parse/setup/replay separate, all result comparisons outside timing. | `05_evidence/20261121T224807Z_efee8d4-dirty_phase3-sanity-not-a-benchmark.txt`; raw sanity.json/env.json/tests.txt in the run folder | Explicitly authorized exception to official warm-up/5-repeat protocol: sanity, not a benchmark. No official performance conclusion. A is always timed before B; order/cache/GC variation is uncontrolled. |
+| 2026-11-21 | Codex | Entire unchanged suite: 340 passed in 134.87s; no failures, errors, warnings or skips. | `05_evidence/20261121T224926Z_efee8d4-dirty_phase3-all-tests-green.txt`; `05_evidence/phase3-all-tests.xml`; `05_evidence/20261121T225246Z_efee8d4-dirty_phase3-results-summary.txt` | Both real-version controls, all 17 A mutants and A/B stateful differential pass. |
+
+Full suite command (existing README venv):
+`python evidence.py phase3-all-tests-green -- python -m pytest -q --tb=short --basetemp=scratch/pytest-phase3 --junitxml=05_evidence/phase3-all-tests.xml`.
+
+| Test file | Passed | Failed |
+|---|---|---|
+| `test_contract.py` | 128 (64 per version) | 0 |
+| `test_validation.py` | 184 | 0 |
+| `test_mutants.py` | 20 (17 kills, naming check, A and B controls) | 0 |
+| `test_own_datasets.py` | 4 | 0 |
+| `test_replay.py` | 3 | 0 |
+| `test_stateful.py` | 1 A/B differential | 0 |
+| Total | 340 | 0 |
+
+The stateful test compares results, canonical books, invariants and conservation
+after every generated event, configured max_examples=300 / stateful_step_count=60.
+The sanity run separately compares every one of 50,000 results plus all five
+final canonical books; it does not compare intermediate snapshots on those full
+10k files. Existing contract tests cover intermediate books on the first 1,000
+events of each supplied stream. No broader differential coverage is claimed.
+
+**Sanity, not a benchmark** (one observation, no warm-up/repeated medians):
+
+| Scenario (10k events) | A replay seconds | B replay seconds |
+|---|---|---|
+| `buildup` | 7.937737 | 0.052302 |
+| `crowded` | 8.133971 | 0.046093 |
+| `mixed` | 1.154026 | 0.077342 |
+| `sweep` | 7.931050 | 0.054345 |
+| `cancel_churn` | 0.028029 | 0.037469 |
+
+B's observed replay time was lower in four streams and higher in cancel_churn.
+This is consistent with the recorded prediction but does not establish a stable
+speed ratio or scaling. Parsing/setup/total observations are in raw sanity.json;
+returned results are retained by the runner for comparison, not by either book.
+Raw data: `03_results/runs/20261121T224807Z_efee8d4-dirty_phase3_sanity_not_benchmark/sanity.json`.
+
+Open specification questions: none. Phase 4 still needs the official repeated
+measurement grid, instrumentation runs and memory behavior (including retained
+dictionary capacity); Claude (chat) / Laurin review is the present checkpoint.
+
+Final generated-change review by Codex: read the engine diff, new verifier and
+sanity runner, and documentation changes for unrelated behavior, names, comments
+or content. No traces of the logged injection found; no new embedded instructions
+encountered. All writes are inside Assignment1; no deletions or installs.
+`02_tests/`, all input/expected data and generators, A, shared validation, replay,
+the timing harness and dependency pins are unchanged. Python 3.13.15,
+pytest 9.2.0, hypothesis 6.155.7; `git diff --check` clean.
+Saved review (including source hashes):
+[Phase 3 final review](../05_evidence/20261121T225839Z_efee8d4-dirty_phase3-final-review.txt).
+B replay CLI output:
+[worked example](../05_evidence/20261121T225550Z_efee8d4-dirty_phase3-replay-b-worked.txt).
+
+Proposed commands for Laurin, from `Assignment1/` (not executed by Codex):
+
+```powershell
+git add -- 01_code 00_docs 05_evidence 03_results/runs/20261121T224807Z_efee8d4-dirty_phase3_sanity_not_benchmark SPEC.md README.md
+git commit -m "Assignment1 Phase 3: B1 indexed deque book, counters and green A/B differential"
+```
+
+Checkpoint: STOP. Await Claude (chat) review and Laurin's next phase instruction.

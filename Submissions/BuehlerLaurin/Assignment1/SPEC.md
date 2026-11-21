@@ -34,7 +34,7 @@ Package `lob` in `01_code/lob/`; registry `METHODS = {("lob", "A"): OrderBookA, 
 
 - All public entry points validate through **one shared module** `lob/validation.py`, so A and B cannot diverge on bad input (aif-tdd Layer 2). Validation rules get their own contract checks.
 - The engine never mutates the input event dict.
-- Replay command (to be built): `python run.py lob.replay <file.jsonl[.gz]> --version A|B` → prints one result per event as JSON Lines (R §Input files and interface: "supply a command to replay a file").
+- Replay command (implemented in Phase 2; both versions available in Phase 3): `python run.py lob.replay <file.jsonl[.gz]> --version A|B` → prints one result per event as JSON Lines (R §Input files and interface: "supply a command to replay a file").
 - Trade history is **not** retained; each call returns only the current event's fills (R §Required results: history optional, must be declared as extra storage).
 
 ## Input domain
@@ -170,11 +170,11 @@ Symbols: B active orders, P occupied price levels (per side), F maker fills of o
 | Version | Data organisation | Insert (no cross) | Cancel | Market sell / crossing limit | Space |
 |---|---|---|---|---|---|
 | A (baseline) | one unsorted Python list per side; scan best order per fill | O(B+1) worst-case including validation; append alone O(1) amortized | O(B+1) worst-case | O((F+1)(B+1)) worst-case including validation, output and residual append | O(B+1) persistent; O(F) returned fills |
-| B1 | per level a `deque`, lazy cancel + compaction; price list sorted (bisect) with best at the tail; `dict` id → order | O(1) existing level; O(P) new level (list insert) | O(1) mark + amortized compaction | O(F + L + S skipped), amortized | O(B + P + S), S bounded by compaction rule |
+| B1 (selected Phase 3) | live id dict, per-price deque with lazy cancellation/compaction; signed sorted prices, best at tail | O(1) existing level; O(P+1) new level, expected amortized incl. validation | O(1) expected amortized if level survives; O(P+1) if emptied | O(F+L+1) expected amortized after stale-cleanup credits, plus O(P+1) for a new residual level | O(B+P+S+1) logical, S <= B+32P; CPython dict capacity may retain past peaks |
 | B2 | per level an `OrderedDict` (true O(1) removal); same sorted price list | as B1 | O(1) expected (hash delete); O(P) if level empties mid-list | O(F + L) expected | O(B + P) |
 | B3 | heap of prices + `in_heap` set; per level FIFO queue | O(log P) new level, O(1) existing | O(1) + lazy level removal | O(F + L log P) amortized | O(B + P + stale heap entries) |
 
-Bound types (worst-case / expected / amortized) will be stated per operation; dict operations are expected O(1). Version B is chosen in Phase 3 after the baseline is measured; it need not win on every workload (S22). Engine: standard library only, no `sortedcontainers` (Q12).
+B1 was chosen explicitly by Laurin in Phase 3; its complete bounds, hashing/resize qualifications and compaction argument appear below. The other B candidates remain alternatives only. Engine containers are standard library only (Q12).
 
 ## Own edge-case datasets (`06_data/own/`, labelled own)
 Written by `python run.py datagen.own_cases` (stdlib only, deterministic, seed 42 for the `long_queue` ids). Each `<case>.jsonl` has a hand-calculated `<case>.expected.json` (one result per event, final canonical book, best bid/ask); the contract check `check_own_<case>` replays it through every version, compares every result, and runs the invariant/conservation step checker after each event. `06_data/own/INDEX.md` lists what each case covers. Cases: `empty_book`, `one_order`, `fifo_one_price`, `sweep_levels`, `sell_sizes`, `market_larger_than_book`, `market_sell_empty_bid_side`, `partial_then_another_sale`, `cancel_cases`, `interleaved_cancel_fill`, `crossing_limit_buy`, `crossing_limit_sell`, `limit_at_touch`, `noncrossing_residuals`, `id_reuse`, `huge_values`, `long_queue`, `invalid_fields` (all 81 rows of the shared invalid-event table `INVALID_EVENTS`).
@@ -271,3 +271,107 @@ O(sum_i (F_i+1)(B_i+1)), bounded above by O(M*(F_max+1)*(B_max+1)).
 Streaming replay adds JSON/gzip parsing and JSON output costs (not timed here);
 it stores one event and result at a time. File parsing,
 engine replay and printing will be separated in Phase 4 measurements.
+
+## Version B1: implementation and cost argument (Phase 3, 2026-11-21)
+
+Chosen by Laurin: B1. `_Order` uses `__slots__` for id, side, price, remaining
+quantity, arrival and alive flag. `orders` maps live ids to these same objects.
+Each `_Side` has actual price -> `_Level` and an ascending list of signed prices
+(bids positive, asks negated); each `_Level` holds a `collections.deque`, live
+count and stale count. Neither dictionary is used as a FIFO queue. The best
+price is always the list tail. A and the shared validator remain unchanged.
+
+Pseudocode: validate using live-index membership; reject without state/seq/counter
+writes, otherwise advance seq. Cancel pops the id, marks its record dead and
+adjusts live/stale counts. Delete a zero-live level and its signed price at once;
+otherwise compact when stale > live AND stale > 32. Matching inspects the best
+opposite level, checks the limit, skips dead heads, emits min-quantity maker-price
+fills and removes exhausted makers from deque/index. Keep partial makers at the
+front. Remove empty best levels by tail pop. Recheck compaction on a surviving
+level after fills, because fills can lower live below stale. Append a limit
+residual to its FIFO; insert its price with bisect only when the level is new.
+
+Invariants: index entries are exactly the alive deque objects, once each; live
+and stale counts equal their deque counts. Each stored level has live > 0, and
+the sorted price list corresponds exactly to those levels. Filtering preserves
+identity and arrival order. `snapshot()` walks prices from best to worst and
+copies only live records; quotes inspect price tails only. Thus stale records
+and empty levels never appear in inspection (I5). Cancelled-id reuse creates a
+new object; skipped dead objects cannot delete or revive its index entry.
+
+B = live orders before an event, P = occupied levels, F = maker fills, L = levels
+inspected (including a final noncrossing level), S = stored dead records.
+For a particular operation, K = dead heads skipped, C = records scanned during
+compaction, D = dead records released when a zero-live level is detached.
+The same unit-cost integer/key model as A applies. Hash-table costs below are
+expected, insertion/rehash and dynamic-array/deque allocation costs amortized;
+adversarial collisions do not have an O(1) guarantee. H denotes total allocated
+slots in the id and two level dictionaries: retained capacity/dummy slots can
+depend on earlier peaks, so a single pathological lookup/rehash is bounded by H,
+not just current B/P. If those capacities track live size, H = O(B+P+1); this
+implementation does not assume that after mass cancellation.
+
+| Operation | Argument and bound type |
+|---|---|
+| Validation | Fixed field checks plus live-id dictionary lookup: O(1) expected; O(H+1) worst case from hashing/collisions. Rejection is atomic including counters. |
+| Existing-level noncrossing limit | O(1) expected amortized: validation, level lookup, slot record, deque append, id insertion, fixed result. An individual dictionary rehash can scan retained capacity; O(H+1) single-operation worst case. |
+| New-level noncrossing limit | Binary search O(log(P+1)); insertion shifts up to P references, may resize, and creates a level. O(P+1) expected amortized overall; O(H+P+1) single-operation worst case including hash-table rehash/collisions. |
+| Cancel, level survives | Index pop/level lookup O(1) expected, lazy marking O(1), plus O(C) immediate compaction. Worst-case one compaction visits O(B+S+1) records; expected amortized O(1) cleanup with the credit argument below, excluding level-price deletion. Including hash collisions gives O(H+B+S+1) single-operation worst case. |
+| Cancel empties a level | Bisect O(log(P+1)), arbitrary price deletion shifts O(P) references; releasing its deque visits D dead records. O(P+D+1) expected actual, plus possible list shrink O(P); cleanup D amortizes over earlier cancels, leaving O(P+1) expected amortized. Collision-sensitive single-event upper bound O(H+P+S+1). |
+| Market sell | O(F+L+K+C+D+1) expected amortized for map/container work, including O(F) fill output. L <= F+1. No scan of unrelated live makers; best-level price removals are tail pops (O(1) amortized). Individual list shrink can cost O(P); a single-event worst-case upper bound including hashing is O((F+L+1)(H+1)+P+K+C+D). After assigning stale cleanup to earlier cancels: O(F+L+1) expected amortized across the stream, not a worst-case per-event latency promise. |
+| Crossing limit | Same as market sell, plus existing-level residual append O(1) expected amortized or new residual level O(P+1) expected amortized. Thus O(F+L+1) or O(F+L+P+1) expected amortized after charging stale cleanup. Single-operation cost also includes any pending K/C/D cleanup, resizing and collision costs above. |
+| `best_bid()` / `best_ask()` | O(1) worst case in the unit-cost model: inspect one list tail or return None; no lazy work hidden in a quote. |
+| `snapshot()` | O(B+P+S+1) expected traversal (level dictionary lookups) and O(B+1) returned copied dictionaries; no sort or state change. With the stale bound below this is O(B+P+1) expected. Worst-case hash probes at P levels give O(P*(H+1)+B+S+1). |
+
+Compaction credit argument: with l live and s stale, a rebuild happens only at
+s > l and s > 32. It scans l+s < 2s records, filters into a fresh deque, then
+releases the old deque. These are O(s) total visits/reference operations. Give
+each successful cancellation a fixed sufficient number of credits. Each stale
+record is removed once: by head skipping, compaction, or whole-level disposal.
+Its credits cover that removal; at a rebuild, the s dead records' credits also
+cover copying the fewer-than-s live records. Rebuild resets stale to zero, so
+the same cancellation is never charged twice. Matching-triggered rebuilds use
+the same previously banked cancellation credits. This amortizes stale cleanup
+over the event stream, while preserving possible single-event cleanup spikes.
+Price-list shifts, id hashing/rehash and output construction are separate costs.
+
+After every accepted operation, a nonempty level satisfies s <= max(l,32),
+otherwise it would have been rebuilt. Summing gives S <= B+32P, so reachable
+order/queue/level storage is O(B+P+S+1) = O(B+P+1), excluding outputs. Rebuild
+temporarily holds old and new deques, still O(B+P+S+1); fill output is O(F).
+This is a logical-object bound, not an allocated-byte or RSS claim: dictionary
+tables add O(H) allocated slots and can retain an earlier peak after deletions. Actual retained
+dictionary capacity and cancellation-churn traced memory must be checked in
+Phase 4 before claiming memory follows current live size. No historical fills
+or events are stored in the book.
+
+Counter flag: `OrderBookB(count_operations=False)` by default sets `counters=None`;
+the ordinary engine path is both tested and timed. With True the same methods
+update `OperationCounters`; results/books must match the default after every
+event. Counters cover accepted event types, filled makers, inspected levels,
+fills, sum of returned submission residuals, dead heads skipped, dead records
+compacted/discarded, rebuild scans, price-list reference shifts and live-order /
+occupied-level peaks. Snapshot, quote and rejection calls leave counters intact.
+The standalone `python run.py lob.check_b` verifies internal counts/bijection,
+both compaction thresholds on both sides, matching-triggered compaction,
+cancelled-id reuse and counter/plain/A parity without modifying `02_tests/`.
+
+### Phase 4 prediction (written before the Phase 3 sanity timing)
+
+B should gain most on `crowded` (LIMIT-only growth over four prices): after the
+few level creations, submissions use indexed lookup and deque append while A
+scans growing live state for duplicates and opposite prices. `buildup` should
+also gain once repeated levels dominate its at-most-1000-price sides. `sweep`
+should gain when sells touch many makers: B walks FIFO heads while A rescans
+per fill. `mixed` should gain when it retains substantial depth. `cancel_churn`
+may show the smallest gain or even lose on very small live books: A's short
+scans compete with B's record/level bookkeeping, lazy cleanup and price shifts.
+Large P with frequent new/empty levels also exposes B1's O(P) sorted-list
+updates. These are predictions, not claims from one timing observation.
+
+Phase 3 sanity protocol, explicitly authorized by Laurin: **sanity, not a
+benchmark**. One timed A replay and one timed B replay per supplied 10k stream,
+no warm-up/repeats/medians; counters off. Read/parse outside replay timing, use
+fresh books, report setup and replay separately, compare every result and final
+snapshot outside timing. Use the existing harness with warmup=0/repeats=1 as
+the authorized exception; no official grid or speed conclusion in this phase.

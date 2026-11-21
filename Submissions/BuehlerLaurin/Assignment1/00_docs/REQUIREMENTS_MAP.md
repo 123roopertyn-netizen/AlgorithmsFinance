@@ -6,59 +6,59 @@ Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/
 ## Model, interface, units
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R1 | Sequential single-venue BTC limit order book in Python, incl. own `FillMarketSell` (R §Task; S2) | A implemented; B Phase 3 | `01_code/lob/book_a.py`: own list/scan matching; A contract evidence in Phase 2. |
+| R1 | Sequential single-venue BTC limit order book in Python, incl. own `FillMarketSell` (R §Task; S2) | A/B implemented and verified | `book_a.py` unchanged; `book_b.py` B1 id index / slot records / deques / signed sorted prices; full Phase 3 suite green. |
 | R2 | Document modelling boundaries (no fees, balances, hidden orders, self-trade checks, delays, simultaneity; one venue; not production) (R §Task; S4) | documented in SPEC | SPEC.md Model boundaries; final README/report work remains Phase 7. |
-| R3 | Integer `price_ticks` (0.01 USD/BTC) and `qty_units` (1e-8 BTC); integer matching/conservation; round only for display; USD = Σp·q / 1e10 (R §Integer units; S5) | A verified; B Phase 3 | `check_result_types_are_exact_ints`, `check_worked_example_book_and_proceeds`, `check_own_huge_values`; TRACE.md integer proceeds. |
-| R4 | `seq` defines arrival order; never priority by id spelling (R §Integer units; S5) | A verified; B Phase 3 | `check_fifo_within_price`, `check_partial_maker_keeps_priority`; LIFO/id-priority/requeue mutants killed; SPEC.md A invariant argument. |
-| R5 | Read JSON Lines (+ gzip) with stdlib `json`/`gzip`; replay in `seq` order from an empty book (R §Input files; S6) | A verified; B Phase 3 | `lob/replay.py` streams stdlib JSON/gzip in file order; `test_replay.py` checks both formats and rejection order. |
-| R6 | Event types LIMIT / MARKET_SELL / CANCEL with their required fields (R §Input files; S6) | A/shared verified; B Phase 3 | `lob/validation.py`; `test_validation.py` (184 direct tests); all A contract checks. |
-| R7 | Provide `AddLimitOrder`, `CancelOrder`, `FillMarketSell`, an event dispatcher and book inspection; document signatures (R §Input files; S6) | A verified; B Phase 3 | `check_direct_methods_match_process`, `check_direct_methods_validate`, `check_direct_methods_reject_wrong_type`; SPEC.md API/N2. |
-| R8 | Supply a command to replay a file (R §Input files) | A verified; B Phase 3 | `python run.py lob.replay <file.jsonl[.gz]> --version A` (also accepts B); three CLI tests in `test_replay.py`; B routes to its Phase 3 stub. |
-| R9 | Both versions accept the same event files and return equivalent results (R §Input files) | expected red (Phase 3) | B remains unchanged stub; B contract cases and A/B stateful test remain red, not skipped/xfail. |
+| R3 | Integer `price_ticks` (0.01 USD/BTC) and `qty_units` (1e-8 BTC); integer matching/conservation; round only for display; USD = Σp·q / 1e10 (R §Integer units; S5) | A/B/shared verified | `check_result_types_are_exact_ints`, `check_worked_example_book_and_proceeds`, `check_own_huge_values`; TRACE.md integer proceeds. |
+| R4 | `seq` defines arrival order; never priority by id spelling (R §Integer units; S5) | A/B/shared verified | `check_fifo_within_price`, `check_partial_maker_keeps_priority`; LIFO/id-priority/requeue mutants killed; SPEC.md A invariant argument. |
+| R5 | Read JSON Lines (+ gzip) with stdlib `json`/`gzip`; replay in `seq` order from an empty book (R §Input files; S6) | A/B verified | `lob/replay.py` unchanged stdlib JSON/gzip reader; both engines replay all five supplied 10k files in the sanity run with 0 result differences and equal final books. |
+| R6 | Event types LIMIT / MARKET_SELL / CANCEL with their required fields (R §Input files; S6) | A/B/shared verified | Shared `validation.py` unchanged; 184 direct validation tests and 128 A/B contract cases pass. |
+| R7 | Provide `AddLimitOrder`, `CancelOrder`, `FillMarketSell`, an event dispatcher and book inspection; document signatures (R §Input files; S6) | A/B/shared verified | `check_direct_methods_match_process`, `check_direct_methods_validate`, `check_direct_methods_reject_wrong_type`; SPEC.md API/N2. |
+| R8 | Supply a command to replay a file (R §Input files) | A/B implemented | Replay command accepts --version A or --version B; unchanged launcher/reader, both versions registered; saved Phase 3 B worked-example replay. |
+| R9 | Both versions accept the same event files and return equivalent results (R §Input files) | A/B verified in stated coverage | Stateful differential checks results/books after every generated event; full five-file sanity compares all 50000 results and five final books. Exact intermediate-book coverage documented below. |
 
 ## Matching, cancellation, validation
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R10 | Buy crosses iff limit ≥ best ask; sell crosses iff limit ≤ best bid; best price first, then arrival (R §Matching rules 1; S7) | A/shared verified; B Phase 3 | `check_limit_at_touch_crosses`, `check_best_price_first`, `check_own_limit_at_touch`, `check_own_crossing_limit_*`; step checker in `contract.run`; A verified in the full Phase 2 evidence below. |
-| R11 | Fill qty = min(incoming, resting) at the resting order's price; continue while crossing (R §Matching rules 2; S7) | A/shared verified; B Phase 3 | `check_fill_at_maker_price`, `check_crossing_sell_at_maker_price`; step checker (min rule, maker price); A verified in the full Phase 2 evidence below. |
-| R12 | Exhausted maker removed; partial maker keeps priority; residual limit rests at its limit behind earlier orders, rank = its `seq` (R §Matching rules 3; S7) | A/shared verified; B Phase 3 | `check_partial_maker_keeps_priority`, `check_own_crossing_limit_buy`, `check_own_partial_then_another_sale`; A verified in the full Phase 2 evidence below. |
-| R13 | `FillMarketSell`: highest bid first, FIFO per price, mutates live book; residual discarded, never rests (R §Matching rules 4; S4, S7, S9) | A/shared verified; B Phase 3 | `check_market_*`, `check_own_sweep_levels`, `check_own_sell_sizes`, `check_own_market_larger_than_book`; A verified in the full Phase 2 evidence below. |
-| R14 | Cancel removes exactly the remaining qty (also after partial fill); unknown / filled / cancelled → `not_found`, no change (R §Matching rules 5; S8) | A/shared verified; B Phase 3 | `check_cancel_*`, `check_own_cancel_cases`, `check_own_interleaved_cancel_fill`; A verified in the full Phase 2 evidence below. |
-| R15 | Reject invalid type/side, noninteger or nonpositive price/qty, duplicate live ids, nonincreasing `seq`; book unchanged (R §Matching rules 6; S8) | A/shared verified; B Phase 3 | `check_rejects_*` (one per rule family), `check_validation_check_order`, `test_validation.py`, `check_own_invalid_fields`; A verified in the full Phase 2 evidence below. |
-| R16 | Rejected events do not advance the last accepted `seq` (R §Matching rules 6; S8) | A/shared verified; B Phase 3 | `check_rejected_event_does_not_advance_seq`, `_check_invalid_rows` (seq 3 still accepted after each rejection); A verified in the full Phase 2 evidence below. |
-| R17 | Cancel of unknown target is valid (not rejected) (R §Matching rules 6) | A/shared verified; B Phase 3 | `check_accepted_cancel_and_market_advance_seq`, `check_own_empty_book`; A verified in the full Phase 2 evidence below. |
-| R18 | After each valid event: no crossed book, no nonpositive resting qty, no order stored twice; empty side allowed (R §Matching rules; S8) | A/shared verified; B Phase 3 | `contract.assert_book` (I1-I4) after every event in every replay and in the stateful test; A verified in the full Phase 2 evidence below. |
+| R10 | Buy crosses iff limit ≥ best ask; sell crosses iff limit ≤ best bid; best price first, then arrival (R §Matching rules 1; S7) | A/B/shared verified | `check_limit_at_touch_crosses`, `check_best_price_first`, `check_own_limit_at_touch`, `check_own_crossing_limit_*`; step checker in `contract.run`; both versions verified in full Phase 3 evidence below. |
+| R11 | Fill qty = min(incoming, resting) at the resting order's price; continue while crossing (R §Matching rules 2; S7) | A/B/shared verified | `check_fill_at_maker_price`, `check_crossing_sell_at_maker_price`; step checker (min rule, maker price); both versions verified in full Phase 3 evidence below. |
+| R12 | Exhausted maker removed; partial maker keeps priority; residual limit rests at its limit behind earlier orders, rank = its `seq` (R §Matching rules 3; S7) | A/B/shared verified | `check_partial_maker_keeps_priority`, `check_own_crossing_limit_buy`, `check_own_partial_then_another_sale`; both versions verified in full Phase 3 evidence below. |
+| R13 | `FillMarketSell`: highest bid first, FIFO per price, mutates live book; residual discarded, never rests (R §Matching rules 4; S4, S7, S9) | A/B/shared verified | `check_market_*`, `check_own_sweep_levels`, `check_own_sell_sizes`, `check_own_market_larger_than_book`; both versions verified in full Phase 3 evidence below. |
+| R14 | Cancel removes exactly the remaining qty (also after partial fill); unknown / filled / cancelled → `not_found`, no change (R §Matching rules 5; S8) | A/B/shared verified | `check_cancel_*`, `check_own_cancel_cases`, `check_own_interleaved_cancel_fill`; both versions verified in full Phase 3 evidence below. |
+| R15 | Reject invalid type/side, noninteger or nonpositive price/qty, duplicate live ids, nonincreasing `seq`; book unchanged (R §Matching rules 6; S8) | A/B/shared verified | `check_rejects_*` (one per rule family), `check_validation_check_order`, `test_validation.py`, `check_own_invalid_fields`; both versions verified in full Phase 3 evidence below. |
+| R16 | Rejected events do not advance the last accepted `seq` (R §Matching rules 6; S8) | A/B/shared verified | `check_rejected_event_does_not_advance_seq`, `_check_invalid_rows` (seq 3 still accepted after each rejection); both versions verified in full Phase 3 evidence below. |
+| R17 | Cancel of unknown target is valid (not rejected) (R §Matching rules 6) | A/B/shared verified | `check_accepted_cancel_and_market_advance_seq`, `check_own_empty_book`; both versions verified in full Phase 3 evidence below. |
+| R18 | After each valid event: no crossed book, no nonpositive resting qty, no order stored twice; empty side allowed (R §Matching rules; S8) | A/B/shared verified | `contract.assert_book` (I1-I4) after every event in every replay and in the stateful test; both versions verified in full Phase 3 evidence below. |
 
 ## Outputs
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R19 | Ordered fill list with `maker_id`, `taker_id`, `price_ticks`, `qty_units`, in execution order (R §Required results; S9) | A/shared verified; B Phase 3 | step checker (fill fields, order = priority order); `check_worked_example_market_sell`; A verified in the full Phase 2 evidence below. |
-| R20 | Submission result: `event_id`, `order_id`, `status`, `unfilled_qty_units`; limit `filled`/`resting` (R §Required results; S9) | A/shared verified; B Phase 3 | step checker (status/unfilled); own dataset expected files; A verified in the full Phase 2 evidence below. |
-| R21 | Market-sell status `filled` / `partial` / `unfilled`; residual never in the book (R §Required results; S9) | A/shared verified; B Phase 3 | `check_market_sell_larger_than_depth_is_partial`, `check_market_residual_discarded`; A verified in the full Phase 2 evidence below. |
-| R22 | Cancel result: `event_id`, `target_order_id`, `cancelled`/`not_found`, `cancelled_qty_units` (0 if not found) (R §Required results; S9) | A/shared verified; B Phase 3 | step checker (cancel result); `check_cancel_not_found_cases`; A verified in the full Phase 2 evidence below. |
-| R23 | Rejection result: `event_id` if available, `rejected`, a reason (R §Required results; S9) | A/shared verified; B Phase 3 | `check_rejects_*`, `test_rejection_result_shape`; A verified in the full Phase 2 evidence below. |
-| R24 | Return only the current event's fills; any retained history declared as extra storage (R §Required results) | A implemented; B Phase 3 | `_match` constructs a new fill list each call; only bids/asks/last_seq persist; SPEC.md storage boundary. No historical output retained. |
-| R25 | Book inspection: active orders with side, price, remaining qty, arrival seq; bids price ↓ then arrival, asks price ↑ then arrival; compare ids + qty, not only depth (R §Required results; S9) | A/shared verified; B Phase 3 | `contract.assert_book`, `check_snapshot_canonical_order`, `check_snapshot_is_a_copy`; A verified in the full Phase 2 evidence below. |
+| R19 | Ordered fill list with `maker_id`, `taker_id`, `price_ticks`, `qty_units`, in execution order (R §Required results; S9) | A/B/shared verified | step checker (fill fields, order = priority order); `check_worked_example_market_sell`; both versions verified in full Phase 3 evidence below. |
+| R20 | Submission result: `event_id`, `order_id`, `status`, `unfilled_qty_units`; limit `filled`/`resting` (R §Required results; S9) | A/B/shared verified | step checker (status/unfilled); own dataset expected files; both versions verified in full Phase 3 evidence below. |
+| R21 | Market-sell status `filled` / `partial` / `unfilled`; residual never in the book (R §Required results; S9) | A/B/shared verified | `check_market_sell_larger_than_depth_is_partial`, `check_market_residual_discarded`; both versions verified in full Phase 3 evidence below. |
+| R22 | Cancel result: `event_id`, `target_order_id`, `cancelled`/`not_found`, `cancelled_qty_units` (0 if not found) (R §Required results; S9) | A/B/shared verified | step checker (cancel result); `check_cancel_not_found_cases`; both versions verified in full Phase 3 evidence below. |
+| R23 | Rejection result: `event_id` if available, `rejected`, a reason (R §Required results; S9) | A/B/shared verified | `check_rejects_*`, `test_rejection_result_shape`; both versions verified in full Phase 3 evidence below. |
+| R24 | Return only the current event's fills; any retained history declared as extra storage (R §Required results) | A/B implemented | Neither engine retains trade history; each call returns its own fills. Sanity runner retains result lists for untimed comparison, explicitly outside engine storage. |
+| R25 | Book inspection: active orders with side, price, remaining qty, arrival seq; bids price ↓ then arrival, asks price ↑ then arrival; compare ids + qty, not only depth (R §Required results; S9) | A/B/shared verified | `contract.assert_book`, `check_snapshot_canonical_order`, `check_snapshot_is_a_copy`; both versions verified in full Phase 3 evidence below. |
 
 ## Tests and correctness
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R26 | Worked example reproduces `worked_expected.json` (fills b1:1, b2:1, b3:3, b4:1 BTC; b4 keeps 4 BTC; ask unchanged; 359,400 USD) (R §Worked example; S3, S11) | A verified; B Phase 3 | `check_worked_example_market_sell`, `check_worked_example_book_and_proceeds`; event-by-event hand trace `00_docs/TRACE.md`. |
-| R27 | Tests written first and seen failing for missing/incorrect behaviour (R §Worked example; S11) | Phase 2 verified | Phase 1 red evidence retained; Phase 2 red `20261121T221448Z_11d831b-dirty_phase2-tests-red.txt`: 335 failed, 5 passed; A implementation followed that run. |
-| R28 | Independent expected outcomes for the listed cases: empty book; one order; zero/negative/invalid input; sell < / = / > depth; several makers at one price; several levels; partial fill then another sale; cancel before/after partial or full fill; repeat/unknown cancel; crossing buys and sells; noncrossing residual limits; id order ≠ arrival order; long queue (R §Worked example; S11) | A verified; B Phase 3 | All 18 own expected files unchanged; `check_own_*` green on A; independent Claude (chat) cross-check recorded in AI_LOG.md. |
-| R29 | Conservation: incoming = fills + residual; maker loses exactly its fills; cancel removes exactly the residual; proceeds = Σ price·qty; discarded market residual not counted as liquidity (R §Worked example; S12) | A/shared verified; B Phase 3 | step checker `contract.step_check` (C1-C6) after every event; A verified in the full Phase 2 evidence below. |
-| R30 | Small generated tests; compare A and B after **every** event incl. ordered fills and canonical books (R §Worked example; S12) | expected red (Phase 3) | `02_tests/test_stateful.py` preserved unchanged; B stub raises NotImplementedError. Differential agreement not claimed. |
-| R31 | Explain invariants for price-time priority and quantity conservation (R §Implement and revise; S12, S13) | A argument documented | SPEC.md Version A: FIFO list invariant, rejection atomicity, C1-C6; TRACE.md; contract step checker. |
+| R26 | Worked example reproduces `worked_expected.json` (fills b1:1, b2:1, b3:3, b4:1 BTC; b4 keeps 4 BTC; ask unchanged; 359,400 USD) (R §Worked example; S3, S11) | A/B verified | Both versions pass `check_worked_example_market_sell` and `check_worked_example_book_and_proceeds`; Phase 2 hand trace unchanged. |
+| R27 | Tests written first and seen failing for missing/incorrect behaviour (R §Worked example; S11) | Phases 1-3 verified | Historical Phase 1/2 red evidence retained; Phase 3 red: `20261121T224224Z_efee8d4-dirty_phase3-tests-red.txt` (65 failed against stub); green: `20261121T224926Z_efee8d4-dirty_phase3-all-tests-green.txt` (340 passed). |
+| R28 | Independent expected outcomes for the listed cases: empty book; one order; zero/negative/invalid input; sell < / = / > depth; several makers at one price; several levels; partial fill then another sale; cancel before/after partial or full fill; repeat/unknown cancel; crossing buys and sells; noncrossing residual limits; id order ≠ arrival order; long queue (R §Worked example; S11) | A/B verified | All 18 original own expected files unchanged; both versions pass all check_own cases. Standalone diagnostic also checks plain/counted B against A and those expectations. |
+| R29 | Conservation: incoming = fills + residual; maker loses exactly its fills; cancel removes exactly the residual; proceeds = Σ price·qty; discarded market residual not counted as liquidity (R §Worked example; S12) | A/B/shared verified | step checker `contract.step_check` (C1-C6) after every event; both versions verified in full Phase 3 evidence below. |
+| R30 | Small generated tests; compare A and B after **every** event incl. ordered fills and canonical books (R §Worked example; S12) | A/B stateful green | Unchanged `02_tests/test_stateful.py`: after-every-event result/book comparison, invariants and conservation; configured 300 examples, 60 stateful steps; full Phase 3 run passes. |
+| R31 | Explain invariants for price-time priority and quantity conservation (R §Implement and revise; S12, S13) | A/B arguments and checks documented | SPEC.md A/B invariant arguments and compaction proof; TRACE.md unchanged. Standalone B diagnostic checks index/deque bijection, live/stale totals, price lists and no empty levels. |
 
 ## Implementation and revision
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R32 | Version A: clear baseline (e.g. scanning/sorting a list of orders) (R §Implement and revise; S13) | A implemented and verified | `01_code/lob/book_a.py`: one unsorted list per side + scans, no id index; 64 A contract checks green. |
-| R33 | Version B: justified data organisation or measured revision (R §Implement and revise; S13) | deferred Phase 3 | `book_b.py` remains the original stub; no optimization or performance claim in Phase 2. |
-| R34 | Own matching logic; no existing matching engine; library lists/dicts/queues/sorting/heaps allowed (R §Implement and revise; S13) | A implemented | `book_a.py` contains own matching logic, standard-library-only engine; no existing matching engine. |
-| R35 | Pseudocode + runtime/space for insertion, cancellation, market sell in the measured versions, using B, P, M, F; include validation, output construction, index updates, inactive entries, cleanup; state worst-case/expected/amortized (R §Implement and revise; S13) | A argued; measurements Phase 4; B Phase 3 | SPEC.md Version A pseudocode + code-based time/space table, B/P/F symbols, public validation/output/deletion/resize costs and bound types. |
-| R36 | Preserve both versions; rerun unchanged tests after revision; add tests for found bugs without weakening expectations (R §Implement and revise; S13) | partial (A preserved; B Phase 3) | Original expected data and assertions unchanged; additive N2/N3/replay checks; real-version mutation control split by version, assertions retained. |
-| R37 | Record what changed and why, and AI suggestions accepted / corrected / rejected (R §Implement and revise; S13) | Phase 2 recorded | `00_docs/AI_LOG.md`: handover, Laurin decisions, review attribution, implementation, evidence and generated-change review; Claude (chat) checkpoint pending. |
+| R32 | Version A: clear baseline (e.g. scanning/sorting a list of orders) (R §Implement and revise; S13) | A preserved and verified | `book_a.py` unchanged from `efee8d4`; 64 A contract cases and A control pass in the full Phase 3 suite. |
+| R33 | Version B: justified data organisation or measured revision (R §Implement and revise; S13) | B1 implemented and verified | Laurin selected B1: `book_b.py`; slot records, id index, per-price FIFO deques, signed sorted prices, lazy cancellation and compaction; SPEC.md code argument and prediction. |
+| R34 | Own matching logic; no existing matching engine; library lists/dicts/queues/sorting/heaps allowed (R §Implement and revise; S13) | A/B implemented | Own standard-library matching logic in `book_a.py` and `book_b.py`; no matching library or plain-dict FIFO. |
+| R35 | Pseudocode + runtime/space for insertion, cancellation, market sell in the measured versions, using B, P, M, F; include validation, output construction, index updates, inactive entries, cleanup; state worst-case/expected/amortized (R §Implement and revise; S13) | A/B code arguments documented; official scaling Phase 4 | SPEC.md A/B pseudocode and per-operation worst/expected/amortized bounds incl. hashing/retained capacity, output, price movement and compaction credits; one-shot sanity is not a scaling benchmark. |
+| R36 | Preserve both versions; rerun unchanged tests after revision; add tests for found bugs without weakening expectations (R §Implement and revise; S13) | A preserved; all existing tests unchanged and green | Entire `02_tests/`, original expected data and generators unchanged. B added beside A; 340 passed including the A/B stateful test and both real-version controls. |
+| R37 | Record what changed and why, and AI suggestions accepted / corrected / rejected (R §Implement and revise; S13) | Phase 3 recorded | AI_LOG.md and REVISION.md: authorized B1 revision, counter flag, red/green evidence, attributed independent A review, sanity observations and limitations; pending Claude (chat) / Laurin review. |
 
 ## Data
 | ID | Requirement (short, with source) | Status | Evidence |
@@ -75,7 +75,7 @@ Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/
 | R43 | Large liquidation: same fresh bid book, 10 % (ceil, ≥ 1 unit) / 100 % / 200 %; count makers touched, levels visited, fills, unfilled; never reuse a depleted book (R §Benchmark experiments 2; S17) | todo | |
 | R44 | Queue concentration: fixed initial order count, vary prices (e.g. 4 vs 1,000); correctness and speed (R §Benchmark experiments 3; S16) | todo | |
 | R45 | Cancellation churn: time and memory with few active orders; detect stale-entry / history growth (R §Benchmark experiments 4; S17, S20) | todo | |
-| R46 | Operation counts in separate small diagnostic runs; counters separate from primary timing; no 1-D extrapolation without controlling depth, fills, mix (R §Benchmark experiments; S17, S18) | todo | |
+| R46 | Operation counts in separate small diagnostic runs; counters separate from primary timing; no 1-D extrapolation without controlling depth, fills, mix (R §Benchmark experiments; S17, S18) | partial Phase 3; official instrumentation Phase 4 | B optional `count_operations=True` counters verified by standalone diagnostic; off during sanity timing. Official counts.csv and controlled driver sweeps remain Phase 4. |
 | R47 | `time.perf_counter`, warm-up, 5 repeats, every raw repeat + median; same pre-generated events; fresh empty book per replay (R §Time and latency; S18) | todo | |
 | R48 | Parsing (JSON/gzip) reported separately from engine replay; total application time optional; book construction/copying not hidden (R §Time and latency; S18) | todo | |
 | R49 | Fixed-book sell tests: construction/reset separate; measured sell incl. matching, state updates, fill-list construction (R §Time and latency; S18) | todo | |
@@ -95,10 +95,10 @@ Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/
 | R59 | Dashboard shows construction, replay and individual-sale scaling; A vs B; throughput and latency distributions; memory incl. post-cancellation; correctness table; workload settings; raw repeats; units; missing/stopped runs labelled (R §Results and dashboard; S22) | todo | |
 | R60 | Explain at least one measured bottleneck with code, operation counts and complexity; revision need not win everywhere (R §Results and dashboard; S22) | todo | |
 | R61 | Submission path `Submissions/BuehlerLaurin/Assignment1/`; course folders and other students' work unchanged (R §Submit; S23) | partial | Folder scaffolded 2026-11-21; final check at Phase 7 |
-| R62 | Include both versions, tests, own generators and exact run commands (R §Submit; S23) | partial; B/benchmarks later | A/shared/replay code, tests and existing own generators present; README documents current replay/test commands; B remains stub. |
+| R62 | Include both versions, tests, own generators and exact run commands (R §Submit; S23) | partial; Phase 3 A/B code and commands present | Both versions, unchanged tests/generators, replay command, internal verifier and sanity runner present; official benchmark/run commands remain later phases. |
 | R63 | Include saved raw results, environment/settings metadata, dashboard code, dependency versions (R §Submit; S23) | todo | |
 | R64 | Short report: specification, correctness, runtime, memory, profiling, revision, limitations (R §Submit; S23) | todo | |
-| R65 | README: clean-environment run path, expected worked-example output, measured-data definitions (R §Submit; S23) | partial Phase 2 | README current status/run commands and worked-example output; measured-data definitions/fresh-venv verification remain later phases. |
+| R65 | README: clean-environment run path, expected worked-example output, measured-data definitions (R §Submit; S23) | partial Phase 3 | README current test/replay/verifier/sanity commands and worked output; measured-data definitions and fresh-venv verification remain later phases. |
 | R66 | Submitted commit identifier recorded (R §Submit; S23) | todo | |
 | R67 | No million-event datasets uploaded; generator commands + checksums instead (R §Submit; S23) | todo | |
 | R68 | No credentials or proprietary data in the public submission (R §Submit) | todo | |
@@ -110,6 +110,7 @@ Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/
 | O1 | Docker packaging (R §Submit; S23: optional) | out of scope | unless time remains |
 | O2 | Peer audit (R §Submit: not required) | todo | Laurin's choice: Codex audit with `aif-review` (Phase 6) |
 | O3 | Retaining full trade history (R §Required results: optional) | out of scope | not retained; would grow with M |
+
 
 ## Phase 2 verification (2026-11-21, base `11d831b`, uncommitted)
 
@@ -136,3 +137,44 @@ stubs/test source, respectively. Expected files and data generators are unchange
 The table does not claim B correctness, A/B agreement, measured complexity,
 bounded traced memory, benchmark results or fresh-environment reproducibility.
 Those checks remain in their selected later phases.
+
+## Phase 3 verification (2026-11-21, base `efee8d4`, uncommitted)
+
+Full output: [340 passed](../05_evidence/20261121T224926Z_efee8d4-dirty_phase3-all-tests-green.txt).
+[Per-file summary](../05_evidence/20261121T225246Z_efee8d4-dirty_phase3-results-summary.txt)
+checks every XML case for absence of failure/error/skip.
+
+| File | Passed | Failed |
+|---|---|---|
+| `test_contract.py` | 128 (64 per version) | 0 |
+| `test_validation.py` | 184 | 0 |
+| `test_mutants.py` | 20 (17 kills + naming + A/B controls) | 0 |
+| `test_own_datasets.py` | 4 | 0 |
+| `test_replay.py` | 3 | 0 |
+| `test_stateful.py` | 1 | 0 |
+| Total | 340 | 0 |
+
+No warning, error or skipped cases. All 17 existing mutants remain killed;
+mutation subclasses still target A as originally written, while both real-version
+controls pass. No tests or expected results were modified for B.
+
+The stateful differential compares A/B results, snapshots, invariants and
+conservation after every generated event (configured max_examples=300,
+stateful_step_count=60). Both versions also pass per-event step checks on the
+first 1000 events of each supplied stream. The one-shot sanity checks every
+result on all 50000 supplied events and all five final books; it does not
+compare intermediate books over those complete 10k streams.
+
+New standalone verifier (not a modification of `02_tests/`):
+[internal/counter checks](../05_evidence/20261121T224429Z_efee8d4-dirty_phase3-internals-green.txt).
+It exercises all 18 own expected files through A / B plain / B counted, checks
+index/deque/price/count consistency, stale bounds, cancellation/fill compaction,
+level deletion/recreation, id reuse, exact hand-counted work and counter atomicity.
+
+Sanity, not a benchmark:
+[one-shot output](../05_evidence/20261121T224807Z_efee8d4-dirty_phase3-sanity-not-a-benchmark.txt),
+raw `03_results/runs/20261121T224807Z_efee8d4-dirty_phase3_sanity_not_benchmark/`
+contains sanity.json, env.json and tests.txt. Formal repeated timings,
+latency/memory/counter runs, official workload grid and fresh-venv checks remain
+in their selected later phases. SPEC.md includes the pre-timing prediction and
+allocated-dictionary-capacity limitation alongside the compaction credit bound.

@@ -1,6 +1,6 @@
 """Registry: METHODS = {(name, version): class}. Each call of a class gives a fresh empty book.
 
-Phase 2: A is the transparent list/scan baseline; B stays a Phase 3 stub.
+Phase 3: A is the list/scan baseline; B uses indexed levels and compacted deques.
 Public API (SPEC.md, Q1): AddLimitOrder, CancelOrder, FillMarketSell, process,
 snapshot, best_bid, best_ask.
 """

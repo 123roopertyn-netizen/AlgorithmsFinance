@@ -1,15 +1,15 @@
 # Assignment 1, limit order book: Laurin Bühler
 
-> Status (2026-11-21): Phase 2 baseline A, shared validation and replay implemented;
-> awaiting Claude (chat) / Laurin review. B remains a Phase 3 stub, so the full
-> suite intentionally has B-related failures. Benchmark/dashboard work is planned.
+> Status (2026-11-21): Phase 3 B1 implemented; all 340 unchanged tests pass.
+> Awaiting Claude (chat) / Laurin checkpoint review. The five-file one-shot timing
+> is labelled "sanity, not a benchmark"; official measurements/dashboard are planned.
 
 ## Clean-environment run path (PowerShell, from this folder)
 ```powershell
 python -m venv "$env:USERPROFILE\.venvs\aif-a1"
 & "$env:USERPROFILE\.venvs\aif-a1\Scripts\Activate.ps1"
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # includes expected Phase 3 B failures
+python -m pytest -q                                   # Phase 3: 340 passed
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
 python run.py bench.run_all                           # (planned) writes 03_results/runs/<run>/
 python -m streamlit run 04_dashboard/app.py           # (planned) http://localhost:8501, reads 03_results/ only
@@ -37,21 +37,35 @@ Final book (via `snapshot()`, not printed as an extra replay line): b4 retains
 6010000 ticks, arrival_seq 5. Integer gross proceeds = 3594000000000000 tick-units
 = 359400.00 USD. Hand trace: `00_docs/TRACE.md`.
 
-Replay also accepts `.jsonl.gz` and `--version B` (B currently raises its Phase 3
-`NotImplementedError`). Events stream in file order; the shared validator rejects
+Replay also accepts `.jsonl.gz` and `--version B`. Events stream in file order; the shared validator rejects
 nonincreasing seq without advancing the last accepted seq. Each book starts empty;
 neither inputs nor result history are retained by the replay command.
 
-To run the currently implemented A/shared/data/CLI checks and all 17 mutants:
+Additional Phase 3 verification and the authorized one-shot sanity command:
 
 ```powershell
-python evidence.py phase2-a-check -- python -m pytest -q -k "not lob-B and not TestDifferential" --basetemp=scratch/pytest-a-check
+python evidence.py phase3-internals -- python run.py lob.check_b
+python evidence.py phase3-sanity-not-a-benchmark -- python run.py bench.sanity
 ```
 
-The full suite keeps B contract checks, the B mutation control and the A/B
-stateful test red until Phase 3. No xfails/skips conceal those missing behaviors.
-The existing venv and pinned dependencies were used; no fresh-venv or benchmark
-claim is made in Phase 2. See `05_evidence/INDEX.md` for saved runs.
+`lob.check_b` checks A/B and counters-on/off parity, all 18 original own expected
+files, internal index/queue/count consistency and compaction boundaries. Existing
+pytest files/expectations are unchanged. `bench.sanity` uses fresh books and the
+shared harness with warmup=0/repeats=1 (Laurin's authorized sanity exception),
+counters off, parsing/setup/replay separated, correctness checked outside timing.
+The runner retains returned result lists equally for both versions; book objects
+retain no history. These observations are not official benchmark medians.
+
+B uses slot-based records, an id index, per-price deques, ascending signed price
+lists (asks negated), and lazy cancellation. Compaction runs when stale > live
+and stale > 32. `OrderBookB(count_operations=True).counters.as_dict()` exposes
+optional work counts; default counters are off. See SPEC.md for semantics,
+complexity and Phase 4 predictions. Raw sanity data and environment are in
+`03_results/runs/20261121T224807Z_efee8d4-dirty_phase3_sanity_not_benchmark/`;
+the per-file test/timing table is in `00_docs/AI_LOG.md` (Phase 3).
+
+The existing pinned venv was used; fresh-venv verification and official runtime /
+memory measurements remain later phases. See `05_evidence/INDEX.md` for evidence.
 
 ## Layout (read in this order)
 | Folder | Contents |
@@ -103,6 +117,6 @@ Units, what each phase contains, per call vs per batch, percentile convention, m
 
 ## Evidence block
 Commit to audit: <hash> (filled in by Laurin)
-Tests (Phase 2): `python -m pytest -q --tb=short --basetemp=scratch/pytest-final --junitxml=05_evidence/phase2-all-tests.xml` → `66 failed, 274 passed in 112.33s` (all 66 expected red for Phase 3 B; see `00_docs/AI_LOG.md` per-file table)
+Tests (Phase 3): `python -m pytest -q --tb=short --basetemp=scratch/pytest-phase3 --junitxml=05_evidence/phase3-all-tests.xml` → `340 passed in 134.87s` (per-file table in `00_docs/AI_LOG.md`)
 Benchmark: <command> → 03_results/runs/<run folder>/
-Fresh-venv check: pending Phase 7 (existing pinned venv used in Phase 2)
+Fresh-venv check: pending Phase 7 (existing pinned venv used through Phase 3)
