@@ -1,8 +1,7 @@
-.pytest_cache/
+﻿.pytest_cache/
 .hypothesis/
 __pycache__/
 *.pyc
 scratch/
 .vscode/
 Thumbs.db
-/CLAUDE.md
