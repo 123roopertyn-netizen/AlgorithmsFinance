@@ -1,4 +1,4 @@
-# Laurin B�hler: Algorithms in Finance
+﻿# Laurin Bühler: Algorithms in Finance
 
 | Folder | Content |
 |---|---|
