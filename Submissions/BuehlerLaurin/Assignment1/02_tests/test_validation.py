@@ -57,3 +57,18 @@ def test_first_event_after_empty_start():
 def test_is_live_not_consulted_for_cancel_target():
     """A cancel target need not be live (SPEC.md): validate never rejects it for that."""
     assert V.validate(C(3, "b1"), 2, lambda _id: False) is None
+
+
+@pytest.mark.parametrize("expected_type", V.EVENT_TYPES)
+@pytest.mark.parametrize("actual_type", V.EVENT_TYPES)
+def test_direct_method_type_check_order(expected_type, actual_type):
+    event = {"seq": 3, "type": actual_type}
+    reason = "missing_field:event_id" if actual_type == expected_type else "wrong_type_for_method"
+    assert V.validate(event, 2, is_live, expected_type=expected_type) == reason
+    assert V.validate({**event, "type": []}, 2, is_live, expected_type=expected_type) == "unknown_type"
+    assert V.validate({**event, "seq": 2}, 2, is_live, expected_type=expected_type) == "nonincreasing_seq"
+
+
+def test_extra_market_fields_are_not_validated():
+    event = {**M(3, "s", 1), "side": [], "price_ticks": False, "comment": "own test"}
+    assert V.validate(event, 2, is_live, expected_type="MARKET_SELL") is None

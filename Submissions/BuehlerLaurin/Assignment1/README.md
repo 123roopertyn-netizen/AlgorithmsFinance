@@ -1,14 +1,16 @@
 # Assignment 1, limit order book: Laurin Bühler
 
-> Status (2026-11-21): Step 0 only (scaffold, spec, data verification). Commands marked *(planned)* do not exist yet.
+> Status (2026-11-21): Phase 2 baseline A, shared validation and replay implemented;
+> awaiting Claude (chat) / Laurin review. B remains a Phase 3 stub, so the full
+> suite intentionally has B-related failures. Benchmark/dashboard work is planned.
 
 ## Clean-environment run path (PowerShell, from this folder)
 ```powershell
 python -m venv "$env:USERPROFILE\.venvs\aif-a1"
 & "$env:USERPROFILE\.venvs\aif-a1\Scripts\Activate.ps1"
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # (planned) expected: <N> passed
-python run.py lob.replay 06_data/supplied/worked_example.jsonl   # (planned) expected output: see below
+python -m pytest -q                                   # includes expected Phase 3 B failures
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
 python run.py bench.run_all                           # (planned) writes 03_results/runs/<run>/
 python -m streamlit run 04_dashboard/app.py           # (planned) http://localhost:8501, reads 03_results/ only
 ```
@@ -21,6 +23,35 @@ python -m streamlit run 04_dashboard/app.py           # (planned) http://localho
 - The engine, the event reader and the data generator use the Python standard library only; `pandas` and `streamlit` are used only by the dashboard.
 
 ## Expected output (worked example)
+
+Replay prints one JSON result per input event. The first five limits return
+`resting` with no fills and their full quantities as `unfilled_qty_units`.
+The sixth result is:
+
+```json
+{"event_id": "event6", "order_id": "s1", "status": "filled", "unfilled_qty_units": 0, "fills": [{"maker_id": "b1", "taker_id": "s1", "price_ticks": 6000000, "qty_units": 100000000}, {"maker_id": "b2", "taker_id": "s1", "price_ticks": 6000000, "qty_units": 100000000}, {"maker_id": "b3", "taker_id": "s1", "price_ticks": 5990000, "qty_units": 300000000}, {"maker_id": "b4", "taker_id": "s1", "price_ticks": 5970000, "qty_units": 100000000}]}
+```
+
+Final book (via `snapshot()`, not printed as an extra replay line): b4 retains
+400000000 units at 5970000 ticks, arrival_seq 4; a1 retains 200000000 units at
+6010000 ticks, arrival_seq 5. Integer gross proceeds = 3594000000000000 tick-units
+= 359400.00 USD. Hand trace: `00_docs/TRACE.md`.
+
+Replay also accepts `.jsonl.gz` and `--version B` (B currently raises its Phase 3
+`NotImplementedError`). Events stream in file order; the shared validator rejects
+nonincreasing seq without advancing the last accepted seq. Each book starts empty;
+neither inputs nor result history are retained by the replay command.
+
+To run the currently implemented A/shared/data/CLI checks and all 17 mutants:
+
+```powershell
+python evidence.py phase2-a-check -- python -m pytest -q -k "not lob-B and not TestDifferential" --basetemp=scratch/pytest-a-check
+```
+
+The full suite keeps B contract checks, the B mutation control and the A/B
+stateful test red until Phase 3. No xfails/skips conceal those missing behaviors.
+The existing venv and pinned dependencies were used; no fresh-venv or benchmark
+claim is made in Phase 2. See `05_evidence/INDEX.md` for saved runs.
 
 ## Layout (read in this order)
 | Folder | Contents |
@@ -72,6 +103,6 @@ Units, what each phase contains, per call vs per batch, percentile convention, m
 
 ## Evidence block
 Commit to audit: <hash> (filled in by Laurin)
-Tests: <command> → <result line>
+Tests (Phase 2): `python -m pytest -q --tb=short --basetemp=scratch/pytest-final --junitxml=05_evidence/phase2-all-tests.xml` → `66 failed, 274 passed in 112.33s` (all 66 expected red for Phase 3 B; see `00_docs/AI_LOG.md` per-file table)
 Benchmark: <command> → 03_results/runs/<run folder>/
-Fresh-venv check: <date>
+Fresh-venv check: pending Phase 7 (existing pinned venv used in Phase 2)

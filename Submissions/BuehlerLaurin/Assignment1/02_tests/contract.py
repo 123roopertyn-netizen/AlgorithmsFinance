@@ -548,6 +548,40 @@ def check_direct_methods_validate(impl):
     assert book.snapshot() == []
 
 
+def check_direct_methods_reject_wrong_type(impl):
+    """N2: type mismatch follows unknown_type and precedes required-field checks."""
+    methods = {"LIMIT": "AddLimitOrder", "MARKET_SELL": "FillMarketSell", "CANCEL": "CancelOrder"}
+    for expected, method in methods.items():
+        for actual in methods:
+            if actual == expected:
+                continue
+            book = impl()
+            run(book, [L(1, "b1", "BUY", 100, 5)])
+            before = book.snapshot()
+            # Missing event_id must lose to wrong_type_for_method.
+            event = {"seq": 2, "type": actual}
+            sent = copy.deepcopy(event)
+            result = getattr(book, method)(sent)
+            assert result == {"event_id": None, "status": "rejected", "reason": "wrong_type_for_method"}, result
+            assert sent == event and book.snapshot() == before
+            unknown = getattr(book, method)({"seq": 2, "type": "UNKNOWN"})
+            assert unknown == {"event_id": None, "status": "rejected", "reason": "unknown_type"}, unknown
+            assert book.process(C(2, "b1"))["status"] == "cancelled", "rejection advanced seq"
+
+
+def check_unknown_extra_fields_ignored(impl):
+    """N3: irrelevant fields do not affect validation, matching, results or state."""
+    plain, extra = impl(), impl()
+    events = [L(1, "b1", "BUY", 100, 3), M(2, "s", 2), C(3, "b1")]
+    extras = [{"comment": "own contract case", "target_order_id": []},
+              {"side": "HOLD", "price_ticks": False, "comment": "ignored on market sell"},
+              {"side": [], "price_ticks": None, "qty_units": False, "order_id": [], "comment": "cancel"}]
+    for event, fields in zip(events, extras):
+        want = run(plain, [event])[0]
+        got = run(extra, [{**event, **fields}])[0]
+        assert got == want and extra.snapshot() == plain.snapshot()
+
+
 def check_result_types_are_exact_ints(impl):
     for r in run(impl(), _API_STREAM):
         for k in ("unfilled_qty_units", "cancelled_qty_units"):

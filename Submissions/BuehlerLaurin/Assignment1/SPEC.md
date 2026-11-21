@@ -12,7 +12,7 @@
 | Benchmarks | Full: time, throughput, latency percentiles, memory, operation counts | All five are explicitly required (R §Benchmark experiments, §Time and latency, §Memory; S16–S20). |
 | Dashboard | Full contract (`aif-bench` §8) | Dashboard from saved results is required (R §Results and dashboard, S22). |
 | Report artifacts | All: README, REPORT, TRACE, REQUIREMENTS_MAP, AI_LOG, LEARNING | README + report + AI record required (R §Submit, §Implement and revise); TRACE/MAP/LEARNING are Laurin's study and audit aids. |
-| Second agent | Codex audits with `aif-review` | Not required ("No peer audit is required", R §Submit); Laurin's choice for an independent check. |
+| Second agent | Claude (chat) reviews every phase; Codex builds from Phase 2 | Laurin handover, 2026-11-21; Laurin runs all git commands. |
 | Checkpoints | Every phase | Learning goal; Laurin approves each phase ("go"). |
 
 ## Task (one sentence)
@@ -64,7 +64,7 @@ Reject, **without changing the book or the last accepted `seq`**:
 - missing required fields (proposal, Q3).
 Valid, not rejected: `CANCEL` of an unknown / filled / cancelled target (→ `not_found`). Out of scope: historical id reuse (a fully filled or cancelled id submitted again is accepted as a new order, R §Matching rules 6).
 
-**Check order and reason codes (decided, Q2–Q5, Q14).** Shared module `lob/validation.py`: `validate(event, last_seq, is_live) -> reason | None` and `rejection(event, reason) -> dict`. The first failing rule gives the `reason`:
+**Check order and reason codes (decided, Q2–Q5, Q14).** Shared module `lob/validation.py`: `validate(event, last_seq, is_live, expected_type=None) -> reason | None` and `rejection(event, reason) -> dict`. The first failing rule gives the `reason`:
 
 | # | Rule | Reason |
 |---|---|---|
@@ -74,16 +74,17 @@ Valid, not rejected: `CANCEL` of an unknown / filled / cancelled target (→ `no
 | 4 | `seq` > last accepted `seq` | `nonincreasing_seq` |
 | 5 | `type` present | `missing_field:type` |
 | 6 | `type` ∈ {`LIMIT`, `MARKET_SELL`, `CANCEL`} (exact spelling) | `unknown_type` |
-| 7 | required fields present, in this order — LIMIT: `event_id`, `order_id`, `side`, `price_ticks`, `qty_units`; MARKET_SELL: `event_id`, `order_id`, `qty_units`; CANCEL: `event_id`, `target_order_id` | `missing_field:<name>` |
-| 8 | `event_id`, then `order_id` / `target_order_id` are non-empty `str` (a present `null` is a bad id, not a missing field) | `bad_id:<name>` |
-| 9 | LIMIT `side` ∈ {`BUY`, `SELL`} (exact spelling) | `unknown_side` |
-| 10 | LIMIT `price_ticks` is `int` (not `bool`) and > 0 | `bad_price` |
-| 11 | `qty_units` is `int` (not `bool`) and > 0 | `bad_qty` |
-| 12 | LIMIT / MARKET_SELL `order_id` is not live (resting) | `duplicate_live_order_id` |
+| 7 | direct method only: known `type` equals its expected type (`expected_type`); dispatcher passes `None` | `wrong_type_for_method` |
+| 8 | required fields present, in this order — LIMIT: `event_id`, `order_id`, `side`, `price_ticks`, `qty_units`; MARKET_SELL: `event_id`, `order_id`, `qty_units`; CANCEL: `event_id`, `target_order_id` | `missing_field:<name>` |
+| 9 | `event_id`, then `order_id` / `target_order_id` are non-empty `str` (a present `null` is a bad id, not a missing field) | `bad_id:<name>` |
+| 10 | LIMIT `side` ∈ {`BUY`, `SELL`} (exact spelling) | `unknown_side` |
+| 11 | LIMIT `price_ticks` is `int` (not `bool`) and > 0 | `bad_price` |
+| 12 | LIMIT / MARKET_SELL `qty_units` is `int` (not `bool`) and > 0 | `bad_qty` |
+| 13 | LIMIT / MARKET_SELL `order_id` is not live (resting) | `duplicate_live_order_id` |
 
 - Rejection result: `{"event_id": <event_id if it is a non-empty str, else None>, "status": "rejected", "reason": <code>}` (Q3).
 - Not checked: `event_id` uniqueness (Q13: would need a history that grows with M); historical reuse of inactive `order_id`s (accepted as a new order, R §Matching rules 6); a CANCEL target need not be live.
-- Rules 2 and 5 (`missing_field:seq` / `missing_field:type`) and the "null id = bad id" convention refine the Q2 order; see open question N1.
+- N1 confirmed by Laurin on 2026-11-21: missing seq/type use `missing_field:seq` / `missing_field:type`; present null ids are bad ids; invalid event_id is reported as `None`.
 
 ## Output (R §Required results, S9; field names from `worked_expected.json`)
 | Event | Result dict |
@@ -168,7 +169,7 @@ Symbols: B active orders, P occupied price levels (per side), F maker fills of o
 
 | Version | Data organisation | Insert (no cross) | Cancel | Market sell / crossing limit | Space |
 |---|---|---|---|---|---|
-| A (baseline) | one Python list of order records per side, best order found by scanning (or kept sorted) | O(1) append (scan variant) | O(B) scan | O(F·B) worst-case (rescan per fill) | O(B) |
+| A (baseline) | one unsorted Python list per side; scan best order per fill | O(B+1) worst-case including validation; append alone O(1) amortized | O(B+1) worst-case | O((F+1)(B+1)) worst-case including validation, output and residual append | O(B+1) persistent; O(F) returned fills |
 | B1 | per level a `deque`, lazy cancel + compaction; price list sorted (bisect) with best at the tail; `dict` id → order | O(1) existing level; O(P) new level (list insert) | O(1) mark + amortized compaction | O(F + L + S skipped), amortized | O(B + P + S), S bounded by compaction rule |
 | B2 | per level an `OrderedDict` (true O(1) removal); same sorted price list | as B1 | O(1) expected (hash delete); O(P) if level empties mid-list | O(F + L) expected | O(B + P) |
 | B3 | heap of prices + `in_heap` set; per level FIFO queue | O(log P) new level, O(1) existing | O(1) + lazy level removal | O(F + L log P) amortized | O(B + P + stale heap entries) |
@@ -193,7 +194,7 @@ Same format and conventions as the supplied generator (bids at 6,000,000 − dep
 | `contract.py` + `test_contract.py` | Named `check_*` rules for every version: worked example; matching rules (inline hand-calculated scenarios); cancellation; one check per validation rule family; interface (direct methods = `process()`, input not mutated, independent instances, snapshot is a copy, canonical order); `check_own_<case>` for each own dataset; invariants on the first 1,000 events of each supplied stream. Every replay runs the step checker (I1–I4, C1–C6, price-time priority, maker price) after each event. |
 | `test_validation.py` | The shared validator directly: every invalid row → its reason; valid events → `None`; rejection result shape. |
 | `test_stateful.py` | Hypothesis A/B differential after every event (results, books, invariants, step checker on A), incl. id reuse, repeated cancels and invalid events. |
-| `test_mutants.py` | 12 mutants via the public API, each killed by a named check; 5 internal mutants planned for Phase 2. |
+| `test_mutants.py` | 17 mutants (12 public-API + 5 internal), each runnable and killed with AssertionError by its named contract check; real-version controls parametrized separately for A/B. |
 | `test_own_datasets.py` | `06_data/own/` equals what `own_cases.py` writes; every case has its check. |
 
 ## Ambiguities -> questions for Laurin
@@ -217,10 +218,56 @@ Q1–Q15: **decided by Laurin on 2026-11-21, all as proposed** (the proposal col
 | Q14 | `type` / `side` case-sensitive (`"buy"` rejected)? | Yes: exact spelling as in R §Input files. |
 | Q15 | Version A design: unsorted list + full scan per fill (simplest oracle) or a sorted list? (R §Implement and revise: "for example scanning/sorting a list") | Unsorted list per side + scan (transparent baseline). |
 
-Open questions from Phase 1 (2026-11-21):
+Phase 1 decisions: **confirmed by Laurin on 2026-11-21** (N1-N3).
 
-| # | Question | Proposal (used in the Phase 1 tests) |
+| # | Question | Decision (2026-11-21) |
 |---|---|---|
-| N1 | Validation details beyond Q2: missing `seq` / `type` report `missing_field:seq` / `missing_field:type` (not `bad_seq` / `unknown_type`); a present `null` id is `bad_id:<name>`; a rejected result has `event_id = None` when `event_id` is present but not a non-empty string. | As stated (rules 2, 5, 8 of the check-order table). |
-| N2 | A direct method called with an event of another type, e.g. `AddLimitOrder({"type": "CANCEL", ...})`. | Reject with a new code `wrong_type_for_method`; not tested yet. |
-| N3 | Unknown extra fields in an event (e.g. `side` on a MARKET_SELL). | Ignore them; not tested yet. |
+| N1 | Validation details beyond Q2: missing `seq` / `type` report `missing_field:seq` / `missing_field:type` (not `bad_seq` / `unknown_type`); a present `null` id is `bad_id:<name>`; a rejected result has `event_id = None` when `event_id` is present but not a non-empty string. | Yes, as proposed; rules 2, 5, 9 and rejection shape. |
+| N2 | A direct method called with an event of another type, e.g. `AddLimitOrder({"type": "CANCEL", ...})`. | Yes: `wrong_type_for_method`, immediately after `unknown_type` (rule 7); direct validator and contract checks added in Phase 2. |
+| N3 | Unknown extra fields in an event (e.g. `side` on a MARKET_SELL). | Yes: ignored (explicit assumption). Contract checks include irrelevant side/price_ticks on MARKET_SELL and an extra comment field; direct validator check added. |
+
+## Version A: argument from the Phase 2 code (2026-11-21)
+
+`01_code/lob/book_a.py` contains only two unsorted lists of live order dicts and
+`last_seq`. No id index, price-level map, aggregates, tombstones or trade history.
+B = active orders before an operation; P = occupied prices (0 <= P <= B);
+F = number of maker fills returned by this operation. Bounds count comparisons,
+references and integer arithmetic as constant-cost operations; Python big-int and
+unbounded string costs additionally depend on bit/identifier length. These are
+code arguments; scaling measurements are deferred to Phase 4, not yet verified.
+
+Pseudocode (public path): validate in table order; return rejection immediately
+if invalid; advance last_seq only if valid; cancel by scan/delete, or repeatedly
+scan the opposite list for its best maker, stop if no cross, emit min-quantity
+fill and decrement both quantities, delete an exhausted maker; append any limit
+residual to its own side. Discard any market residual. Return this event's fills.
+
+| Operation / component | Bound type and argument |
+|---|---|
+| Shared validation | O(1) fixed field checks, then `_is_live` scans at most B records for submissions: O(B+1) worst-case. CANCEL skips the duplicate scan. Some rejected submissions return before that scan. No mutations on any rejection. |
+| `_best_index`, `best_bid`, `best_ask` | O(B+1) worst-case: visit each order on that side, O(1) working space. Strict price improvement replaces the candidate; equal price keeps the earliest list position. |
+| Noncrossing limit | Validation O(B+1), opposite scan O(B+1), new record O(1), list append O(1) amortized: O(B+1) amortized overall; even a single O(B+1) append resize leaves the public worst-case O(B+1). Append alone has worst-case O(B+1). |
+| Cancel | Scan both lists until target found or exhausted, then Python list deletion shifts at most B references: O(B+1) worst-case. List capacity shrink can also copy O(B) references, within that bound. |
+| Market sell | Validation O(B+1). At most F successful scans and one stopping scan; each scan and exhausted-maker list deletion O(B+1). Fill records O(F) and fill-list append O(1) amortized, O(F) total. Thus O((F+1)(B+1)) worst-case upper bound (including an empty book / F=0), with no limit-residual append. |
+| Crossing limit | Same matching work as market sell, plus residual append O(1) amortized / O(B+1) worst-case: O((F+1)(B+1)) worst-case overall, including list resizing. |
+| Canonical snapshot | Sort references by price then arrival per side and copy each order dict: O(B log(B+1)+1) worst-case time, O(B+1) temporary/output space. Sorting is inspection only; matching never sorts the stored lists. |
+| Persistent / temporary space | O(B+1) persistent for live records and list capacity; no state grows with past event count M at fixed B. CPython list shrink prevents retained capacity growing with historical peak after deletions. Matching O(1) working state excluding the O(F) returned fill list; resize/delete can use O(B) transient storage. No separate P-dependent storage or level operations. |
+
+The simpler textbook O(F*B) describes successful scans for F>0, but omits
+validation and the final no-cross check, so the public bound keeps the +1 terms.
+Each list is in arrival order: accepted seq strictly increases, appends occur at
+the end, deletions preserve survivor order and partial fills do not move makers.
+Therefore earliest position among equal best prices is FIFO. min-quantity fills
+preserve C1/C2, residual handling preserves C5/C6, and cancel removes just its
+remaining quantity (C3). Integer proceeds use the returned maker-price fills
+(C4). B has not been implemented or measured in this phase.
+
+Assumption N3: fields not required for the event's type are ignored, even if
+their values would be invalid on another type. Event-id uniqueness remains the
+input assumption decided in Q13; it is not tracked with a growing history.
+
+For a pre-parsed M-event stream, sum each event's public cost:
+O(sum_i (F_i+1)(B_i+1)), bounded above by O(M*(F_max+1)*(B_max+1)).
+Streaming replay adds JSON/gzip parsing and JSON output costs (not timed here);
+it stores one event and result at a time. File parsing,
+engine replay and printing will be separated in Phase 4 measurements.

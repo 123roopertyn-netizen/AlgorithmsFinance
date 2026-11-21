@@ -1,17 +1,16 @@
 """Mutation tests ("test the tests"), from the aif-tdd template.
 
-Each mutant subclasses the base version and overrides ONE public method so that exactly
+Each mutant subclasses the base version and overrides ONE method so that exactly
 one rule breaks; KILLED_BY names the contract check that must catch it with an
 AssertionError. Any other exception means the mutant or the check is broken (fix it,
 never count it as a kill). A surviving mutant means a missing test: add the test, never
 delete the mutant.
 
-Phase 1 (now): the versions are NotImplementedError stubs, so every test here fails as
-"BLOCKED" until the base passes all checks (Phase 2). The mutants below therefore only use
-the PUBLIC API (process / snapshot / best_*), which is fixed in SPEC.md.
+Phase 2: the first 12 mutants change the PUBLIC API; five additional mutants use
+A's internal selection, matching and residual-storage methods. Mutation analysis
+is blocked unless every unmodified A contract check passes. B remains a stub.
 
-Planned for Phase 2, once Version A's internals exist (they override an internal method
-of A, so they cannot be written against a stub):
+Internal mutants added in Phase 2:
   * LIFO within a price level                -> check_fifo_within_price
   * partially filled maker re-queued at back  -> check_partial_maker_keeps_priority
   * priority by id spelling instead of seq    -> check_own_fifo_one_price
@@ -180,10 +179,70 @@ class MutantBestBidIsBestAsk(BASE):
         return super().best_ask()
 
 
+class MutantLifo(BASE):
+    """Select the last arrival at the best price instead of the first."""
+    KILLED_BY = "check_fifo_within_price"
+
+    def _best_index(self, orders, side):
+        if not orders:
+            return None
+        return min(range(len(orders)), key=lambda i: (
+            -orders[i]["price_ticks"] if side == "BUY" else orders[i]["price_ticks"],
+            -orders[i]["arrival_seq"]))
+
+
+class MutantRequeuesPartialMaker(BASE):
+    """Move a surviving partial maker to the back of its side's list."""
+    KILLED_BY = "check_partial_maker_keeps_priority"
+
+    def _match(self, event, side, limit):
+        fills, remaining = super()._match(event, side, limit)
+        if fills:
+            orders = self.asks if side == "BUY" else self.bids
+            for i, maker in enumerate(orders):
+                if maker["order_id"] == fills[-1]["maker_id"]:
+                    orders.append(orders.pop(i))
+                    break
+        return fills, remaining
+
+
+class MutantPriorityById(BASE):
+    """Break equal-price ties by identifier spelling instead of arrival."""
+    KILLED_BY = "check_own_fifo_one_price"
+
+    def _best_index(self, orders, side):
+        if not orders:
+            return None
+        return min(range(len(orders)), key=lambda i: (
+            -orders[i]["price_ticks"] if side == "BUY" else orders[i]["price_ticks"],
+            orders[i]["order_id"]))
+
+
+class MutantWrongPriceEnd(BASE):
+    """Match the lowest bid or highest ask first."""
+    KILLED_BY = "check_best_price_first"
+
+    def _best_index(self, orders, side):
+        if not orders:
+            return None
+        return min(range(len(orders)), key=lambda i: (
+            orders[i]["price_ticks"] if side == "BUY" else -orders[i]["price_ticks"],
+            orders[i]["arrival_seq"]))
+
+
+class MutantDropsLimitResidual(BASE):
+    """Report a limit residual but omit storing it."""
+    KILLED_BY = "check_crossing_sell_at_maker_price"
+
+    def _rest(self, event, remaining):
+        pass
+
+
 MUTANTS = [MutantTakerPrice, MutantMarketResidualRests, MutantCancelKeepsOrder, MutantAcceptsBoolQty,
            MutantAcceptsIntegralFloatQty, MutantSeqAdvancesOnReject, MutantNoDuplicateCheck,
            MutantFillsReversed, MutantPartialReportedAsFilled, MutantMutatesInput,
-           MutantAsksDescending, MutantBestBidIsBestAsk]
+           MutantAsksDescending, MutantBestBidIsBestAsk, MutantLifo, MutantRequeuesPartialMaker,
+           MutantPriorityById, MutantWrongPriceEnd, MutantDropsLimitResidual]
 
 
 def _run(check, impl):
@@ -223,7 +282,9 @@ def test_every_mutant_names_an_existing_check():
     assert not missing, missing
 
 
-def test_real_versions_pass_all_checks():
-    for key, impl in METHODS.items():
-        for check in CHECKS:
-            assert _run(check, impl) == "pass", (key, check.__name__, _run(check, impl))
+@pytest.mark.parametrize("key", sorted(METHODS), ids=lambda k: "-".join(k))
+def test_real_versions_pass_all_checks(key):
+    # Separate version cases expose B's expected Phase 3 red result explicitly.
+    impl = METHODS[key]
+    for check in CHECKS:
+        assert _run(check, impl) == "pass", (key, check.__name__, _run(check, impl))

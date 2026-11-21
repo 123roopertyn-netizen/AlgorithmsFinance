@@ -1,7 +1,6 @@
 """Registry: METHODS = {(name, version): class}. Each call of a class gives a fresh empty book.
 
-Phase 1 (red run): both versions are NotImplementedError stubs, so every contract
-check fails for the right reason instead of collecting nothing.
+Phase 2: A is the transparent list/scan baseline; B stays a Phase 3 stub.
 Public API (SPEC.md, Q1): AddLimitOrder, CancelOrder, FillMarketSell, process,
 snapshot, best_bid, best_ask.
 """
