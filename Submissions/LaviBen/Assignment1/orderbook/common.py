@@ -53,6 +53,11 @@ class OrderBookBase:
         if rejection is not None:
             return rejection
 
+        return self._process_valid(event)
+
+    def _process_valid(self, event: Mapping[str, object]) -> dict[str, object]:
+        """Dispatch one event that has already passed complete validation."""
+
         # Validation proves these indexed values and their concrete types.
         event_type = event["type"]
         if event_type == "LIMIT":
@@ -68,17 +73,31 @@ class OrderBookBase:
     def AddLimitOrder(self, event: Mapping[str, object]) -> dict[str, object]:
         """Process a limit event through the same validation as the dispatcher."""
 
-        return self.ProcessEvent(event)
+        return self._process_expected_type(event, "LIMIT")
 
     def CancelOrder(self, event: Mapping[str, object]) -> dict[str, object]:
         """Process a cancellation through the same validation as the dispatcher."""
 
-        return self.ProcessEvent(event)
+        return self._process_expected_type(event, "CANCEL")
 
     def FillMarketSell(self, event: Mapping[str, object]) -> dict[str, object]:
         """Process a market sell through the same validation as the dispatcher."""
 
-        return self.ProcessEvent(event)
+        return self._process_expected_type(event, "MARKET_SELL")
+
+    def _process_expected_type(
+        self,
+        event: Mapping[str, object],
+        expected_type: str,
+    ) -> dict[str, object]:
+        """Validate a direct call and reject a valid event of another type."""
+
+        rejection = self._validate(event)
+        if rejection is not None:
+            return rejection
+        if event["type"] != expected_type:
+            return self._rejection(event["event_id"], "wrong_event_type_for_method")
+        return self._process_valid(event)
 
     def _validate(self, event: object) -> dict[str, object] | None:
         """Return a stable rejection dictionary, or ``None`` when accepted."""

@@ -90,10 +90,16 @@ class DashboardTests(unittest.TestCase):
             "Saved-results dashboard",
             "Timing and throughput",
             "Processing latency",
+            "Empirical cumulative distribution (ECDF)",
             "Traced memory",
             "Liquidation",
             "Correctness",
             "Raw repeats",
+            "Stopped, partial, or missing evidence",
+            "Completion status",
+            "Expected repeats",
+            "Missing repeats",
+            "Curves plot only complete repeat sets",
             "Environment and settings",
             "provisional_smoke",
             "test-platform",
@@ -101,6 +107,30 @@ class DashboardTests(unittest.TestCase):
             self.assertIn(text, html)
         self.assertIn("setDefault('experiment','stream')", html)
         self.assertIn("seriesKey", html)
+        self.assertIn("completionStatus(r)==='complete'", html)
+        self.assertIn("completionStatus(r)==='missing'", html)
+        self.assertIn("events_requested", html)
+        self.assertIn("ecdfChart", html)
+        self.assertNotIn("run_benchmarks.py", html)
+
+    def test_latency_ecdf_uses_saved_samples_without_rerunning(self) -> None:
+        latency = {
+            **REPORT["records"][0],
+            "measurement_kind": "latency",
+            "phase": "per_event_instrumented",
+            "version": "revised",
+            "samples_ns": [10, 20, 20, 40],
+            "sample_count": 4,
+            "p50_ns": 20,
+            "p95_ns": 40,
+            "p99_ns": 40,
+        }
+
+        html = render_dashboard({**REPORT, "records": [latency]})
+
+        self.assertIn('"samples_ns":[10,20,20,40]', html)
+        self.assertIn("latencyEcdf", html)
+        self.assertIn("samples_ns", html)
         self.assertNotIn("run_benchmarks.py", html)
 
     def test_dashboard_output_is_byte_stable_for_same_report(self) -> None:
@@ -110,6 +140,56 @@ class DashboardTests(unittest.TestCase):
             write_dashboard(REPORT, first)
             write_dashboard(REPORT, second)
             self.assertEqual(first.read_bytes(), second.read_bytes())
+
+        placeholder_report = {
+            **REPORT,
+            "settings": {
+                **REPORT["settings"],
+                "saved_marker": "__STATUS_HTML__ __STATUS_CLASS__",
+            },
+        }
+        placeholder_html = render_dashboard(placeholder_report)
+        self.assertIn(
+            '"saved_marker":"__STATUS_HTML__ __STATUS_CLASS__"',
+            placeholder_html,
+        )
+
+    def test_legacy_clean_report_is_marked_superseded(self) -> None:
+        legacy = {
+            **REPORT,
+            "run_label": "canonical",
+            "environment": {**REPORT["environment"], "git_dirty": False},
+        }
+
+        html = render_dashboard(legacy)
+
+        self.assertIn("Superseded legacy measurement evidence.", html)
+        self.assertNotIn("Canonical clean-tree evidence.", html)
+
+        revision_two = {
+            **legacy,
+            "settings": {
+                **legacy["settings"],
+                "measurement_integrity_revision": 2,
+            },
+        }
+        revision_two_html = render_dashboard(revision_two)
+        self.assertIn("Superseded legacy measurement evidence.", revision_two_html)
+        self.assertNotIn("Canonical clean-tree evidence.", revision_two_html)
+
+        corrected = {
+            **legacy,
+            "settings": {
+                **legacy["settings"],
+                "measurement_integrity_revision": 3,
+            },
+        }
+        corrected_html = render_dashboard(corrected)
+        self.assertIn("Canonical clean-tree evidence.", corrected_html)
+        self.assertNotIn(
+            "Superseded legacy measurement evidence.",
+            corrected_html,
+        )
 
 
 if __name__ == "__main__":

@@ -62,12 +62,44 @@ def _aggregate(
             "phase": key[5],
             "liquidation_percent": key[6],
             "seed_count": len(values),
+            "completed_repeat_count": sum(
+                int(value.get("completed_repeat_count", 0)) for value in values
+            ),
+            "stopped_repeat_count": sum(
+                int(value.get("stopped_repeat_count", 0)) for value in values
+            ),
+            "expected_repeat_count": sum(
+                int(value.get("expected_repeat_count", 0)) for value in values
+            ),
+            "missing_repeat_count": sum(
+                int(value.get("missing_repeat_count", 0)) for value in values
+            ),
         }
         for field in value_fields:
             present = [float(value[field]) for value in values if value.get(field) is not None]
             row[field] = statistics.median(present) if present else None
         output.append(row)
     return output
+
+
+def _repeat_coverage(row: Mapping[str, object]) -> str:
+    """Render completed/expected coverage without hiding stopped or missing work."""
+
+    completed = int(row.get("completed_repeat_count", 0))
+    stopped = int(row.get("stopped_repeat_count", 0))
+    missing = int(row.get("missing_repeat_count", 0))
+    expected = int(row.get("expected_repeat_count", 0))
+    if not expected:
+        expected = completed + stopped + missing
+    if not expected:
+        return "-"
+    exceptions = []
+    if stopped:
+        exceptions.append(f"{stopped} stopped")
+    if missing:
+        exceptions.append(f"{missing} missing")
+    suffix = f" ({', '.join(exceptions)})" if exceptions else ""
+    return f"{completed}/{expected}{suffix}"
 
 
 def render_report(report: dict[str, object]) -> str:
@@ -78,12 +110,17 @@ def render_report(report: dict[str, object]) -> str:
     environment: dict[str, object] = report["environment"]  # type: ignore[assignment]
     settings: dict[str, object] = report["settings"]  # type: ignore[assignment]
     run_label = str(report["run_label"])
-    canonical = run_label == "canonical" and not environment.get("git_dirty")
-    status = (
-        "Canonical clean-tree evidence."
-        if canonical
-        else "PROVISIONAL: this report was produced from a noncanonical or dirty-tree run."
-    )
+    integrity_revision = int(settings.get("measurement_integrity_revision", 0))
+    clean_canonical = run_label == "canonical" and not environment.get("git_dirty")
+    if clean_canonical and integrity_revision >= 3:
+        status = "Canonical clean-tree evidence."
+    elif clean_canonical:
+        status = (
+            "SUPERSEDED: legacy measurement evidence. This report predates "
+            "measurement-integrity revision 3."
+        )
+    else:
+        status = "PROVISIONAL: this report was produced from a noncanonical or dirty-tree run."
 
     correctness = [record for record in records if record["measurement_kind"] == "correctness"]
     completed_correctness = [record for record in correctness if not record["stopped"]]
@@ -94,6 +131,25 @@ def render_report(report: dict[str, object]) -> str:
     )
     correctness_disagreements = len(completed_correctness) - correctness_passes
     stopped = [record for record in records if record.get("stopped")]
+    partial_timing = [
+        record
+        for record in records
+        if record.get("measurement_kind") == "timing_summary"
+        and (
+            record.get("completion_status") == "partial"
+            or record.get("completion_status") == "missing"
+            or int(record.get("missing_repeat_count", 0)) > 0
+            or (
+                int(record.get("completed_repeat_count", 0)) > 0
+                and int(record.get("stopped_repeat_count", 0)) > 0
+            )
+        )
+    ]
+    missing_timing_repeats = sum(
+        int(record.get("missing_repeat_count", 0))
+        for record in records
+        if record.get("measurement_kind") == "timing_summary"
+    )
 
     timing = _aggregate(
         (
@@ -183,14 +239,16 @@ def render_report(report: dict[str, object]) -> str:
         _markdown_table(
             [
                 "Experiment", "Scenario", "M", "Levels", "Version", "Phase",
-                "Sale %", "Seeds", "Median seconds", "Median events/s",
+                "Sale %", "Seeds", "Repeat coverage", "Median seconds", "Median events/s",
             ],
             (
                 (
                     row["experiment"], row["scenario"], row["event_count"],
                     row["levels"], row["version"], row["phase"],
                     row["liquidation_percent"] if row["liquidation_percent"] is not None else "-",
-                    row["seed_count"], _number(row["elapsed_seconds_median"], 6),
+                    row["seed_count"],
+                    _repeat_coverage(row),
+                    _number(row["elapsed_seconds_median"], 6),
                     _number(row["throughput_events_per_second_median"], 0),
                 )
                 for row in timing
@@ -249,11 +307,13 @@ def render_report(report: dict[str, object]) -> str:
         "## Large liquidation",
         "",
         _markdown_table(
-            ["Setup orders", "Version", "Sale %", "Seeds", "Median sale seconds"],
+            ["Setup orders", "Version", "Sale %", "Seeds", "Repeat coverage", "Median sale seconds"],
             (
                 (
                     row["event_count"], row["version"], row["liquidation_percent"],
-                    row["seed_count"], _number(row["elapsed_seconds_median"], 6),
+                    row["seed_count"],
+                    _repeat_coverage(row),
+                    _number(row["elapsed_seconds_median"], 6),
                 )
                 for row in liquidation
             ),
@@ -266,10 +326,14 @@ def render_report(report: dict[str, object]) -> str:
         "## Bottleneck and operation counts",
         "",
         _markdown_table(
-            ["Dataset", "M", "Active peak", "Level peak", "Fills", "Visited levels", "Final active"],
+            [
+                "Dataset", "Requested / processed", "Active peak", "Level peak",
+                "Fills", "Visited levels", "Final active",
+            ],
             (
                 (
-                    row.get("dataset_id"), row.get("events_processed"),
+                    row.get("dataset_id"),
+                    f"{row.get('events_requested', '-')} / {row.get('events_processed', '-')}",
                     row.get("active_order_peak"), row.get("occupied_price_level_peak"),
                     row.get("fill_count"), row.get("maker_price_levels_visited"),
                     row.get("final_active_order_count"),
@@ -285,7 +349,10 @@ def render_report(report: dict[str, object]) -> str:
         "",
         "## Limitations",
         "",
-        f"Stopped saved records: {len(stopped)}. Declared stops are not extrapolated. Results are "
+        f"Stopped saved records: {len(stopped)}. Partial timing summaries: "
+        f"{len(partial_timing)}. Missing timing repeats: {missing_timing_repeats}. "
+        "Repeat coverage is shown in timing tables; declared stops and missing work are "
+        "not extrapolated. Results are "
         "machine- and interpreter-specific synthetic measurements. Sequential processing excludes "
         "networking and queueing, so throughput does not establish live-venue overload capacity. "
         "The supplied data are teaching workloads rather than historical or calibrated market data. "
@@ -302,6 +369,8 @@ def render_report(report: dict[str, object]) -> str:
         "```text",
         command_text,
         "```",
+        "",
+        f"Time-limit scope: {settings.get('time_limit_scope', 'not recorded')}",
         "",
         "Run `python3 -m unittest discover -s tests -v`, rebuild the dashboard from the saved "
         "result file with `python3 dashboard.py`, and consult `MEASUREMENT_PLAN.md` for exact "

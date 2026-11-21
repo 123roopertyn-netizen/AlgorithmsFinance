@@ -43,6 +43,7 @@ IMPLEMENTATIONS = {
     "baseline": BaselineOrderBook,
     "revised": RevisedOrderBook,
 }
+MEASUREMENT_INTEGRITY_REVISION = 3
 
 
 def parse_args() -> argparse.Namespace:
@@ -87,13 +88,19 @@ def append_timing_summary(
     base: Mapping[str, object],
     phase: str,
     version: str,
+    expected_repeat_count: int | None = None,
 ) -> None:
+    if expected_repeat_count is None:
+        expected_repeat_count = len(raw_records)
+    if expected_repeat_count < len(raw_records):
+        raise ValueError("expected repeat count cannot be smaller than raw records")
     completed = [
         float(record["elapsed_seconds"])
         for record in raw_records
         if not record["stopped"]
     ]
     stopped_count = len(raw_records) - len(completed)
+    missing_count = expected_repeat_count - len(raw_records)
     if completed:
         median_elapsed = statistics.median(completed)
         completed_throughputs = [
@@ -109,8 +116,13 @@ def append_timing_summary(
             "repeat": None,
             "elapsed_seconds_median": median_elapsed,
             "time_unit": "seconds",
+            "expected_repeat_count": expected_repeat_count,
             "completed_repeat_count": len(completed),
             "stopped_repeat_count": stopped_count,
+            "missing_repeat_count": missing_count,
+            "completion_status": (
+                "partial" if stopped_count or missing_count else "complete"
+            ),
             "stopped": False,
         }
         if completed_throughputs:
@@ -128,11 +140,18 @@ def append_timing_summary(
                 "phase": phase,
                 "version": version,
                 "repeat": None,
+                "expected_repeat_count": expected_repeat_count,
                 "completed_repeat_count": 0,
                 "stopped_repeat_count": stopped_count,
-                "stopped": True,
-                "stop_reason": "all raw repeats stopped at the declared limit",
+                "missing_repeat_count": missing_count,
+                "completion_status": "stopped" if not missing_count else "missing",
+                "stopped": not missing_count,
                 "time_unit": "seconds",
+                **(
+                    {"stop_reason": "all raw repeats stopped at the declared limit"}
+                    if not missing_count
+                    else {}
+                ),
             }
         )
 
@@ -148,9 +167,11 @@ def compare_versions(
             raise AssertionError(f"input mutation at diagnostic event {index}")
         if results["baseline"] != results["revised"]:
             raise AssertionError(f"result disagreement at diagnostic event {index}")
-    states = {name: book.InspectBook() for name, book in books.items()}
-    if states["baseline"] != states["revised"]:
-        raise AssertionError("final diagnostic books disagree")
+        states = {name: book.InspectBook() for name, book in books.items()}
+        if states["baseline"] != states["revised"]:
+            raise AssertionError(
+                f"canonical-book disagreement at diagnostic event {index}"
+            )
     return {
         "events_compared": len(events),
         "ordered_results_equal": True,
@@ -189,11 +210,24 @@ def parse_measurements(
             "time_unit": "seconds",
             "events_processed": len(parsed),
             "throughput_events_per_second": len(parsed) / elapsed,
+            "attempted": True,
             "stopped": False,
         }
         raw.append(record)
         records.append(record)
-    append_timing_summary(records, raw, base, "input_read_parse", "shared")
+        # Release this repeat's parsed objects after the clock read and before
+        # the next clock starts. Otherwise reassignment charges prior cleanup
+        # to the following parse repeat.
+        del parsed
+        gc.collect()
+    append_timing_summary(
+        records,
+        raw,
+        base,
+        "input_read_parse",
+        "shared",
+        expected_repeat_count=repeats,
+    )
     return records
 
 
@@ -216,10 +250,23 @@ def append_application_totals(records: list[dict[str, object]]) -> None:
     for source in sources:
         parse_record = parse_by_repeat.get((source["dataset_id"], source["repeat"]))
         if parse_record is None:
-            continue
-        total_elapsed = float(parse_record["elapsed_seconds"]) + float(
-            source["elapsed_seconds"]
-        )
+            raise ValueError(
+                "unpaired timing repeats: no input_read_parse row for "
+                f"dataset={source['dataset_id']!r}, repeat={source['repeat']!r}"
+            )
+        parse_elapsed = float(parse_record["elapsed_seconds"])
+        source_elapsed = source["elapsed_seconds"]
+        operation_attempted = source.get("attempted", True)
+        if source_elapsed is None:
+            if operation_attempted is not False:
+                raise ValueError(
+                    "null source timing must be explicitly unattempted"
+                )
+            # The paired parse did run, so the derived application phase has a
+            # known partial duration even though its operation never started.
+            total_elapsed = parse_elapsed
+        else:
+            total_elapsed = parse_elapsed + float(source_elapsed)
         total: dict[str, object] = {
             key: source[key]
             for key in (
@@ -246,6 +293,8 @@ def append_application_totals(records: list[dict[str, object]]) -> None:
                 "input_read_parse_seconds": parse_record["elapsed_seconds"],
                 "engine_seconds": source["elapsed_seconds"],
                 "events_processed": source.get("events_processed"),
+                "operation_attempted": operation_attempted,
+                "attempted": True,
                 "stopped": source["stopped"],
             }
         )
@@ -289,6 +338,11 @@ def append_application_totals(records: list[dict[str, object]]) -> None:
             base,
             "application_total",
             str(first["version"]),
+            expected_repeat_count=sum(
+                1
+                for dataset_id, _repeat in parse_by_repeat
+                if dataset_id == first["dataset_id"]
+            ),
         )
 
 
@@ -318,17 +372,21 @@ def stream_measurements(
         }
     )
 
-    # One full diagnostics run uses the revised representation for O(1) active
-    # and level counts in later implementations; it is outside primary timing.
-    diagnostics = replay_diagnostics(RevisedOrderBook, events)
+    # Operation counts explain a small representative prefix and remain
+    # separate from primary timing. They are bounded like every other
+    # potentially long operation.
+    diagnostics = replay_diagnostics(
+        RevisedOrderBook,
+        diagnostic_input,
+        time_limit_seconds,
+    )
     records.append(
         {
             **base,
             "measurement_kind": "operation_counts",
-            "phase": "full_replay_instrumented",
+            "phase": "diagnostic_prefix_instrumented",
             "version": "revised",
             **diagnostics,
-            "stopped": False,
         }
     )
 
@@ -352,7 +410,14 @@ def stream_measurements(
                 record["throughput_events_per_second"] = len(events) / elapsed
             raw.append(record)
             records.append(record)
-        append_timing_summary(records, raw, base, "engine_replay", version)
+        append_timing_summary(
+            records,
+            raw,
+            base,
+            "engine_replay",
+            version,
+            expected_repeat_count=repeats,
+        )
 
         latency_input = events if latency_events is None else events[:latency_events]
         latency = latency_replay(book_class, latency_input, time_limit_seconds)
@@ -471,12 +536,22 @@ def liquidation_measurements(
     warmup_events: int,
     time_limit_seconds: float | None,
     include_memory: bool,
+    diagnostic_events: int | None = None,
 ) -> list[dict[str, object]]:
     base = common_fields(metadata)
     records: list[dict[str, object]] = []
     total_bid_qty = sum(int(event["qty_units"]) for event in setup_events)
 
-    build_diagnostics = replay_diagnostics(RevisedOrderBook, setup_events)
+    diagnostic_input = (
+        setup_events
+        if diagnostic_events is None
+        else setup_events[: min(len(setup_events), diagnostic_events)]
+    )
+    build_diagnostics = replay_diagnostics(
+        RevisedOrderBook,
+        diagnostic_input,
+        time_limit_seconds,
+    )
     records.append(
         {
             **base,
@@ -484,7 +559,6 @@ def liquidation_measurements(
             "phase": "liquidation_book_build_instrumented",
             "version": "revised",
             **build_diagnostics,
-            "stopped": False,
         }
     )
 
@@ -533,6 +607,8 @@ def liquidation_measurements(
                     "stop_reason": stop_reason,
                 }
             )
+            del attempts, stopped_versions
+            gc.collect()
             continue
 
         results = {name: attempt["result"] for name, attempt in attempts.items()}
@@ -556,6 +632,11 @@ def liquidation_measurements(
                 "stopped": False,
             }
         )
+        # Correctness states and fill lists can be large. Release them before
+        # warm-up, timing, or tracing so later phases start from a clean
+        # lifecycle boundary.
+        del fills, results, states, attempts, stopped_versions
+        gc.collect()
 
     for version in versions:
         book_class = IMPLEMENTATIONS[version]
@@ -575,19 +656,26 @@ def liquidation_measurements(
                 "build_plus_sale": [],
             }
             for repeat in range(repeats):
-                build_started = perf_counter()
+                book: Any | None = None
+                build_events_processed = 0
+                build_started: float | None = None
                 build_stopped = False
                 try:
                     with time_limit(time_limit_seconds):
+                        build_started = perf_counter()
                         book = book_class()
                         for event in setup_events:
                             book.ProcessEvent(event)
+                            build_events_processed += 1
+                        build_elapsed = perf_counter() - build_started
                 except MeasurementTimeout as error:
-                    build_elapsed = perf_counter() - build_started
+                    build_elapsed = (
+                        0.0
+                        if build_started is None
+                        else perf_counter() - build_started
+                    )
                     build_stopped = True
                     stop_reason = str(error)
-                else:
-                    build_elapsed = perf_counter() - build_started
 
                 build_record: dict[str, object] = {
                     **base,
@@ -599,7 +687,8 @@ def liquidation_measurements(
                     "requested_qty_units": requested,
                     "elapsed_seconds": build_elapsed,
                     "time_unit": "seconds",
-                    "events_processed": len(setup_events) if not build_stopped else None,
+                    "events_processed": build_events_processed,
+                    "attempted": True,
                     "stopped": build_stopped,
                 }
                 if build_stopped:
@@ -610,38 +699,64 @@ def liquidation_measurements(
                 phase_raw["book_build"].append(build_record)
 
                 if build_stopped:
-                    for phase in ("individual_sale", "build_plus_sale"):
-                        stopped_record = {
-                            **base,
-                            "measurement_kind": "timing",
-                            "phase": phase,
-                            "version": version,
-                            "repeat": repeat,
-                            "liquidation_percent": percent,
-                            "requested_qty_units": requested,
-                            "elapsed_seconds": build_elapsed,
-                            "time_unit": "seconds",
-                            "events_processed": None,
-                            "stopped": True,
-                            "stop_reason": "book build stopped; sale not attempted",
-                        }
-                        records.append(stopped_record)
-                        phase_raw[phase].append(stopped_record)
+                    sale_not_attempted = {
+                        **base,
+                        "measurement_kind": "timing",
+                        "phase": "individual_sale",
+                        "version": version,
+                        "repeat": repeat,
+                        "liquidation_percent": percent,
+                        "requested_qty_units": requested,
+                        "elapsed_seconds": None,
+                        "time_unit": "seconds",
+                        "events_processed": 0,
+                        "attempted": False,
+                        "stopped": True,
+                        "stop_reason": "book build stopped; sale not attempted",
+                    }
+                    partial_combined = {
+                        **base,
+                        "measurement_kind": "timing",
+                        "phase": "build_plus_sale",
+                        "version": version,
+                        "repeat": repeat,
+                        "liquidation_percent": percent,
+                        "requested_qty_units": requested,
+                        "elapsed_seconds": build_elapsed,
+                        "time_unit": "seconds",
+                        "events_processed": build_events_processed,
+                        "attempted": True,
+                        "stopped": True,
+                        "stop_reason": "book build stopped; sale not attempted",
+                    }
+                    records.extend((sale_not_attempted, partial_combined))
+                    phase_raw["individual_sale"].append(sale_not_attempted)
+                    phase_raw["build_plus_sale"].append(partial_combined)
+                    del book
+                    gc.collect()
                     continue
 
-                sale_started = perf_counter()
+                assert book is not None
+                sale_result: dict[str, object] | None = None
+                fills: list[dict[str, object]] | None = None
+                sale_started: float | None = None
                 try:
                     with time_limit(time_limit_seconds):
+                        sale_started = perf_counter()
                         sale_result = book.ProcessEvent(sale_event)
+                        sale_elapsed = perf_counter() - sale_started
                 except MeasurementTimeout as error:
-                    sale_elapsed = perf_counter() - sale_started
+                    sale_elapsed = (
+                        0.0
+                        if sale_started is None
+                        else perf_counter() - sale_started
+                    )
                     sale_stopped = True
                     sale_stop_reason = str(error)
                     fill_count = None
                     levels_visited = None
                     unfilled = None
                 else:
-                    sale_elapsed = perf_counter() - sale_started
                     sale_stopped = False
                     fills = sale_result["fills"]
                     fill_count = len(fills)
@@ -662,6 +777,7 @@ def liquidation_measurements(
                     "maker_price_levels_visited": levels_visited,
                     "unfilled_qty_units": unfilled,
                     "events_processed": 0 if sale_stopped else 1,
+                    "attempted": True,
                     "stopped": sale_stopped,
                 }
                 if sale_stopped:
@@ -680,6 +796,7 @@ def liquidation_measurements(
                     "elapsed_seconds": build_elapsed + sale_elapsed,
                     "time_unit": "seconds",
                     "events_processed": len(setup_events) + (0 if sale_stopped else 1),
+                    "attempted": True,
                     "stopped": sale_stopped,
                 }
                 if sale_stopped:
@@ -687,13 +804,25 @@ def liquidation_measurements(
                 records.append(combined_record)
                 phase_raw["build_plus_sale"].append(combined_record)
 
+                # The next construction repeat must not pay to release this
+                # trial's book or fill output.
+                del fills, sale_result, book
+                gc.collect()
+
             phase_base = {
                 **base,
                 "liquidation_percent": percent,
                 "requested_qty_units": requested,
             }
             for phase, raw in phase_raw.items():
-                append_timing_summary(records, raw, phase_base, phase, version)
+                append_timing_summary(
+                    records,
+                    raw,
+                    phase_base,
+                    phase,
+                    version,
+                    expected_repeat_count=repeats,
+                )
 
             if include_memory:
                 memory = traced_liquidation(
@@ -740,6 +869,11 @@ def main() -> int:
     ):
         if value < 1:
             raise SystemExit(f"{name} must be positive")
+    if parse_repeats != repeats:
+        raise SystemExit(
+            "parse_repeats must equal repeats so every application-total repeat "
+            "has an immutable one-to-one parse/replay pair"
+        )
 
     environment = environment_metadata()
     if args.profile == "canonical" and environment["git_dirty"]:
@@ -771,6 +905,7 @@ def main() -> int:
                     warmup_events,
                     args.time_limit_seconds,
                     not args.skip_memory,
+                    diagnostic_events=args.diagnostic_events,
                 )
             )
         else:
@@ -804,8 +939,22 @@ def main() -> int:
             "warmup_events": warmup_events,
             "diagnostic_events": args.diagnostic_events,
             "latency_events": latency_events,
-            "time_limit_seconds_per_phase": args.time_limit_seconds,
+            "operation_time_limit_seconds": args.time_limit_seconds,
+            "time_limit_scope": (
+                "engine replay, per-event latency, liquidation build/sale, "
+                "bounded correctness attempts, and memory tracing; input parsing "
+                "and derived application totals are not independently limited"
+            ),
+            "completed_timing_boundary": (
+                "perf_counter starts after timeout-handler setup and stops before "
+                "timeout-handler teardown"
+            ),
+            "stopped_timing_boundary": (
+                "after an operation starts, elapsed time ends in the exception "
+                "handler after timeout-context teardown; a pre-start timeout records zero"
+            ),
             "memory_enabled": not args.skip_memory,
+            "measurement_integrity_revision": MEASUREMENT_INTEGRITY_REVISION,
             "same_prepared_event_tuple_for_versions": True,
             "fresh_book_per_replay_and_liquidation_size": True,
             "primary_timing_excludes_input_read_parse": True,

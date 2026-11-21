@@ -105,6 +105,9 @@ After every accepted event:
    maker from every structure exactly once.
 8. Validation finishes before mutation and only accepted events advance
    `last_accepted_seq`.
+9. A named direct method processes only its corresponding event type; a valid
+   wrong-type call returns `wrong_event_type_for_method` without mutation or
+   sequence advancement.
 
 ## Revision and test record
 
@@ -123,14 +126,19 @@ After every accepted event:
   confirms the surviving makers retain FIFO priority.
 - The algorithm/fixture suite reached 22 passing tests after those regressions.
   A 23rd test now replays all 50,000 supplied events through fresh books; both
-  versions must return equal results for every event and equal final canonical
-  books.
-- Ten additional tests cover deterministic measurement inputs, stable gzip
+  versions must return equal results and equal canonical books after every
+  event.
+- Additional tests cover deterministic measurement inputs, stable gzip
   storage, liquidation sizing, latency breakdowns, percentile convention,
-  diagnostics, memory boundaries, report validation and explicit stopped-run
-  labeling, including bounded liquidation correctness diagnostics. Two
-  dashboard tests and two short-report tests verify required saved-result views
-  and byte-stable generation. The complete suite now has 37 passing tests.
+  bounded diagnostics, memory boundaries, report validation,
+  timeout-instrumentation boundaries, between-repeat cleanup, repeat pairing,
+  expected/stopped/missing summaries, and explicit stopped or unattempted work.
+  Dashboard and short-report tests verify the saved-sample ECDF, revision-3
+  evidence gate, diagnostic coverage, required views, and byte-stable
+  generation. The complete post-audit suite passes all 60 tests; its strict
+  50,000-event public-state comparison makes the run intentionally slow.
+- `REGRESSION_FIX_BASELINE.md` records the failing commands, exit statuses and
+  reasons observed before the post-audit measurement and presentation fixes.
 
 ## AI use
 
@@ -146,7 +154,11 @@ Accepted suggestions:
 - replay identical supplied events through fresh instances of both versions;
 - pre-generate checksummed benchmark inputs and separate timing, latency,
   operation counting and memory tracing; and
-- build a dependency-free dashboard and report from saved results only.
+- test clock/context and object-lifecycle order deterministically rather than
+  inferring it from noisy wall-clock values; and
+- build a dependency-free dashboard and report from saved results only; and
+- render latency as an ECDF from saved per-event samples rather than treating
+  three percentiles as a distribution.
 
 Corrected suggestions:
 
@@ -163,7 +175,25 @@ Corrected suggestions:
 - final visual/report review found that an all-data chart connected unrelated
   scenarios and the short report merged stream and queue-concentration rows.
   Defaults and series keys now keep curves comparable, while report groups
-  include experiment and price-level count.
+  include experiment and price-level count; and
+- a post-run audit found that prior parsed objects and liquidation books/fill
+  outputs could be released inside the next timing window, completed timings
+  included timeout-handler setup/teardown, an unattempted sale inherited its
+  build time, partial repeat summaries were under-labeled, and full supplied
+  streams compared canonical state only at the end. Tests reproduced each
+  defect before cleanup and clocks were moved to the correct lifecycle
+  boundaries, unattempted durations became explicit nulls, repeat coverage was
+  exposed, and canonical books were compared after every event.
+- A fresh audit found that unequal parse/replay repeat settings silently
+  dropped application totals, operation counts replayed complete large streams
+  without a limit, final liquidation correctness states survived into later
+  phases, direct operation methods accepted unrelated event types, report
+  validation admitted contradictory records, and the dashboard lacked a true
+  latency distribution. Tests reproduced these defects first. Revision 3 now
+  rejects unequal repeat settings, records expected/completed/stopped/missing
+  coverage, bounds prefix diagnostics, releases correctness objects, enforces
+  named method types atomically, validates cross-field consistency, and renders
+  an ECDF from saved samples.
 
 Rejected suggestions:
 
@@ -179,7 +209,10 @@ Rejected suggestions:
   dashboard meets the saved-data requirement without extra dependencies.
 
 Passing tests and cross-version agreement are evidence, not proof of
-correctness. The canonical benchmark and memory evidence measures rather than
-assumes that Version B is faster or smaller on every workload. Completed
-correctness comparisons all agree; declared stops remain visible and are not
-treated as passes.
+correctness. The earlier canonical benchmark archive is superseded because its
+measurement lifecycle predates revision 3. The corrected eight-dataset smoke
+check produced 232 validated records and 14,000 saved latency samples with no
+stops or missing repeats; it measures rather than assumes that Version B is
+faster or smaller on every workload. A replacement canonical run remains
+pending a clean committed revision. Declared stops, partial or missing repeat
+sets, and unattempted operations remain visible and are not treated as passes.

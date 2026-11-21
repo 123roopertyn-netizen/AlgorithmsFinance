@@ -120,11 +120,16 @@ class FixtureTests(unittest.TestCase):
                             results["revised"],
                             f"{path.name}: result mismatch at event {line_number}",
                         )
-                self.assertEqual(
-                    books["baseline"].InspectBook(),
-                    books["revised"].InspectBook(),
-                    f"{path.name}: final canonical books disagree",
-                )
+                        states = {
+                            name: book.InspectBook()
+                            for name, book in books.items()
+                        }
+                        self.assertEqual(
+                            states["baseline"],
+                            states["revised"],
+                            f"{path.name}: canonical books disagree at event "
+                            f"{line_number}",
+                        )
 
 
 if __name__ == "__main__":

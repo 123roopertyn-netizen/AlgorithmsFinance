@@ -19,10 +19,11 @@ exist:
 - `RevisedOrderBook` uses indexed FIFO price levels, an active-order index and
   sorted price keys with eager cleanup.
 
-The shared contract suite, the added regression cases and all fixture checks
-currently pass. Both versions also produced identical ordered results on every
-event in all five supplied 10,000-event streams. This agreement supplements
-the independently calculated examples and invariants; it is not a proof.
+The complete post-audit suite passes. Both versions produce identical ordered
+results and identical
+canonical books after every event in all five supplied 10,000-event streams.
+This agreement supplements the independently calculated examples and
+invariants; it is not a proof.
 
 Run from this directory:
 
@@ -30,11 +31,13 @@ Run from this directory:
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 ```
 
-Expected result at this checkpoint: `Ran 37 tests` followed by `OK`. The 23
-algorithm/fixture tests include a full 50,000-event supplied-stream replay;
-ten tests cover the separate
-measurement framework and its stopped-run behavior, two cover the dashboard,
-and two cover the generated short report.
+The suite includes a strict 50,000-event supplied-stream replay with canonical
+state comparison after every event; that test can take several minutes. The
+fresh-audit additions cover direct-method type safety, integer boundaries,
+ask-side FIFO, residual priority, repeat pairing, bounded diagnostics,
+object-lifecycle cleanup, strict report validation, missing-repeat disclosure,
+and a saved-sample latency ECDF. The verified result is `Ran 60 tests` followed
+by `OK` (208.320 seconds on the recorded development machine).
 
 Replay the worked example with either version:
 
@@ -48,16 +51,21 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/replay.py \
 Both traces fill makers `b1`, `b2`, `b3`, then `b4`, leave four BTC on `b4`,
 leave the two-BTC ask unchanged and imply gross proceeds of `359400.00` USD.
 
-The canonical benchmark was run from clean measurement commit
-`ffb474170b4849af850e31588f9a1a70dcf08da3`. It covers 72 required datasets
-plus one one-million-event mixed attempt and saves 3,744 records. All 76
-completed correctness comparisons agree; 15 large liquidation correctness
-attempts and other slow baseline phases are explicitly stopped at the equal
-five-second limit. See `MEASUREMENT_PLAN.md`, `REPORT.md`, and
-`results/CHECKSUMS.json`. `dashboard.py` and `build_report.py` load saved
-results only; they never rerun benchmarks.
+The tracked benchmark archive was produced from clean measurement commit
+`ffb474170b4849af850e31588f9a1a70dcf08da3`, but a later audit found timing
+lifecycle, incomplete-repeat, and unbounded-diagnostic defects. The files under
+`results/` and the generated `REPORT.md` are therefore preserved only as
+superseded provenance, not accepted canonical evidence. The revision-3 runner,
+dashboard, and report builder pass focused regression tests and a
+revision-3 eight-dataset pipeline smoke check (232 validated records, 14,000
+saved latency samples, zero stops, and zero missing repeats). A replacement
+canonical run requires the explicitly authorized measurement-code commit and a
+clean submission tree, as required by `AGENTS.md`. `dashboard.py` and
+`build_report.py` load saved results only; they never rerun benchmarks. Both
+builders require the corrected saved-data marker
+`measurement_integrity_revision: 3` before granting a clean run canonical status.
 
-Rebuild both derived artifacts exactly with:
+Render the archived raw data with the corrected builders using:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 dashboard.py \
@@ -68,9 +76,13 @@ PYTHONDONTWRITEBYTECODE=1 python3 build_report.py \
   --output REPORT.md
 ```
 
-Open `results/dashboard.html` in a browser. The dashboard is dependency-free,
-works offline, exposes raw repeats/settings/environment, and changes filters
-without running measurement code.
+These outputs intentionally differ from the tracked legacy dashboard and
+`REPORT.md`: the corrected builders label that raw report superseded because it
+lacks measurement-integrity revision 3. The dashboard is dependency-free,
+works offline, exposes raw repeats/settings/environment, renders a latency ECDF
+from saved `samples_ns`, and changes filters without running measurement code.
+Byte-stable current artifacts will be recorded only after regeneration from
+the replacement canonical report.
 
 ## Frozen public API
 
@@ -85,16 +97,20 @@ Both `BaselineOrderBook` and `RevisedOrderBook` expose:
 
 All event and result field names, validation precedence, rejection reasons,
 ordering rules, and invariants are defined in `CONTRACT.md` and exercised by
-the same tests.
+the same tests. Each named direct method accepts only its corresponding event
+type. A completely valid event passed to the wrong direct method is rejected
+atomically with `wrong_event_type_for_method` and does not advance sequence.
 
 ## Implement and revise evidence
 
 `IMPLEMENTATION_NOTES.md` records pseudocode, invariants, runtime and space
-reasoning, the meaningful data-structure revision, the discovered validation
-regression and AI-use decisions. The unchanged 20-test suite passed before the
-two algorithm regression cases were added; the algorithm suite then reached
-22 tests. Measurement, dashboard, and report tests were subsequently written
-test-first.
+reasoning, the meaningful data-structure revision, discovered validation and
+measurement regressions, and AI-use decisions. The original 20-test suite
+passed before the first algorithm regressions were added, and strict
+supplied-stream comparison followed. Fresh-audit algorithm, measurement,
+dashboard, and report regressions were likewise written and observed failing
+before their implementation fixes; exact commands and results are preserved in
+`REGRESSION_FIX_BASELINE.md`.
 
 ## Supplied teaching data
 
@@ -102,7 +118,7 @@ test-first.
 10,000-event streams are unmodified teaching assets. They are synthetic and
 not calibrated historical exchange data. Generated 100,000- and
 1,000,000-event streams remain untracked. Their exact commands are in
-`MEASUREMENT_PLAN.md`; the canonical raw report records every dataset setting
+`MEASUREMENT_PLAN.md`; the archived raw report records every dataset setting
 and checksum, including one-million-event SHA-256
 `ce4213a66317d9565327e231f8cc84aa5f04e01253ba225feff4f9be7db08120`.
 

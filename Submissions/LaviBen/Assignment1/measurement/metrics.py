@@ -98,11 +98,16 @@ def book_counts(book: Any) -> tuple[int, int]:
 
 
 def replay_diagnostics(
-    book_class: type[Any], events: Sequence[Mapping[str, object]]
+    book_class: type[Any],
+    events: Sequence[Mapping[str, object]],
+    time_limit_seconds: float | None = None,
 ) -> dict[str, object]:
-    """Collect correctness/operation counts in a separate instrumented run."""
+    """Collect bounded operation counts in a separate instrumented run."""
 
-    book = book_class()
+    book: Any | None = None
+    processed = 0
+    stopped = False
+    stop_reason: str | None = None
     event_types: Counter[str] = Counter()
     statuses: Counter[str] = Counter()
     active_peak = 0
@@ -111,24 +116,39 @@ def replay_diagnostics(
     filled_qty = 0
     levels_visited = 0
     market_unfilled_qty = 0
+    final_active: int | None = None
+    final_levels: int | None = None
 
-    for event in events:
-        event_types[str(event.get("type"))] += 1
-        result = book.ProcessEvent(event)
-        statuses[str(result["status"])] += 1
-        fills = result.get("fills", [])
-        fill_count += len(fills)
-        filled_qty += sum(item["qty_units"] for item in fills)
-        levels_visited += len({item["price_ticks"] for item in fills})
-        if event.get("type") == "MARKET_SELL":
-            market_unfilled_qty += result["unfilled_qty_units"]
-        active, occupied = book_counts(book)
-        active_peak = max(active_peak, active)
-        level_peak = max(level_peak, occupied)
+    try:
+        with time_limit(time_limit_seconds):
+            book = book_class()
+            for event in events:
+                result = book.ProcessEvent(event)
+                processed += 1
+                event_types[str(event.get("type"))] += 1
+                statuses[str(result["status"])] += 1
+                fills = result.get("fills", [])
+                fill_count += len(fills)
+                filled_qty += sum(item["qty_units"] for item in fills)
+                levels_visited += len({item["price_ticks"] for item in fills})
+                if event.get("type") == "MARKET_SELL":
+                    market_unfilled_qty += result["unfilled_qty_units"]
+                active, occupied = book_counts(book)
+                active_peak = max(active_peak, active)
+                level_peak = max(level_peak, occupied)
+            final_active, final_levels = book_counts(book)
+    except MeasurementTimeout as error:
+        stopped = True
+        stop_reason = str(error)
 
-    final_active, final_levels = book_counts(book)
-    return {
-        "events_processed": len(events),
+    if stopped or book is None:
+        # An interrupted ProcessEvent may have only partly mutated its book, so
+        # do not present that transient state as a valid final checkpoint.
+        final_active = None
+        final_levels = None
+    result = {
+        "events_requested": len(events),
+        "events_processed": processed,
         "event_type_counts": dict(sorted(event_types.items())),
         "status_counts": dict(sorted(statuses.items())),
         "active_order_peak": active_peak,
@@ -139,7 +159,11 @@ def replay_diagnostics(
         "filled_qty_units": filled_qty,
         "maker_price_levels_visited": levels_visited,
         "market_unfilled_qty_units": market_unfilled_qty,
+        "stopped": stopped,
     }
+    if stop_reason is not None:
+        result["stop_reason"] = stop_reason
+    return result
 
 
 def timed_replay(
@@ -151,27 +175,32 @@ def timed_replay(
 
     processed = 0
     last_output: dict[str, object] | None = None
-    started = perf_counter()
+    started: float | None = None
     try:
         with time_limit(time_limit_seconds):
+            # Alarm-handler setup and teardown are instrumentation, not part
+            # of the replay operation being measured.
+            started = perf_counter()
             book = book_class()
             for event in events:
                 last_output = book.ProcessEvent(event)
                 processed += 1
+            elapsed = perf_counter() - started
     except MeasurementTimeout as error:
-        elapsed = perf_counter() - started
+        elapsed = 0.0 if started is None else perf_counter() - started
         return {
             "elapsed_seconds": elapsed,
             "events_processed": processed,
+            "attempted": True,
             "stopped": True,
             "stop_reason": str(error),
         }
-    elapsed = perf_counter() - started
     # Keep the final output live until after the clock read.
     assert last_output is not None or not events
     return {
         "elapsed_seconds": elapsed,
         "events_processed": processed,
+        "attempted": True,
         "stopped": False,
     }
 
@@ -355,24 +384,135 @@ def validate_report(report: Mapping[str, object]) -> None:
         report,
         ("schema_version", "run_label", "environment", "settings", "datasets", "records"),
     )
+    settings = report["settings"]
+    if not isinstance(settings, Mapping):
+        raise ValueError("settings must be an object")
+    revision = settings.get("measurement_integrity_revision", 0)
+    if type(revision) is not int or revision < 0:
+        raise ValueError("measurement_integrity_revision must be a nonnegative integer")
+
     records = report["records"]
     if not isinstance(records, list):
         raise ValueError("records must be a list")
+    raw_repeat_keys: set[tuple[object, ...]] = set()
     for record in records:
         if not isinstance(record, Mapping):
             raise ValueError("every record must be an object")
         _require(record, ("measurement_kind", "phase", "version", "stopped"))
+        if type(record["stopped"]) is not bool:
+            raise ValueError("stopped must be Boolean")
+        if "attempted" in record and type(record["attempted"]) is not bool:
+            raise ValueError("attempted must be Boolean")
         if record["measurement_kind"] == "timing":
             _require(record, ("repeat", "elapsed_seconds"))
+            repeat = record["repeat"]
+            if type(repeat) is not int or repeat < 0:
+                raise ValueError("raw timing repeat must be a nonnegative integer")
             elapsed = record["elapsed_seconds"]
-            if not isinstance(elapsed, (int, float)) or not math.isfinite(elapsed) or elapsed < 0:
-                raise ValueError("timing elapsed_seconds must be finite and nonnegative")
+            attempted = record.get("attempted", True)
+            if attempted is False:
+                if not record["stopped"] or elapsed is not None:
+                    raise ValueError(
+                        "unattempted timing must be stopped with null elapsed_seconds"
+                    )
+            elif (
+                type(elapsed) not in (int, float)
+                or not math.isfinite(elapsed)
+                or elapsed < 0
+            ):
+                raise ValueError(
+                    "attempted timing elapsed_seconds must be finite and nonnegative"
+                )
+            if revision >= 3:
+                _require(record, ("dataset_id",))
+                repeat_key = (
+                    record["dataset_id"],
+                    record["phase"],
+                    record["version"],
+                    record.get("liquidation_percent"),
+                    repeat,
+                )
+                if repeat_key in raw_repeat_keys:
+                    raise ValueError(f"duplicate raw timing repeat: {repeat_key}")
+                raw_repeat_keys.add(repeat_key)
         if record["stopped"]:
             _require(record, ("stop_reason",))
+            if not isinstance(record["stop_reason"], str) or not record["stop_reason"]:
+                raise ValueError("stopped record requires a nonempty stop_reason")
+        if record["measurement_kind"] == "timing_summary" and revision >= 3:
+            _require(
+                record,
+                (
+                    "expected_repeat_count",
+                    "completed_repeat_count",
+                    "stopped_repeat_count",
+                    "missing_repeat_count",
+                    "completion_status",
+                ),
+            )
+            counts = [
+                record["expected_repeat_count"],
+                record["completed_repeat_count"],
+                record["stopped_repeat_count"],
+                record["missing_repeat_count"],
+            ]
+            if any(type(value) is not int or value < 0 for value in counts):
+                raise ValueError("timing summary repeat counts must be nonnegative integers")
+            expected, completed, stopped_count, missing = counts
+            if completed + stopped_count + missing != expected:
+                raise ValueError("timing summary repeat counts do not equal expected count")
+            if completed == expected and stopped_count == 0 and missing == 0:
+                expected_status = "complete"
+            elif completed > 0:
+                expected_status = "partial"
+            elif stopped_count == expected and missing == 0:
+                expected_status = "stopped"
+            elif missing == expected and stopped_count == 0:
+                expected_status = "missing"
+            else:
+                expected_status = "partial"
+            if record["completion_status"] != expected_status:
+                raise ValueError("timing summary completion_status contradicts repeat counts")
+            if bool(record["stopped"]) != (expected_status == "stopped"):
+                raise ValueError("timing summary stopped flag contradicts completion_status")
+            if completed:
+                _require(record, ("elapsed_seconds_median",))
+                median = record["elapsed_seconds_median"]
+                if (
+                    type(median) not in (int, float)
+                    or not math.isfinite(median)
+                    or median < 0
+                ):
+                    raise ValueError("timing summary median must be finite and nonnegative")
         if record["measurement_kind"] == "memory":
             _require(record, ("current_traced_bytes", "peak_traced_bytes"))
-        if record["measurement_kind"] == "latency" and not record["stopped"]:
-            _require(record, ("samples_ns", "p50_ns", "p95_ns", "p99_ns"))
+            current = record["current_traced_bytes"]
+            peak = record["peak_traced_bytes"]
+            if (
+                type(current) is not int
+                or type(peak) is not int
+                or current < 0
+                or peak < 0
+                or current > peak
+            ):
+                raise ValueError("memory values must be nonnegative integers with current <= peak")
+        if record["measurement_kind"] == "latency":
+            _require(record, ("samples_ns", "sample_count"))
+            samples = record["samples_ns"]
+            if not isinstance(samples, list) or any(
+                type(sample) is not int or sample < 0 for sample in samples
+            ):
+                raise ValueError("latency samples must be a list of nonnegative integers")
+            if type(record["sample_count"]) is not int or record["sample_count"] != len(samples):
+                raise ValueError("latency sample_count must equal saved sample length")
+            if not record["stopped"]:
+                _require(record, ("p50_ns", "p95_ns", "p99_ns"))
+                if not samples:
+                    raise ValueError("completed latency record must contain samples")
+                expected_latency = latency_summary(samples)
+                for field in ("p50_ns", "p95_ns", "p99_ns"):
+                    if record[field] != expected_latency[field]:
+                        raise ValueError(f"latency {field} contradicts saved samples")
 
 
 def write_report(path: Path, report: Mapping[str, object]) -> None:

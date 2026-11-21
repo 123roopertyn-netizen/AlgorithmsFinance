@@ -16,7 +16,10 @@ This plan and the executable tests were completed before creating an
 | Crossing limits and maker-price execution | Hand-calculated crossing buy and sell cases at multiple prices |
 | Cancellation state changes | Before execution, after partial fill, after full fill, repeated and unknown targets |
 | Long FIFO queue | 200 makers with reverse-lexical identifiers |
-| Validation and atomic rejection | Stable reason/precedence table plus a lower-sequence valid follow-up |
+| Validation and atomic rejection | Stable reason/precedence table, boolean integer rejection, duplicate live market ID, invalid cancel target, unchanged book/sequence, and a lower-sequence valid follow-up |
+| Integer boundaries | Negative sequence/price, floating price, and zero limit/market quantity reject atomically |
+| Direct-method type safety | Each named method accepts only its event type; valid wrong-type calls return `wrong_event_type_for_method` without mutation or sequence advancement |
+| Ask-side FIFO and residual priority | Same-price asks execute by arrival; a crossing limit residual precedes a later order at its resting price |
 | Quantity conservation | Incoming quantity equals fills plus reported residual after every submission |
 | Maker conservation | Each maker's before/after residual differs by exactly its ordered fills |
 | Cancellation conservation | Cancelled quantity equals the target's prior residual |
@@ -24,6 +27,19 @@ This plan and the executable tests were completed before creating an
 | Worked example | Exact supplied fills, remaining book and `359400.00` USD proceeds |
 | Supplied data integrity | Byte count, SHA-256, event count, event-type count, sequence and metadata checks |
 | Version agreement | Results and canonical books compared after every event in ten generated streams and all five supplied 10,000-event streams |
+| Timing lifecycle | Deterministic fake clocks/context managers prove timeout setup/teardown and prior-object cleanup are outside completed timing windows |
+| Stopped/unattempted evidence | Attempted stops retain measured partial duration; skipped sale work has `attempted: false`, null duration and an explicit reason |
+| Repeat completeness | Parse/replay counts must pair; complete, partial, stopped, and missing summaries expose expected/completed/stopped/missing counts in saved data, dashboard and report |
+| Bounded diagnostics | Operation counts use only the configured prefix, remain inside the declared limit, and record requested/processed/stopped evidence |
+| Correctness-object lifecycle | Full liquidation results, states and fills are destroyed before warmup, timing or tracing begins |
+| Saved-report validation | Non-Boolean flags, duplicate repeats, contradictory summaries, invalid memory, and latency/sample percentile disagreement are rejected |
+| Latency distribution | Dashboard ECDF is derived only from saved `samples_ns`; revision-2 evidence remains superseded |
+
+The strict supplied-stream agreement test intentionally performs public
+canonical inspection after each of 50,000 events. This is substantially slower
+than the remaining suite because public inspection sorts and copies the live
+book; it is retained to satisfy the per-event state requirement rather than
+reduced to final-state agreement.
 
 ## Hand-calculated conservation stream
 
@@ -55,3 +71,15 @@ in `TESTS_FIRST_BASELINE.md` before implementation begins.
 
 Passing tests will be evidence, not proof. Final documentation must also state
 the invariants and complexity reasoning for the versions actually measured.
+
+## Post-audit regression baseline
+
+Measurement, dashboard, report, and supplied-stream coverage regressions added
+after the first benchmark archive were also run before their fixes. The exact
+commands, nonzero exit statuses, failure counts and reasons are preserved in
+`REGRESSION_FIX_BASELINE.md`. These tests do not use elapsed-time thresholds:
+they inspect deterministic clock/context/cleanup order and saved-record
+semantics, so they are stable across machines.
+
+The integrated post-audit run completed all 60 tests successfully. Passing
+remains evidence rather than a proof of correctness.

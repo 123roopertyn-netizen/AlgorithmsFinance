@@ -279,6 +279,80 @@ class OrderBookContractTests(unittest.TestCase):
                 self.assertEqual(cancellation["cancelled_qty_units"], 2)
                 self.assertEqual(book.InspectBook(), [])
 
+    def test_direct_operation_methods_reject_wrong_event_type_atomically(self) -> None:
+        cases = (
+            ("AddLimitOrder", cancel(2, "kept")),
+            ("CancelOrder", market_sell(2, "seller", 1)),
+            ("FillMarketSell", limit(2, "new", "BUY", 101, 1)),
+        )
+        for name, book_class in self.implementations():
+            for method_name, wrong_event in cases:
+                with self.subTest(implementation=name, method=method_name):
+                    book = book_class()
+                    book.ProcessEvent(limit(1, "kept", "BUY", 100, 3))
+                    before = book.InspectBook()
+
+                    result = getattr(book, method_name)(wrong_event)
+
+                    self.assertEqual(
+                        result,
+                        {
+                            "event_id": wrong_event["event_id"],
+                            "status": "rejected",
+                            "reason": "wrong_event_type_for_method",
+                        },
+                    )
+                    self.assertEqual(book.InspectBook(), before)
+                    self.assertEqual(book.last_accepted_seq, 1)
+
+    def test_same_price_ask_fifo(self) -> None:
+        for name, book_class in self.implementations():
+            with self.subTest(implementation=name):
+                book = book_class()
+                book.ProcessEvent(limit(1, "ask-z", "SELL", 100, 2))
+                book.ProcessEvent(limit(2, "ask-a", "SELL", 100, 2))
+
+                result = book.ProcessEvent(limit(3, "buyer", "BUY", 100, 3))
+
+                self.assertEqual(
+                    result["fills"],
+                    [
+                        fill("ask-z", "buyer", 100, 2),
+                        fill("ask-a", "buyer", 100, 1),
+                    ],
+                )
+                self.assertEqual(
+                    book.InspectBook(),
+                    [
+                        {
+                            "order_id": "ask-a",
+                            "side": "SELL",
+                            "price_ticks": 100,
+                            "qty_units": 1,
+                            "arrival_seq": 2,
+                        }
+                    ],
+                )
+
+    def test_crossing_limit_residual_keeps_priority_over_later_same_price_order(self) -> None:
+        for name, book_class in self.implementations():
+            with self.subTest(implementation=name):
+                book = book_class()
+                book.ProcessEvent(limit(1, "ask", "SELL", 99, 2))
+                crossing = book.ProcessEvent(limit(2, "residual", "BUY", 100, 5))
+                book.ProcessEvent(limit(3, "later", "BUY", 100, 4))
+
+                self.assertEqual(crossing["fills"], [fill("ask", "residual", 99, 2)])
+                self.assertEqual(crossing["unfilled_qty_units"], 3)
+                sale = book.ProcessEvent(market_sell(4, "seller", 4))
+                self.assertEqual(
+                    sale["fills"],
+                    [
+                        fill("residual", "seller", 100, 3),
+                        fill("later", "seller", 100, 1),
+                    ],
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

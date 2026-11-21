@@ -2,17 +2,30 @@
 
 ## Status
 
-Stages 7-9 are implemented:
+Stages 7-9 are implemented in the corrected working tree:
 
 1. deterministic benchmark input preparation with settings and SHA-256;
 2. primary timing, throughput, separate per-event latency, correctness and
    operation-count runs; and
 3. fresh `tracemalloc` runs with explicit inclusion boundaries.
 
-The current evidence is a **provisional smoke run**, not a canonical result.
+The tracked `results/` archive and generated `REPORT.md` are **superseded**.
+They were produced from commit `ffb474170b4849af850e31588f9a1a70dcf08da3`,
+before an audit found that parse and liquidation repeats could charge prior
+object cleanup to the next timing window, timeout-handler setup/teardown was
+inside completed elapsed values, and skipped/partial work was not represented
+precisely enough. A fresh audit additionally found that unequal parse/replay
+counts could silently omit application totals, full operation diagnostics were
+unbounded, large correctness objects survived into later phases, and the
+dashboard exposed percentiles but no latency distribution. Revision 3 repairs
+those defects and has a validated eight-dataset smoke check, but no replacement
+canonical result yet.
+
 The runner refuses `--profile canonical` while the Assignment 1 tree is dirty.
-This enforces the project rule that measurement code must be committed before
-canonical measurement and prevents results from naming the wrong code version.
+Under `AGENTS.md`, Ben must explicitly authorize committing the corrected
+measurement code before a replacement canonical run can start from a clean
+tree. This prevents results from naming a code version other than the code
+actually measured.
 
 ## Dataset grid
 
@@ -63,11 +76,15 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/run_benchmarks.py \
   --output results/raw_measurements.json.gz
 ```
 
-The five-second limit applies independently and equally to every version,
-repeat, latency run, and memory run. It is deliberately finite so quadratic
-baseline cases produce explicit stopped evidence instead of making the full
-grid impractical. Completed smaller cases remain measured normally; stopped
-values are not extrapolated.
+The five-second operational limit applies independently and equally to every
+version's replay repeat, latency run, bounded operation-count prefix,
+liquidation correctness attempt, liquidation build/sale operation, and memory
+run. Input parsing is measured but has no separate operational limit;
+`application_total` is a derived sum and does not run under a new limit. The
+finite limit lets quadratic baseline cases
+produce explicit stopped evidence instead of making the grid impractical.
+Completed smaller cases remain measured normally; stopped values are not
+extrapolated.
 
 Before that run, add one feasible million-event attempt without expanding the
 entire grid to that size:
@@ -87,7 +104,9 @@ to both versions, and retains either completed or stopped evidence.
 
 The report records the exact executable and argument vector actually used.
 Canonical mode uses five raw repeats and reports their median; smoke mode uses
-two repeats only to test the pipeline.
+two repeats only to test the pipeline. Parsing and replay repeat counts must be
+equal so every application-total repeat has an immutable one-to-one pair; the
+runner rejects unequal settings before measurement.
 
 - `input_read_parse`: gzip reading plus JSON decoding, measured separately.
 - `engine_replay`: fresh empty-book construction plus the complete prepared
@@ -100,9 +119,33 @@ two repeats only to test the pipeline.
 - `build_plus_sale`: the corresponding construction and sale times combined.
 
 Both versions receive the same inputs, warmup prefix, repeat count and
-per-phase time limit. A stopped run is saved with elapsed time, completed event
-count and reason; it is never omitted or extrapolated. Parsing, latency,
-operation counting and memory tracing do not run inside primary timing.
+operational time limit. Completed replay, build, and sale clocks start only
+after timeout-handler setup and stop before handler teardown. Each parse result
+is released after its stop-clock and before the next repeat's start-clock;
+each liquidation book, final result, and fills list is likewise released after
+its clocks and before the next construction repeat. A stopped attempted run is
+saved with elapsed time, completed event count and reason. A sale skipped
+because its book build stopped is explicitly `attempted: false`, has
+`elapsed_seconds: null`, and is never assigned an invented duration. Parsing,
+latency, operation counting and memory tracing do not run inside primary
+timing.
+
+Full liquidation correctness results, canonical states, and fill lists are
+reduced to compact comparison fields, released, and garbage-collected before
+warmup, primary timing, or memory tracing begins.
+
+For a timeout after an operation starts, the stopped duration ends at the
+first exception-path clock read, after the timeout context has restored its
+signal handler. If the context stops before the operation's start clock, the
+attempted phase records zero elapsed time. These stopped-run semantics and the
+completed-operation boundary are written into the saved settings. Corrected
+runs also record `measurement_integrity_revision: 3`; clean reports with an
+older revision are labeled superseded rather than canonical.
+
+Every timing summary records expected, completed, stopped, and missing repeat
+counts plus `completion_status` (`complete`, `partial`, `stopped`, or
+`missing`). Partial or missing summaries remain visible with their exact repeat
+coverage; they are never presented as if all five canonical repeats completed.
 
 Latency instrumentation saves every per-event duration in nanoseconds and
 reports nearest-rank median, 95th and 99th percentiles overall, by event type,
@@ -110,14 +153,22 @@ and for early versus late windows. Each window is the first or last 10% of the
 instrumented stream, capped at 1,000 events. Nearest-rank means sorting `n`
 samples and selecting rank `ceil(p/100*n)`, with minimum rank one. These are
 in-process algorithm times, not network or queueing latency.
+The dashboard renders an empirical cumulative distribution directly from the
+saved `samples_ns`; it never reruns or reconstructs latency measurements.
 
 ## Operation counts and correctness
 
-Separate runs save event/status counts, fills, filled quantity, market
-residual, active-order peak, occupied-price-level peak and final book size.
+Separate runs over the configured diagnostic prefix save event/status counts,
+fills, filled quantity, market residual, active-order peak, occupied-price-level
+peak and final book size. They record requested and processed event counts, use
+the declared operational limit, and preserve stopped/partial evidence instead
+of delaying a large benchmark without a bound.
+
 Liquidation records also save requested quantity, makers touched, price levels
-visited and unfilled residual. Ordered results and canonical final books are
-compared between versions on diagnostic streams and every liquidation size.
+visited and unfilled residual. Ordered results and canonical books are compared
+between versions after every diagnostic event and after every liquidation
+size.
+
 Liquidation construction, sale, and final inspection share the declared
 diagnostic limit; a version that cannot finish produces a labeled stopped
 correctness row rather than an unbounded pre-measurement delay.
@@ -145,8 +196,10 @@ partial/stopped evidence rather than hanging.
 
 ## Provisional smoke evidence
 
-The latest ignored smoke report contains eight datasets and 232 validated
-records: raw timing repeats and medians, 14,000 raw event-latency samples,
-operation counts, correctness records and 20 fresh memory records. No smoke
-phase stopped. The report identifies the tree as dirty and labels itself
-`provisional_smoke`; it must not be copied into canonical results.
+The fresh revision-3 smoke report covers eight representative 1,000-event
+datasets and contains 232 validated records, including 14,000 saved latency
+samples. It validates repeat pairing, prefix-bounded diagnostics, strict schema
+checks, and complete summaries with zero stops or missing repeats. Its dashboard
+and report rebuild byte-for-byte. This remains provisional because the source
+tree was dirty: every smoke report uses `provisional_smoke` and must not be
+copied into canonical results. The replacement canonical run remains pending.

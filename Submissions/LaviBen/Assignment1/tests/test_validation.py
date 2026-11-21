@@ -5,7 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 import unittest
 
-from support import cancel, limit, require_implementations
+from support import cancel, limit, market_sell, require_implementations
 
 
 class ValidationTests(unittest.TestCase):
@@ -41,6 +41,7 @@ class ValidationTests(unittest.TestCase):
             ({"event_id": "bad"}, {"event_id": "bad", "status": "rejected", "reason": "missing_seq"}),
             ({"event_id": "bad", "seq": True, "type": "CANCEL", "target_order_id": "x"}, {"event_id": "bad", "status": "rejected", "reason": "invalid_seq"}),
             ({"event_id": "bad", "seq": 0, "type": "CANCEL", "target_order_id": "x"}, {"event_id": "bad", "status": "rejected", "reason": "invalid_seq"}),
+            ({"event_id": "bad", "seq": -1, "type": "CANCEL", "target_order_id": "x"}, {"event_id": "bad", "status": "rejected", "reason": "invalid_seq"}),
             ({"event_id": "bad", "seq": 1, "type": "NOPE"}, {"event_id": "bad", "status": "rejected", "reason": "nonincreasing_seq"}),
             ({"event_id": "bad", "seq": 2}, {"event_id": "bad", "status": "rejected", "reason": "missing_type"}),
             ({"event_id": "bad", "seq": 2, "type": "NOPE"}, {"event_id": "bad", "status": "rejected", "reason": "unknown_event_type"}),
@@ -52,11 +53,21 @@ class ValidationTests(unittest.TestCase):
             ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "qty_units": 1}, {"event_id": "bad", "status": "rejected", "reason": "missing_price_ticks"}),
             ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": True, "qty_units": 1}, {"event_id": "bad", "status": "rejected", "reason": "invalid_price_ticks"}),
             ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": 0, "qty_units": 1}, {"event_id": "bad", "status": "rejected", "reason": "invalid_price_ticks"}),
+            ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": -100, "qty_units": 1}, {"event_id": "bad", "status": "rejected", "reason": "invalid_price_ticks"}),
+            ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": 100.0, "qty_units": 1}, {"event_id": "bad", "status": "rejected", "reason": "invalid_price_ticks"}),
             ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": 100}, {"event_id": "bad", "status": "rejected", "reason": "missing_qty_units"}),
+            ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": 100, "qty_units": True}, {"event_id": "bad", "status": "rejected", "reason": "invalid_qty_units"}),
+            ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": 100, "qty_units": False}, {"event_id": "bad", "status": "rejected", "reason": "invalid_qty_units"}),
+            ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": 100, "qty_units": 0}, {"event_id": "bad", "status": "rejected", "reason": "invalid_qty_units"}),
             ({"event_id": "bad", "seq": 2, "type": "LIMIT", "order_id": "x", "side": "BUY", "price_ticks": 100, "qty_units": -1}, {"event_id": "bad", "status": "rejected", "reason": "invalid_qty_units"}),
+            (market_sell(2, "kept", 1, event_id="bad"), {"event_id": "bad", "status": "rejected", "reason": "duplicate_live_order_id"}),
+            ({"event_id": "bad", "seq": 2, "type": "MARKET_SELL", "order_id": "s", "qty_units": True}, {"event_id": "bad", "status": "rejected", "reason": "invalid_qty_units"}),
+            ({"event_id": "bad", "seq": 2, "type": "MARKET_SELL", "order_id": "s", "qty_units": False}, {"event_id": "bad", "status": "rejected", "reason": "invalid_qty_units"}),
+            ({"event_id": "bad", "seq": 2, "type": "MARKET_SELL", "order_id": "s", "qty_units": 0}, {"event_id": "bad", "status": "rejected", "reason": "invalid_qty_units"}),
             ({"event_id": "bad", "seq": 2, "type": "MARKET_SELL", "order_id": "s", "qty_units": 1.5}, {"event_id": "bad", "status": "rejected", "reason": "invalid_qty_units"}),
             ({"event_id": "bad", "seq": 2, "type": "CANCEL"}, {"event_id": "bad", "status": "rejected", "reason": "missing_target_order_id"}),
             ({"event_id": "bad", "seq": 2, "type": "CANCEL", "target_order_id": ""}, {"event_id": "bad", "status": "rejected", "reason": "invalid_target_order_id"}),
+            ({"event_id": "bad", "seq": 2, "type": "CANCEL", "target_order_id": 7}, {"event_id": "bad", "status": "rejected", "reason": "invalid_target_order_id"}),
         )
 
         for name, book_class in self.implementations():

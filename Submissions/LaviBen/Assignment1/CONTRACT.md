@@ -21,10 +21,14 @@ InspectBook() -> list[dict[str, object]]
 ```
 
 `ProcessEvent` is the normal entry point and dispatches by `type`. Direct calls
-to the three operation methods use the same validation and result schema. The
-read-only `last_accepted_seq` property is `None` on an empty book and otherwise
-contains the most recent accepted event sequence. No method mutates the input
-mapping.
+to the three operation methods use the same validation and result schema, but
+each accepts only its named event type: `AddLimitOrder` accepts `LIMIT`,
+`CancelOrder` accepts `CANCEL`, and `FillMarketSell` accepts `MARKET_SELL`.
+After normal validation, a valid event of the wrong type is rejected with
+`wrong_event_type_for_method`; it does not mutate state or advance the accepted
+sequence. The read-only `last_accepted_seq` property is `None` on an empty book
+and otherwise contains the most recent accepted event sequence. No method
+mutates the input mapping.
 
 ## Integer units and ordering
 
@@ -76,6 +80,7 @@ They return a stable reason from this list:
 - `nonincreasing_seq`
 - `missing_type`
 - `unknown_event_type`
+- `wrong_event_type_for_method`
 - `missing_order_id`
 - `invalid_order_id`
 - `duplicate_live_order_id`

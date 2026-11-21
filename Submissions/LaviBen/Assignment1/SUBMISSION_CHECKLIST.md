@@ -20,19 +20,47 @@
   checkpoints, cancellation cleanup, final output alive, and time limits.
 - [x] Stopped runs are labeled and preserved; no values are clamped,
   extrapolated, invented, or silently omitted.
+- [x] Parse, replay, liquidation-build, sale, and object-cleanup lifecycle
+  boundaries have deterministic regression coverage; unattempted work uses a
+  null duration and partial summaries expose repeat coverage.
 - [x] Dashboard and report builders load saved evidence only and are byte-stable.
 - [x] Docker packaging is intentionally omitted because it is optional.
 
+## Fresh-audit repairs in progress
+
+- [x] Preserve the current working tree and identify the reviewed baseline.
+- [x] Record tests-first failures for every newly discovered defect.
+- [x] Reject or explicitly disclose mismatched parse/replay repeat sets.
+- [x] Bound operation-count diagnostics and preserve partial/stopped evidence.
+- [x] Release liquidation correctness state before timing and memory phases.
+- [x] Strengthen saved-report consistency validation.
+- [x] Render a true latency distribution from saved samples only.
+- [x] Freeze and enforce operation-specific direct-method behavior.
+- [x] Add the missing validation, FIFO-symmetry, and residual-priority tests.
+- [x] Run the complete corrected test suite (60 tests, 208.320 seconds).
+- [x] Run an eight-dataset revision-3 smoke benchmark and validate all 232 records.
+- [x] Update all documentation to match the corrected implementation.
+
 ## Required before submission
 
-- [x] Explicitly authorize and create the local pre-measurement commit.
-- [x] Generate the canonical dataset grid from that committed code.
-- [x] Run canonical five-repeat timing/latency/memory measurements from a clean tree.
-- [x] Attempt the optional one-million-event case within the declared limit and
+- [x] Explicitly authorize and create a new local commit containing the
+  corrected measurement, dashboard, report, test, and documentation code.
+- [ ] Confirm or regenerate the canonical dataset grid from that committed code.
+- [ ] Run replacement canonical five-repeat timing/latency/memory measurements
+  from a clean tree.
+- [ ] Attempt the optional one-million-event case within the declared limit and
   retain stopped evidence if it is infeasible.
-- [x] Generate `results/dashboard.html` and `REPORT.md` from canonical results.
-- [x] Verify the dashboard visually and reproduce it byte-for-byte.
-- [x] Run the complete test suite and final Git scope/secret checks.
-- [x] Record audited measurement commit
-  `ffb474170b4849af850e31588f9a1a70dcf08da3` in the raw evidence and report.
+- [ ] Generate `results/dashboard.html` and `REPORT.md` from replacement
+  canonical results.
+- [ ] Verify the replacement dashboard visually and reproduce both generated
+  artifacts byte-for-byte.
+- [ ] Refresh `results/CHECKSUMS.json` for the replacement raw report,
+  dashboard, and root report.
+- [ ] Run the complete test suite and final Git scope/secret checks on the
+  clean submission candidate.
+- [ ] Record the new audited measurement commit in the replacement raw evidence
+  and report. Commit `ffb474170b4849af850e31588f9a1a70dcf08da3` belongs only
+  to the superseded archive.
+- [ ] Create a new immutable annotated audit/submission tag; do not move or
+  reuse an earlier tag.
 - [ ] Push only when Ben Lavi explicitly requests it; do not merge the pull request.
