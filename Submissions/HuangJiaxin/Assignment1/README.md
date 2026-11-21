@@ -33,3 +33,22 @@ exchange records, and not calibrated to any exchange.
 * `lob/events_io.py` reads JSON Lines files, plain or gzip-compressed, either streamed
   (`iter_events`) or preloaded (`read_events`). Reading and parsing are timed separately
   from the matching engine.
+
+## Tests (written before the implementation)
+
+`python -m pytest -q tests` runs every test against **both** versions.
+
+| File | What it checks | Expected values from |
+|---|---|---|
+| `test_worked_example.py` | the course example: fills b1:1, b2:1, b3:3, b4:1 BTC, 359,400 dollars, remaining book | course `worked_expected.json` |
+| `test_matching.py` | empty book; one order; sells smaller than, equal to and larger than depth; several makers at one price; several price levels; partial fill then another sale; cancellation before/after partial and full fills; repeated and unknown cancels; crossing buys and sells at resting prices; residual limits; identifiers whose spelling differs from arrival order; a queue of 1,000 orders at one price | calculated by hand |
+| `test_validation.py` | 25 kinds of invalid events (type, side, zero/negative/float/string/bool prices and quantities, missing fields, duplicate live identifiers, nonincreasing seq) leave the book and the last accepted seq unchanged | the rules in the assignment |
+| `test_invariants.py` | after every event of 20 random streams: no crossed book, positive quantities, no order stored twice, canonical order; incoming quantity = fills + residual; each maker loses exactly its fills at its own price; cancels remove exactly the residual; fills follow price-time priority; market residuals never rest | checked from snapshots, independent of the implementation |
+| `test_equivalence.py` | versions A and B give identical results and books after every event (30 random streams, the five supplied 10,000-event samples) | comparison between versions |
+
+Before any implementation, both versions were empty stubs. The run is saved in
+`evidence/step3_tests_before_implementation.txt`: 152 tests failed and 37 passed. The only
+passes were the empty-book test for each version (an empty stub is a correct empty book) and
+all 35 equivalence tests (30 random streams, 5 samples), because two empty stubs trivially
+agree with each other. This is why agreement between
+versions is only extra evidence and never replaces the hand-calculated expected results.
