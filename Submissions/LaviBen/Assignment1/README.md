@@ -5,30 +5,74 @@
 - Branch: `lavi/assignment1-limit-order-book`
 - Language target: Python 3.10+
 
-## Current tests-first status
+## Current implementation status
 
 The interface and expected behavior are frozen in `CONTRACT.md`. The supplied
 generator and fixtures are copied byte-for-byte and recorded in
 `fixtures/CHECKSUMS.json`.
 
-Tests were written before either order-book implementation. At this checkpoint,
-`orderbook.baseline` and `orderbook.revised` intentionally do not exist. The
-first full test run must therefore fail and its command/result must be recorded
-before implementation begins.
+Tests were written and run before either implementation; the original failing
+run remains recorded in `TESTS_FIRST_BASELINE.md`. Both preserved versions now
+exist:
+
+- `BaselineOrderBook` transparently scans a list of individual active orders.
+- `RevisedOrderBook` uses indexed FIFO price levels, an active-order index and
+  sorted price keys with eager cleanup.
+
+The shared contract suite, the added regression cases and all fixture checks
+currently pass. Both versions also produced identical ordered results on every
+event in all five supplied 10,000-event streams. This agreement supplements
+the independently calculated examples and invariants; it is not a proof.
 
 Run from this directory:
 
 ```bash
-python3 -m unittest discover -s tests -v
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 ```
 
-The intended final project will preserve both a transparent baseline and a
-revised implementation. This checkpoint contains no matching-engine code,
-benchmark runner, saved measurement, or dashboard.
+Expected result at this checkpoint: `Ran 36 tests` followed by `OK`. The 23
+algorithm/fixture tests include a full 50,000-event supplied-stream replay;
+nine tests cover the separate
+measurement framework and its stopped-run behavior, two cover the dashboard,
+and two cover the generated short report.
+
+Replay the worked example with either version:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 tools/replay.py \
+  fixtures/worked_example.jsonl --version baseline --trace
+PYTHONDONTWRITEBYTECODE=1 python3 tools/replay.py \
+  fixtures/worked_example.jsonl --version revised --trace
+```
+
+Both traces fill makers `b1`, `b2`, `b3`, then `b4`, leave four BTC on `b4`,
+leave the two-BTC ask unchanged and imply gross proceeds of `359400.00` USD.
+
+The benchmark-data, parsing/total timing, latency, operation-count, and
+`tracemalloc` framework is implemented and has passed a local provisional
+smoke run. See `MEASUREMENT_PLAN.md`. Canonical measurements remain
+intentionally blocked until this code is committed and the submission tree is
+clean. `dashboard.py` and `build_report.py` load saved results only; they never
+rerun benchmarks.
+
+After canonical results exist, rebuild both artifacts exactly with:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 dashboard.py \
+  --results results/raw_measurements.json.gz \
+  --output results/dashboard.html
+PYTHONDONTWRITEBYTECODE=1 python3 build_report.py \
+  --results results/raw_measurements.json.gz \
+  --output REPORT.md
+```
+
+Open `results/dashboard.html` in a browser. The dashboard is dependency-free,
+works offline, exposes raw repeats/settings/environment, and changes filters
+without running measurement code.
 
 ## Frozen public API
 
-Both `BaselineOrderBook` and `RevisedOrderBook` will expose:
+Both `BaselineOrderBook` and `RevisedOrderBook` expose:
 
 - `ProcessEvent`
 - `AddLimitOrder`
@@ -40,6 +84,15 @@ Both `BaselineOrderBook` and `RevisedOrderBook` will expose:
 All event and result field names, validation precedence, rejection reasons,
 ordering rules, and invariants are defined in `CONTRACT.md` and exercised by
 the same tests.
+
+## Implement and revise evidence
+
+`IMPLEMENTATION_NOTES.md` records pseudocode, invariants, runtime and space
+reasoning, the meaningful data-structure revision, the discovered validation
+regression and AI-use decisions. The unchanged 20-test suite passed before the
+two algorithm regression cases were added; the algorithm suite then reached
+22 tests. Measurement, dashboard, and report tests were subsequently written
+test-first.
 
 ## Supplied teaching data
 

@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 import unittest
 
+from support import require_implementations
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -95,6 +97,34 @@ class FixtureTests(unittest.TestCase):
         )
         self.assertEqual(expected["gross_proceeds_tick_units"], 3_594_000_000_000_000)
         self.assertEqual(expected["gross_proceeds_usd"], "359400.00")
+
+    def test_all_supplied_events_match_both_versions(self) -> None:
+        implementations = require_implementations(self)
+        supplied = PROJECT_ROOT / "fixtures" / "supplied"
+
+        for path in sorted(supplied.glob("*_10000.jsonl.gz")):
+            with self.subTest(path=path.name):
+                books = {
+                    name: book_class()
+                    for name, book_class in implementations.items()
+                }
+                with gzip.open(path, "rt", encoding="utf-8") as stream:
+                    for line_number, line in enumerate(stream, 1):
+                        event = json.loads(line)
+                        results = {
+                            name: book.ProcessEvent(event)
+                            for name, book in books.items()
+                        }
+                        self.assertEqual(
+                            results["baseline"],
+                            results["revised"],
+                            f"{path.name}: result mismatch at event {line_number}",
+                        )
+                self.assertEqual(
+                    books["baseline"].InspectBook(),
+                    books["revised"].InspectBook(),
+                    f"{path.name}: final canonical books disagree",
+                )
 
 
 if __name__ == "__main__":

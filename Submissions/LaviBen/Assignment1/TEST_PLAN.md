@@ -23,7 +23,7 @@ This plan and the executable tests were completed before creating an
 | Proceeds | Integer sum of resting price times executed quantity |
 | Worked example | Exact supplied fills, remaining book and `359400.00` USD proceeds |
 | Supplied data integrity | Byte count, SHA-256, event count, event-type count, sequence and metadata checks |
-| Version agreement | Results and canonical books compared after every event in ten generated streams |
+| Version agreement | Results and canonical books compared after every event in ten generated streams and all five supplied 10,000-event streams |
 
 ## Hand-calculated conservation stream
 

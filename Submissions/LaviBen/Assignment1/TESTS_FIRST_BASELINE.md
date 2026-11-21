@@ -2,6 +2,7 @@
 
 Date: 21 November 2026 (Europe/Berlin)
 Interpreter: CPython 3.14.7
+Checkpoint commit: `8788d13b6a59aadfa9785cbc31967dce2cc4e4fe`
 
 The public contract, independent expected results, copied-fixture integrity
 checks and shared two-version test suite existed before either implementation.
