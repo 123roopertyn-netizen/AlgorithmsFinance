@@ -142,7 +142,7 @@ Accepted suggestions:
   storage and matching algorithms separate;
 - use integer-only matching and explicit price-time keys;
 - use insertion-ordered price-level dictionaries plus an active-order index;
-- add a regression test before correcting the unhashable-value crash; and
+- add a regression test before correcting the unhashable-value crash;
 - replay identical supplied events through fresh instances of both versions;
 - pre-generate checksummed benchmark inputs and separate timing, latency,
   operation counting and memory tracing; and
@@ -159,7 +159,11 @@ Corrected suggestions:
 - the first full canonical attempt revealed that liquidation correctness built
   the slow baseline outside its declared limit; a failing regression test was
   recorded, then construction, sale, and inspection were placed inside the
-  same bounded diagnostic attempt with explicit stopped evidence.
+  same bounded diagnostic attempt with explicit stopped evidence; and
+- final visual/report review found that an all-data chart connected unrelated
+  scenarios and the short report merged stream and queue-concentration rows.
+  Defaults and series keys now keep curves comparable, while report groups
+  include experiment and price-level count.
 
 Rejected suggestions:
 
@@ -175,6 +179,7 @@ Rejected suggestions:
   dashboard meets the saved-data requirement without extra dependencies.
 
 Passing tests and cross-version agreement are evidence, not proof of
-correctness. The benchmark and memory framework measures rather than assumes
-that Version B is faster or smaller on every workload. Current smoke evidence
-is provisional; canonical claims wait for a clean recorded code commit.
+correctness. The canonical benchmark and memory evidence measures rather than
+assumes that Version B is faster or smaller on every workload. Completed
+correctness comparisons all agree; declared stops remain visible and are not
+treated as passes.

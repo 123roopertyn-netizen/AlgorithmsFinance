@@ -48,14 +48,16 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/replay.py \
 Both traces fill makers `b1`, `b2`, `b3`, then `b4`, leave four BTC on `b4`,
 leave the two-BTC ask unchanged and imply gross proceeds of `359400.00` USD.
 
-The benchmark-data, parsing/total timing, latency, operation-count, and
-`tracemalloc` framework is implemented and has passed a local provisional
-smoke run. See `MEASUREMENT_PLAN.md`. Canonical measurements remain
-intentionally blocked until this code is committed and the submission tree is
-clean. `dashboard.py` and `build_report.py` load saved results only; they never
-rerun benchmarks.
+The canonical benchmark was run from clean measurement commit
+`ffb474170b4849af850e31588f9a1a70dcf08da3`. It covers 72 required datasets
+plus one one-million-event mixed attempt and saves 3,744 records. All 76
+completed correctness comparisons agree; 15 large liquidation correctness
+attempts and other slow baseline phases are explicitly stopped at the equal
+five-second limit. See `MEASUREMENT_PLAN.md`, `REPORT.md`, and
+`results/CHECKSUMS.json`. `dashboard.py` and `build_report.py` load saved
+results only; they never rerun benchmarks.
 
-After canonical results exist, rebuild both artifacts exactly with:
+Rebuild both derived artifacts exactly with:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 dashboard.py \
@@ -99,8 +101,10 @@ test-first.
 `tools/generate_orders.py`, the worked example, and the five compressed
 10,000-event streams are unmodified teaching assets. They are synthetic and
 not calibrated historical exchange data. Generated 100,000- and
-1,000,000-event streams will remain untracked; later documentation will record
-their exact commands and checksums.
+1,000,000-event streams remain untracked. Their exact commands are in
+`MEASUREMENT_PLAN.md`; the canonical raw report records every dataset setting
+and checksum, including one-million-event SHA-256
+`ce4213a66317d9565327e231f8cc84aa5f04e01253ba225feff4f9be7db08120`.
 
 The source package manifest also listed `.DS_Store`, but that file was absent
 from the package and is intentionally not recreated or submitted.

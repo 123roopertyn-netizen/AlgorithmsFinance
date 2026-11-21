@@ -99,6 +99,8 @@ class DashboardTests(unittest.TestCase):
             "test-platform",
         ):
             self.assertIn(text, html)
+        self.assertIn("setDefault('experiment','stream')", html)
+        self.assertIn("seriesKey", html)
         self.assertNotIn("run_benchmarks.py", html)
 
     def test_dashboard_output_is_byte_stable_for_same_report(self) -> None:

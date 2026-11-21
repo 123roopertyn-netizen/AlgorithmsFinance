@@ -42,8 +42,10 @@ def _aggregate(
     grouped: dict[tuple[object, ...], list[Mapping[str, object]]] = defaultdict(list)
     for record in records:
         key = (
+            record.get("experiment"),
             record.get("scenario"),
             record.get("event_count"),
+            record.get("levels"),
             record.get("version"),
             record.get("phase"),
             record.get("liquidation_percent"),
@@ -52,11 +54,13 @@ def _aggregate(
     output: list[dict[str, object]] = []
     for key, values in sorted(grouped.items(), key=lambda item: tuple(str(v) for v in item[0])):
         row: dict[str, object] = {
-            "scenario": key[0],
-            "event_count": key[1],
-            "version": key[2],
-            "phase": key[3],
-            "liquidation_percent": key[4],
+            "experiment": key[0],
+            "scenario": key[1],
+            "event_count": key[2],
+            "levels": key[3],
+            "version": key[4],
+            "phase": key[5],
+            "liquidation_percent": key[6],
             "seed_count": len(values),
         }
         for field in value_fields:
@@ -82,10 +86,13 @@ def render_report(report: dict[str, object]) -> str:
     )
 
     correctness = [record for record in records if record["measurement_kind"] == "correctness"]
+    completed_correctness = [record for record in correctness if not record["stopped"]]
+    stopped_correctness = [record for record in correctness if record["stopped"]]
     correctness_passes = sum(
         bool(record.get("ordered_results_equal")) and bool(record.get("final_books_equal"))
-        for record in correctness
+        for record in completed_correctness
     )
+    correctness_disagreements = len(completed_correctness) - correctness_passes
     stopped = [record for record in records if record.get("stopped")]
 
     timing = _aggregate(
@@ -154,8 +161,10 @@ def render_report(report: dict[str, object]) -> str:
         "",
         "## Correctness evidence",
         "",
-        f"Saved correctness rows passing ordered-result and final-book agreement: "
-        f"{correctness_passes}/{len(correctness)}. Independent tests additionally cover "
+        f"Completed correctness rows passing ordered-result and final-book agreement: "
+        f"{correctness_passes}/{len(completed_correctness)}; {len(stopped_correctness)} were "
+        f"stopped by the declared limit and {correctness_disagreements} completed rows "
+        f"disagreed. Independent tests additionally cover "
         "worked fills, price-time priority, partial fills, cancellation, atomic validation, "
         "quantity/proceeds conservation, input immutability, and defensive inspection copies. "
         "Agreement is supporting evidence rather than a proof.",
@@ -173,12 +182,13 @@ def render_report(report: dict[str, object]) -> str:
         "",
         _markdown_table(
             [
-                "Scenario", "M", "Version", "Phase", "Sale %", "Seeds",
-                "Median seconds", "Median events/s",
+                "Experiment", "Scenario", "M", "Levels", "Version", "Phase",
+                "Sale %", "Seeds", "Median seconds", "Median events/s",
             ],
             (
                 (
-                    row["scenario"], row["event_count"], row["version"], row["phase"],
+                    row["experiment"], row["scenario"], row["event_count"],
+                    row["levels"], row["version"], row["phase"],
                     row["liquidation_percent"] if row["liquidation_percent"] is not None else "-",
                     row["seed_count"], _number(row["elapsed_seconds_median"], 6),
                     _number(row["throughput_events_per_second_median"], 0),
@@ -194,10 +204,14 @@ def render_report(report: dict[str, object]) -> str:
         "## Processing latency",
         "",
         _markdown_table(
-            ["Scenario", "M", "Version", "Seeds", "p50 ns", "p95 ns", "p99 ns"],
+            [
+                "Experiment", "Scenario", "M", "Levels", "Version", "Seeds",
+                "p50 ns", "p95 ns", "p99 ns",
+            ],
             (
                 (
-                    row["scenario"], row["event_count"], row["version"], row["seed_count"],
+                    row["experiment"], row["scenario"], row["event_count"],
+                    row["levels"], row["version"], row["seed_count"],
                     _number(row["p50_ns"], 0), _number(row["p95_ns"], 0),
                     _number(row["p99_ns"], 0),
                 )
@@ -212,10 +226,14 @@ def render_report(report: dict[str, object]) -> str:
         "## Memory",
         "",
         _markdown_table(
-            ["Scenario", "M", "Version", "Seeds", "Current MiB", "Peak MiB"],
+            [
+                "Experiment", "Scenario", "M", "Levels", "Version", "Seeds",
+                "Current MiB", "Peak MiB",
+            ],
             (
                 (
-                    row["scenario"], row["event_count"], row["version"], row["seed_count"],
+                    row["experiment"], row["scenario"], row["event_count"],
+                    row["levels"], row["version"], row["seed_count"],
                     _number(float(row["current_traced_bytes"] or 0) / 1_048_576, 3),
                     _number(float(row["peak_traced_bytes"] or 0) / 1_048_576, 3),
                 )

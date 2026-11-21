@@ -39,7 +39,12 @@ class ReportingTests(unittest.TestCase):
             self.assertIn(heading, report)
         self.assertIn("provisional_smoke", report)
         self.assertIn("abc123", report)
-        self.assertIn("| Scenario | M | Version | Phase | Sale % |", report)
+        self.assertIn(
+            "| Experiment | Scenario | M | Levels | Version | Phase | Sale % |",
+            report,
+        )
+        self.assertIn("Completed correctness rows passing", report)
+        self.assertIn("stopped by the declared limit", report)
 
     def test_report_output_is_byte_stable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -25,13 +25,14 @@
 
 ## Required before submission
 
-- [ ] Explicitly authorize and create the local pre-measurement commit.
-- [ ] Generate the canonical dataset grid from that committed code.
-- [ ] Run canonical five-repeat timing/latency/memory measurements from a clean tree.
-- [ ] Attempt the optional one-million-event case within the declared limit and
+- [x] Explicitly authorize and create the local pre-measurement commit.
+- [x] Generate the canonical dataset grid from that committed code.
+- [x] Run canonical five-repeat timing/latency/memory measurements from a clean tree.
+- [x] Attempt the optional one-million-event case within the declared limit and
   retain stopped evidence if it is infeasible.
-- [ ] Generate `results/dashboard.html` and `REPORT.md` from canonical results.
-- [ ] Verify the dashboard visually and reproduce it byte-for-byte.
-- [ ] Run the complete test suite and final Git scope/secret checks.
-- [ ] Record the immutable submission commit identifier.
+- [x] Generate `results/dashboard.html` and `REPORT.md` from canonical results.
+- [x] Verify the dashboard visually and reproduce it byte-for-byte.
+- [x] Run the complete test suite and final Git scope/secret checks.
+- [x] Record audited measurement commit
+  `ffb474170b4849af850e31588f9a1a70dcf08da3` in the raw evidence and report.
 - [ ] Push only when Ben Lavi explicitly requests it; do not merge the pull request.
