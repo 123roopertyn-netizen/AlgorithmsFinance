@@ -33,7 +33,7 @@ python -m streamlit run 04_dashboard/app.py           # (planned) http://localho
 | `03_results/runs/` | one folder per benchmark run (raw CSVs, `env.json`, `tests.txt`) |
 | `04_dashboard/` | dashboard; reads saved results only |
 | `05_evidence/` | saved test/check logs with commit and timestamp, `INDEX.md` |
-| `06_data/` | `supplied/` sample files; `generated/` is git-ignored (commands + sha256 below) |
+| `06_data/` | `supplied/` sample files (course); `own/` own edge-case datasets with expected results; `generated/` is git-ignored (commands + sha256 below) |
 
 ## Data generation (commands + sha256)
 All data are synthetic teaching data from the course package, not historical exchange records.
@@ -56,6 +56,10 @@ python run.py datagen.check_reproduction --generator "<package dir>\generate_ord
 | `mixed_10000.jsonl.gz` | `f5a027da6b31209d5e83c56bfbf8626604bb5f91e4176b784ff8a1dac1974a16` |
 | `sweep_10000.jsonl.gz` | `c50755964212445574359b0fe4011f908ad2833edc900d49ecfa25948cca334f` |
 | `cancel_churn_10000.jsonl.gz` | `7aef5f014e6d1e5d01cb37c7ff7b02cfcc5a30f185de8a4b33db2d32b3d9d933` |
+
+**Own data (labelled *own*, separate from the supplied files):**
+- `06_data/own/`: 18 small hand-designed edge-case streams with hand-calculated expected results (`<case>.expected.json`), written by `python run.py datagen.own_cases`; `python run.py datagen.own_cases --check` verifies that the committed files match the generator. Overview: `06_data/own/INDEX.md`.
+- `01_code/datagen/adversarial.py`: own adversarial benchmark scenarios for Phase 4 (`deep_book`, `mid_queue_cancels`, `repeated_full_sweeps`; see SPEC.md). Not run yet; output will go to `06_data/generated/own/`.
 
 Benchmark streams (M = 1k / 10k / 100k, seeds 42 / 43 / 44, five scenarios, 1M attempted) will be generated outside timing into `06_data/generated/` (git-ignored); the exact commands and their sha256 will be listed here.
 

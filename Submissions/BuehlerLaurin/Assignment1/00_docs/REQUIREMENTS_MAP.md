@@ -12,42 +12,42 @@ Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/
 | R4 | `seq` defines arrival order; never priority by id spelling (R §Integer units; S5) | todo | |
 | R5 | Read JSON Lines (+ gzip) with stdlib `json`/`gzip`; replay in `seq` order from an empty book (R §Input files; S6) | todo | |
 | R6 | Event types LIMIT / MARKET_SELL / CANCEL with their required fields (R §Input files; S6) | todo | |
-| R7 | Provide `AddLimitOrder`, `CancelOrder`, `FillMarketSell`, an event dispatcher and book inspection; document signatures (R §Input files; S6) | todo | |
+| R7 | Provide `AddLimitOrder`, `CancelOrder`, `FillMarketSell`, an event dispatcher and book inspection; document signatures (R §Input files; S6) | partial | tests written, red (run 20261121T135944Z): API fixed in SPEC (Q1); stubs `01_code/lob/book_a.py`, `book_b.py`; `check_direct_methods_match_process`, `check_direct_methods_validate` |
 | R8 | Supply a command to replay a file (R §Input files) | todo | |
-| R9 | Both versions accept the same event files and return equivalent results (R §Input files) | todo | |
+| R9 | Both versions accept the same event files and return equivalent results (R §Input files) | partial | tests written, red (run 20261121T135944Z): `02_tests/test_stateful.py` (A/B after every event); every `check_*` runs on both versions |
 
 ## Matching, cancellation, validation
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R10 | Buy crosses iff limit ≥ best ask; sell crosses iff limit ≤ best bid; best price first, then arrival (R §Matching rules 1; S7) | todo | |
-| R11 | Fill qty = min(incoming, resting) at the resting order's price; continue while crossing (R §Matching rules 2; S7) | todo | |
-| R12 | Exhausted maker removed; partial maker keeps priority; residual limit rests at its limit behind earlier orders, rank = its `seq` (R §Matching rules 3; S7) | todo | |
-| R13 | `FillMarketSell`: highest bid first, FIFO per price, mutates live book; residual discarded, never rests (R §Matching rules 4; S4, S7, S9) | todo | |
-| R14 | Cancel removes exactly the remaining qty (also after partial fill); unknown / filled / cancelled → `not_found`, no change (R §Matching rules 5; S8) | todo | |
-| R15 | Reject invalid type/side, noninteger or nonpositive price/qty, duplicate live ids, nonincreasing `seq`; book unchanged (R §Matching rules 6; S8) | todo | |
-| R16 | Rejected events do not advance the last accepted `seq` (R §Matching rules 6; S8) | todo | |
-| R17 | Cancel of unknown target is valid (not rejected) (R §Matching rules 6) | todo | |
-| R18 | After each valid event: no crossed book, no nonpositive resting qty, no order stored twice; empty side allowed (R §Matching rules; S8) | todo | |
+| R10 | Buy crosses iff limit ≥ best ask; sell crosses iff limit ≤ best bid; best price first, then arrival (R §Matching rules 1; S7) | partial | tests written, red (run 20261121T135944Z): `check_limit_at_touch_crosses`, `check_best_price_first`, `check_own_limit_at_touch`, `check_own_crossing_limit_*`; step checker in `contract.run` |
+| R11 | Fill qty = min(incoming, resting) at the resting order's price; continue while crossing (R §Matching rules 2; S7) | partial | tests written, red (run 20261121T135944Z): `check_fill_at_maker_price`, `check_crossing_sell_at_maker_price`; step checker (min rule, maker price) |
+| R12 | Exhausted maker removed; partial maker keeps priority; residual limit rests at its limit behind earlier orders, rank = its `seq` (R §Matching rules 3; S7) | partial | tests written, red (run 20261121T135944Z): `check_partial_maker_keeps_priority`, `check_own_crossing_limit_buy`, `check_own_partial_then_another_sale` |
+| R13 | `FillMarketSell`: highest bid first, FIFO per price, mutates live book; residual discarded, never rests (R §Matching rules 4; S4, S7, S9) | partial | tests written, red (run 20261121T135944Z): `check_market_*`, `check_own_sweep_levels`, `check_own_sell_sizes`, `check_own_market_larger_than_book` |
+| R14 | Cancel removes exactly the remaining qty (also after partial fill); unknown / filled / cancelled → `not_found`, no change (R §Matching rules 5; S8) | partial | tests written, red (run 20261121T135944Z): `check_cancel_*`, `check_own_cancel_cases`, `check_own_interleaved_cancel_fill` |
+| R15 | Reject invalid type/side, noninteger or nonpositive price/qty, duplicate live ids, nonincreasing `seq`; book unchanged (R §Matching rules 6; S8) | partial | tests written, red (run 20261121T135944Z): `check_rejects_*` (one per rule family), `check_validation_check_order`, `test_validation.py`, `check_own_invalid_fields` |
+| R16 | Rejected events do not advance the last accepted `seq` (R §Matching rules 6; S8) | partial | tests written, red (run 20261121T135944Z): `check_rejected_event_does_not_advance_seq`, `_check_invalid_rows` (seq 3 still accepted after each rejection) |
+| R17 | Cancel of unknown target is valid (not rejected) (R §Matching rules 6) | partial | tests written, red (run 20261121T135944Z): `check_accepted_cancel_and_market_advance_seq`, `check_own_empty_book` |
+| R18 | After each valid event: no crossed book, no nonpositive resting qty, no order stored twice; empty side allowed (R §Matching rules; S8) | partial | tests written, red (run 20261121T135944Z): `contract.assert_book` (I1-I4) after every event in every replay and in the stateful test |
 
 ## Outputs
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R19 | Ordered fill list with `maker_id`, `taker_id`, `price_ticks`, `qty_units`, in execution order (R §Required results; S9) | todo | |
-| R20 | Submission result: `event_id`, `order_id`, `status`, `unfilled_qty_units`; limit `filled`/`resting` (R §Required results; S9) | todo | |
-| R21 | Market-sell status `filled` / `partial` / `unfilled`; residual never in the book (R §Required results; S9) | todo | |
-| R22 | Cancel result: `event_id`, `target_order_id`, `cancelled`/`not_found`, `cancelled_qty_units` (0 if not found) (R §Required results; S9) | todo | |
-| R23 | Rejection result: `event_id` if available, `rejected`, a reason (R §Required results; S9) | todo | |
+| R19 | Ordered fill list with `maker_id`, `taker_id`, `price_ticks`, `qty_units`, in execution order (R §Required results; S9) | partial | tests written, red (run 20261121T135944Z): step checker (fill fields, order = priority order); `check_worked_example_market_sell` |
+| R20 | Submission result: `event_id`, `order_id`, `status`, `unfilled_qty_units`; limit `filled`/`resting` (R §Required results; S9) | partial | tests written, red (run 20261121T135944Z): step checker (status/unfilled); own dataset expected files |
+| R21 | Market-sell status `filled` / `partial` / `unfilled`; residual never in the book (R §Required results; S9) | partial | tests written, red (run 20261121T135944Z): `check_market_sell_larger_than_depth_is_partial`, `check_market_residual_discarded` |
+| R22 | Cancel result: `event_id`, `target_order_id`, `cancelled`/`not_found`, `cancelled_qty_units` (0 if not found) (R §Required results; S9) | partial | tests written, red (run 20261121T135944Z): step checker (cancel result); `check_cancel_not_found_cases` |
+| R23 | Rejection result: `event_id` if available, `rejected`, a reason (R §Required results; S9) | partial | tests written, red (run 20261121T135944Z): `check_rejects_*`, `test_rejection_result_shape` |
 | R24 | Return only the current event's fills; any retained history declared as extra storage (R §Required results) | todo | |
-| R25 | Book inspection: active orders with side, price, remaining qty, arrival seq; bids price ↓ then arrival, asks price ↑ then arrival; compare ids + qty, not only depth (R §Required results; S9) | todo | |
+| R25 | Book inspection: active orders with side, price, remaining qty, arrival seq; bids price ↓ then arrival, asks price ↑ then arrival; compare ids + qty, not only depth (R §Required results; S9) | partial | tests written, red (run 20261121T135944Z): `contract.assert_book`, `check_snapshot_canonical_order`, `check_snapshot_is_a_copy` |
 
 ## Tests and correctness
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R26 | Worked example reproduces `worked_expected.json` (fills b1:1, b2:1, b3:3, b4:1 BTC; b4 keeps 4 BTC; ask unchanged; 359,400 USD) (R §Worked example; S3, S11) | todo | |
-| R27 | Tests written first and seen failing for missing/incorrect behaviour (R §Worked example; S11) | todo | |
-| R28 | Independent expected outcomes for the listed cases: empty book; one order; zero/negative/invalid input; sell < / = / > depth; several makers at one price; several levels; partial fill then another sale; cancel before/after partial or full fill; repeat/unknown cancel; crossing buys and sells; noncrossing residual limits; id order ≠ arrival order; long queue (R §Worked example; S11) | todo | |
-| R29 | Conservation: incoming = fills + residual; maker loses exactly its fills; cancel removes exactly the residual; proceeds = Σ price·qty; discarded market residual not counted as liquidity (R §Worked example; S12) | todo | |
-| R30 | Small generated tests; compare A and B after **every** event incl. ordered fills and canonical books (R §Worked example; S12) | todo | |
+| R26 | Worked example reproduces `worked_expected.json` (fills b1:1, b2:1, b3:3, b4:1 BTC; b4 keeps 4 BTC; ask unchanged; 359,400 USD) (R §Worked example; S3, S11) | partial | tests written, red (run 20261121T135944Z): `check_worked_example_market_sell`, `check_worked_example_book_and_proceeds` |
+| R27 | Tests written first and seen failing for missing/incorrect behaviour (R §Worked example; S11) | partial | tests written, red (run 20261121T135944Z): red run `05_evidence/20261121T135944Z_fea364d-dirty_tests-red-rerun-after-helper-rename.txt` (312 failed: 300 NotImplementedError, 12 mutants BLOCKED; 5 data tests passed) |
+| R28 | Independent expected outcomes for the listed cases: empty book; one order; zero/negative/invalid input; sell < / = / > depth; several makers at one price; several levels; partial fill then another sale; cancel before/after partial or full fill; repeat/unknown cancel; crossing buys and sells; noncrossing residual limits; id order ≠ arrival order; long queue (R §Worked example; S11) | partial | tests written, red (run 20261121T135944Z): own datasets `06_data/own/` (18 cases, `check_own_<case>`) + inline checks in `02_tests/contract.py`; list in SPEC.md Edge cases |
+| R29 | Conservation: incoming = fills + residual; maker loses exactly its fills; cancel removes exactly the residual; proceeds = Σ price·qty; discarded market residual not counted as liquidity (R §Worked example; S12) | partial | tests written, red (run 20261121T135944Z): step checker `contract.step_check` (C1-C6) after every event |
+| R30 | Small generated tests; compare A and B after **every** event incl. ordered fills and canonical books (R §Worked example; S12) | partial | tests written, red (run 20261121T135944Z): `02_tests/test_stateful.py` (Hypothesis, results + books after every event) |
 | R31 | Explain invariants for price-time priority and quantity conservation (R §Implement and revise; S12, S13) | todo | |
 
 ## Implementation and revision
