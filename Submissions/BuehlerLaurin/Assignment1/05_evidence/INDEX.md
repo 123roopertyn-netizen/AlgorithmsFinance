@@ -1,0 +1,4 @@
+- 20261121T111536Z · bc2576f dirty · **manifest-package** · exit 0 · `RESULT: PASS (20 files verified)` · [20261121T111536Z_bc2576f-dirty_manifest-package.txt](20261121T111536Z_bc2576f-dirty_manifest-package.txt)
+- 20261121T111537Z · bc2576f dirty · **manifest-supplied-copies** · exit 0 · `RESULT: PASS (5 files verified)` · [20261121T111537Z_bc2576f-dirty_manifest-supplied-copies.txt](20261121T111537Z_bc2576f-dirty_manifest-supplied-copies.txt)
+- 20261121T111558Z · bc2576f dirty · **generator-reproduces-seed42-10k** · exit 0 · `RESULT: PASS (5 scenarios regenerated)` · [20261121T111558Z_bc2576f-dirty_generator-reproduces-seed42-10k.txt](20261121T111558Z_bc2576f-dirty_generator-reproduces-seed42-10k.txt)
+- 20261121T111636Z · bc2576f dirty · **worked-files-sha** · exit 0 · `OK       worked_expected.json` · [20261121T111636Z_bc2576f-dirty_worked-files-sha.txt](20261121T111636Z_bc2576f-dirty_worked-files-sha.txt)
