@@ -118,6 +118,9 @@ residual, active-order peak, occupied-price-level peak and final book size.
 Liquidation records also save requested quantity, makers touched, price levels
 visited and unfilled residual. Ordered results and canonical final books are
 compared between versions on diagnostic streams and every liquidation size.
+Liquidation construction, sale, and final inspection share the declared
+diagnostic limit; a version that cannot finish produces a labeled stopped
+correctness row rather than an unbounded pre-measurement delay.
 
 ## Memory boundary
 

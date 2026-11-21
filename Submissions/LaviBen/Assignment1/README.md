@@ -30,9 +30,9 @@ Run from this directory:
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 ```
 
-Expected result at this checkpoint: `Ran 36 tests` followed by `OK`. The 23
+Expected result at this checkpoint: `Ran 37 tests` followed by `OK`. The 23
 algorithm/fixture tests include a full 50,000-event supplied-stream replay;
-nine tests cover the separate
+ten tests cover the separate
 measurement framework and its stopped-run behavior, two cover the dashboard,
 and two cover the generated short report.
 

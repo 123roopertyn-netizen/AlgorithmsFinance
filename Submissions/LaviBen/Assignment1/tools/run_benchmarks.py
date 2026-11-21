@@ -431,6 +431,38 @@ def traced_liquidation(
     return result
 
 
+def liquidation_correctness_attempt(
+    book_class: type[Any],
+    setup_events: Sequence[Mapping[str, object]],
+    sale_event: Mapping[str, object],
+    time_limit_seconds: float | None,
+) -> dict[str, object]:
+    """Build, sell, and inspect within the same declared diagnostic limit."""
+
+    processed = 0
+    try:
+        with time_limit(time_limit_seconds):
+            book = book_class()
+            for event in setup_events:
+                book.ProcessEvent(event)
+                processed += 1
+            result = book.ProcessEvent(sale_event)
+            processed += 1
+            state = book.InspectBook()
+    except MeasurementTimeout as error:
+        return {
+            "events_processed": processed,
+            "stopped": True,
+            "stop_reason": str(error),
+        }
+    return {
+        "events_processed": processed,
+        "result": result,
+        "state": state,
+        "stopped": False,
+    }
+
+
 def liquidation_measurements(
     setup_events: Sequence[Mapping[str, object]],
     metadata: Mapping[str, object],
@@ -465,12 +497,46 @@ def liquidation_measurements(
             "order_id": f"liquidation-{percent}",
             "qty_units": requested,
         }
-        books = {name: cls() for name, cls in IMPLEMENTATIONS.items()}
-        for book in books.values():
-            for event in setup_events:
-                book.ProcessEvent(event)
-        results = {name: book.ProcessEvent(sale_event) for name, book in books.items()}
-        states = {name: book.InspectBook() for name, book in books.items()}
+        attempts = {
+            name: liquidation_correctness_attempt(
+                book_class,
+                setup_events,
+                sale_event,
+                time_limit_seconds,
+            )
+            for name, book_class in IMPLEMENTATIONS.items()
+        }
+        stopped_versions = [
+            name for name, attempt in attempts.items() if attempt["stopped"]
+        ]
+        if stopped_versions:
+            stop_reason = "; ".join(
+                f"{name}: {attempts[name]['stop_reason']}"
+                for name in stopped_versions
+            )
+            records.append(
+                {
+                    **base,
+                    "measurement_kind": "correctness",
+                    "phase": "individual_sale",
+                    "version": "shared",
+                    "liquidation_percent": percent,
+                    "requested_qty_units": requested,
+                    "attempt_events_processed": {
+                        name: attempt["events_processed"]
+                        for name, attempt in attempts.items()
+                    },
+                    "completed_versions": [
+                        name for name in attempts if name not in stopped_versions
+                    ],
+                    "stopped": True,
+                    "stop_reason": stop_reason,
+                }
+            )
+            continue
+
+        results = {name: attempt["result"] for name, attempt in attempts.items()}
+        states = {name: attempt["state"] for name, attempt in attempts.items()}
         if results["baseline"] != results["revised"] or states["baseline"] != states["revised"]:
             raise AssertionError(f"liquidation versions disagree at {percent}%")
         fills = results["revised"]["fills"]

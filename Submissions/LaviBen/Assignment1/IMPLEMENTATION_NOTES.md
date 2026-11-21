@@ -125,12 +125,12 @@ After every accepted event:
   A 23rd test now replays all 50,000 supplied events through fresh books; both
   versions must return equal results for every event and equal final canonical
   books.
-- Nine additional tests cover deterministic measurement inputs, stable gzip
+- Ten additional tests cover deterministic measurement inputs, stable gzip
   storage, liquidation sizing, latency breakdowns, percentile convention,
   diagnostics, memory boundaries, report validation and explicit stopped-run
-  labeling. Two dashboard tests and two short-report tests verify required
-  saved-result views and byte-stable generation. The complete suite now has 36
-  passing tests.
+  labeling, including bounded liquidation correctness diagnostics. Two
+  dashboard tests and two short-report tests verify required saved-result views
+  and byte-stable generation. The complete suite now has 37 passing tests.
 
 ## AI use
 
@@ -155,7 +155,11 @@ Corrected suggestions:
   and
 - the first short-report table omitted liquidation percentage, making three
   application-total rows appear duplicated; the percentage column and a
-  regression assertion were added without changing measurements.
+  regression assertion were added without changing measurements; and
+- the first full canonical attempt revealed that liquidation correctness built
+  the slow baseline outside its declared limit; a failing regression test was
+  recorded, then construction, sale, and inspection were placed inside the
+  same bounded diagnostic attempt with explicit stopped evidence.
 
 Rejected suggestions:
 

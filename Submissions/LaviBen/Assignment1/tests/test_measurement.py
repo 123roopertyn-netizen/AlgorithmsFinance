@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import tempfile
+from time import sleep
 import unittest
+from unittest.mock import patch
 
 from measurement.datasets import (
     DatasetSpec,
@@ -24,6 +26,7 @@ from measurement.metrics import (
 )
 from orderbook.baseline import BaselineOrderBook
 from orderbook.revised import RevisedOrderBook
+import tools.run_benchmarks as benchmark_runner
 
 
 class MeasurementContractTests(unittest.TestCase):
@@ -65,6 +68,49 @@ class MeasurementContractTests(unittest.TestCase):
         self.assertEqual(liquidation_request(total, 10), max(1, (total + 9) // 10))
         self.assertEqual(liquidation_request(total, 100), total)
         self.assertEqual(liquidation_request(total, 200), total * 2)
+
+    def test_liquidation_correctness_work_respects_declared_limit(self) -> None:
+        class SlowBaseline(BaselineOrderBook):
+            def ProcessEvent(self, event):
+                sleep(0.02)
+                return super().ProcessEvent(event)
+
+        spec = DatasetSpec("liquidation", "bid_book", 2, 42, 8)
+        events = generate_events(spec)
+        metadata = {
+            "dataset_id": spec.dataset_id,
+            "experiment": spec.experiment,
+            "scenario": spec.scenario,
+            "event_count": spec.event_count,
+            "seed": spec.seed,
+            "levels": spec.levels,
+            "event_sha256": event_checksum(events),
+        }
+        with patch.dict(
+            benchmark_runner.IMPLEMENTATIONS,
+            {"baseline": SlowBaseline, "revised": RevisedOrderBook},
+            clear=True,
+        ):
+            records = benchmark_runner.liquidation_measurements(
+                events,
+                metadata,
+                versions=(),
+                repeats=1,
+                warmup_events=1,
+                time_limit_seconds=0.01,
+                include_memory=False,
+            )
+
+        correctness = [
+            record
+            for record in records
+            if record["measurement_kind"] == "correctness"
+        ]
+        self.assertEqual(len(correctness), 3)
+        self.assertTrue(all(record["stopped"] for record in correctness))
+        self.assertTrue(
+            all("baseline" in record["stop_reason"] for record in correctness)
+        )
 
     def test_nearest_rank_percentile_convention(self) -> None:
         samples = [50, 10, 40, 20, 30]
