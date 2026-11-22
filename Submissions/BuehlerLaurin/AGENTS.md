@@ -33,6 +33,7 @@ The owner is a student. The goal is a correct, fast, reproducible submission **a
 | `aif-debug` | Root cause before fix, incl. performance bugs | "test X fails", "versions disagree" |
 | `aif-verify` | Evidence before any claim; evidence files; final evidence block | "are we done?", "ready to submit?" |
 | `aif-review` | Independent audit in a fresh session or by the second agent; read-only on the reviewed code | "audit my solution" |
+| `aif-attack` | Red team in a fresh session or by the second agent: try to break correctness and speed (complexity, latency, memory attacks); results feed the robustness filter and the adversarial benchmarks | "try to break it", "make it slow" |
 
 Explicit call: Claude Code `/aif-<name>`, Codex `$aif-<name>`.
 
@@ -44,7 +45,7 @@ Explicit call: Claude Code `/aif-<name>`, Codex `$aif-<name>`.
 5. **Fast version(s)**, compared with the baseline after every operation. **Checkpoint.**
 6. **Measure** (`aif-bench`), one results folder per run; then the dashboard (only if required). **Checkpoint.**
 7. **Profile, optimise one bottleneck, one change per revision**, re-measure. **Checkpoint.**
-8. **Audit** (`aif-review`) by Codex or a fresh session.
+8. **Attack and audit:** `aif-attack` (try to break it) and `aif-review` (audit) by the other agent or a fresh session; confirmed breaks are fixed with `aif-debug`, regression test first.
 9. **Verify and document** (`aif-verify`): README, `00_docs/REPORT.md`, `00_docs/LEARNING.md`, requirements map complete, fresh-environment check. Laurin commits, pushes and opens the PR.
 
 ## 5. Practices we always apply
@@ -78,6 +79,7 @@ Submissions/BuehlerLaurin/
     ├── 05_evidence/         logs of test runs and checks + INDEX.md (committed)
     ├── 06_data/supplied/    small supplied sample files (committed)
     ├── 06_data/generated/   large generated data (git-ignored; commands + sha256 in README)
+    ├── 07_attack/           attack tests, generators, logs, ATTACK_REPORT.md (aif-attack)
     └── scratch/             throw-away (git-ignored)
 ```
 Numbers only on container folders; everything Python imports keeps a plain name. Run commands from the exercise root (`python -m pytest`, `python run.py ...`).
