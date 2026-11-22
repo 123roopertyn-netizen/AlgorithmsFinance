@@ -12,6 +12,7 @@ import traceback
 import tracemalloc
 
 from bench import core
+from bench.protocol import timing_plan
 from bench.harness import peak_traced_bytes, percentiles, time_repeats, traced_curve
 from lob.replay import read_events
 
@@ -39,12 +40,14 @@ def measure(phase, function, limit_s):
 def run_job(job):
     case, version, mode = job["case"], job["version"], job["mode"]
     limit_s, limit_bytes = job["limit_s"], job["limit_bytes"]
+    warmups, repeats, label = timing_plan(version, case["size"])
     journal = Path(job["journal"])
     journal.parent.mkdir(parents=True, exist_ok=True)
     base = {"case_id": case["id"], "experiment": case["part"], "workload": case["label"],
             "size": case["size"], "events": case["events"], "seed": case["seed"],
             "levels": case["levels"], "own": case["own"], "percent": case.get("percent", ""),
-            "version": version, "mode": mode, "input_sha256": case["sha256"]}
+            "version": version, "mode": mode, "input_sha256": case["sha256"],
+            "timing_protocol": label}
     def emit(kind, **fields):
         row = {**base, "status": "ok", **fields}
         with journal.open("a", encoding="utf-8") as stream:
@@ -69,16 +72,16 @@ def run_job(job):
         emit("checks", sample_events=sample_n, comparison="every sampled result/book vs A", counters_on=mode == "counts")
         if mode == "timing":
             emit("timing", phase="parse", repeat=0, seconds=parse_s, warmup=False, repeats_requested=1)
-            for repeat in range(-1, 5):  # exactly one warm-up, five measured trials
+            for repeat in range(-warmups, repeats):
                 phase = "construction"
                 construction_s, book = measure(phase, lambda: core.prepare_book(case, events, version), limit_s)
                 emit("timing", phase=phase, repeat=repeat, seconds=construction_s,
-                     warmup=repeat < 0, repeats_requested=5)
+                     warmup=repeat < 0, repeats_requested=repeats)
                 phase = "replay"
                 replay_s, result = measure(phase, lambda: core.replay(book, work), limit_s)
-                emit("timing", phase=phase, repeat=repeat, seconds=replay_s, warmup=repeat < 0, repeats_requested=5)
+                emit("timing", phase=phase, repeat=repeat, seconds=replay_s, warmup=repeat < 0, repeats_requested=repeats)
                 emit("timing", phase="total", repeat=repeat, seconds=parse_s + construction_s + replay_s,
-                     warmup=repeat < 0, repeats_requested=5)
+                     warmup=repeat < 0, repeats_requested=repeats)
                 del book, result
         elif mode == "latency":
             _, book = measure("construction", lambda: core.prepare_book(case, events, version), limit_s)
@@ -159,17 +162,17 @@ def run_job(job):
                 emit("counts", phase="replay", counter=name, value=value, applicable=value >= 0)
         else:
             raise ValueError("unknown measurement mode: " + mode)
-        emit("result", phase=mode, status="ok", repeats_requested=5 if mode == "timing" else 1)
+        emit("result", phase=mode, status="ok", repeats_requested=repeats if mode == "timing" else 1)
         return 0
     except ResourceStop as exc:
         emit("stops", phase=exc.phase or phase, repeat=repeat, status="stopped", reason=exc.reason,
              observed=exc.observed, limit_s=limit_s, limit_bytes=limit_bytes, seconds="",
-             repeats_requested=5 if mode == "timing" else 1)
+             repeats_requested=repeats if mode == "timing" else 1)
         return 124
     except MemoryError:
         emit("stops", phase=phase, repeat=repeat, status="stopped", reason="allocation_failed",
              observed="", limit_s=limit_s, limit_bytes=limit_bytes, seconds="",
-             repeats_requested=5 if mode == "timing" else 1)
+             repeats_requested=repeats if mode == "timing" else 1)
         return 124
     except Exception as exc:
         emit("stops", phase=phase, repeat=repeat, status="error", reason=repr(exc), seconds="")

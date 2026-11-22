@@ -244,3 +244,27 @@ robustness analysis, final B selection, bottleneck report and dashboard remain
 pending. No 10k/100k/1M engine benchmark was run in this phase. No fresh-venv
 reproduction is claimed. A source-pinned long-run session requires Laurin's
 commit and explicit long-run command after review.
+
+## Pre-long-run amendment (2026-11-22, base `6c2a8d1`)
+
+SPEC.md and BENCHMARK_PLAN.md record Laurin's three decisions BEFORE long
+measurements. R47/R48/R51 now have a declared baseline deviation: A at 100k/1M
+uses one measured trial without warm-up, labelled A: single trial; small A and
+all B candidates retain warm-up + five repeats. No previous smoke raw results
+are retroactively altered. R33's fallback only allows targeted revisions if
+all candidates fail robustness, with the same rules and all violations reported.
+
+[Full suite](../05_evidence/20261122T011345Z_6c2a8d1-dirty_phase4a-amendment-all-tests.txt):
+531 passed in 181.67s, no failures/errors/skips/warnings. Original 501 engine
+tests and the original 16 pipeline cases remain; 14 schedule/reporting cases
+were added with red/green evidence. B's repeat protocol remains unchanged.
+Full large engine measurements, candidate selection and dashboard stay pending.
+
+R37/R56/R57/R62/R63/R67: revised runtime/storage JSON and MD under
+`00_docs/phase4_plan_20261122/`, updated wrapper/README, root CSV commit policy
+and local-only jobs/journals/logs via .gitignore. Approximate full coverage:
+2,032 workers / 6,112 files, only about 16 committed root artifacts. Already
+tracked historical smoke internals are preserved, not untracked.
+[Archive evidence](../05_evidence/20261122T011203Z_6c2a8d1-dirty_phase4a-archive-smoke.txt)
+confirms the superseded smoke's 663 files / 6,847,781 bytes and every sha256
+preserved under scratch. No deletion, long run or git mutation was executed.

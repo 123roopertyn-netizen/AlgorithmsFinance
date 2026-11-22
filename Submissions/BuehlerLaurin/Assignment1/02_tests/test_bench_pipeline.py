@@ -183,3 +183,58 @@ def test_memory_curve_observer_does_not_retain_sample_allocations():
                          setup=lambda: None, observe=lambda state: (0, 0, 0, 0))
     assert curve[-1]["current_bytes"] - curve[1]["current_bytes"] < 4096
     assert curve[-1]["live_orders"] == 0
+
+
+@pytest.mark.parametrize("version,size,expected", [
+    ("A", 1000, (1, 5, "warm-up + 5 repeats")),
+    ("A", 10000, (1, 5, "warm-up + 5 repeats")),
+    ("A", 100000, (0, 1, "A: single trial")),
+    ("A", 1000000, (0, 1, "A: single trial")),
+    *[(v, size, (1, 5, "warm-up + 5 repeats"))
+      for v in ("B1", "B2", "B3") for size in (100000, 1000000)],
+])
+def test_declared_baseline_schedule(version, size, expected):
+    from bench.protocol import timing_plan
+    assert timing_plan(version, size) == expected
+
+
+def test_large_a_summary_is_explicit_single_trial(tmp_path):
+    from bench.harness import append_rows
+    from bench.run_all import summarize
+    append_rows(tmp_path/"timing.csv", [{
+        "case_id": "large", "version": "A", "size": 100000, "phase": "replay",
+        "repeat": 0, "warmup": False, "seconds": 2, "status": "ok",
+        "replayed_events": 100000, "repeats_requested": 1,
+        "timing_protocol": "A: single trial"}])
+    append_rows(tmp_path/"cells.csv", [{"case_id": "large", "version": "A",
+                                      "mode": "timing", "status": "ok"}])
+    row = summarize(tmp_path)[0]
+    assert row["status"] == "ok" and row["repeats_requested"] == 1
+    assert row["statistic"] == "single_trial" and row["timing_protocol"] == "A: single trial"
+    assert row["median_s"] == 2 and row["throughput_events_s"] == 50000
+
+
+@pytest.mark.parametrize("version,size,indices", [
+    ("A", 100000, [0]), ("A", 10000, [-1, 0, 1, 2, 3, 4]),
+    ("B1", 100000, [-1, 0, 1, 2, 3, 4]),
+])
+def test_worker_obeys_declared_trials_using_tiny_synthetic_input(tmp_path, version, size, indices):
+    """Control-flow check: size label exercises policy; only 4 events are replayed."""
+    import gzip
+    import hashlib
+    from bench.worker import run_job
+    path = tmp_path/"tiny.jsonl.gz"
+    with gzip.open(path, "wt", encoding="utf-8") as stream:
+        for event in rows("liquidation", 4, 42):
+            stream.write(json.dumps(event)+"\n")
+    case = {"id": "synthetic-policy", "part": "official", "label": "tiny-policy-test",
+            "workload": "tiny-policy-test", "size": size, "events": 4, "seed": 42,
+            "levels": 1000, "own": True, "path": str(path),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+    journal = tmp_path/"out.jsonl"
+    assert run_job({"case": case, "version": version, "mode": "timing", "limit_s": 10,
+                    "limit_bytes": 4*1024**3, "journal": str(journal)}) == 0
+    records = [json.loads(line) for line in journal.read_text().splitlines()]
+    replay_rows = [r["row"] for r in records if r["kind"] == "timing" and r["row"]["phase"] == "replay"]
+    assert [r["repeat"] for r in replay_rows] == indices
+    assert all(r["repeats_requested"] == len([i for i in indices if i >= 0]) for r in replay_rows)

@@ -600,3 +600,28 @@ They are planning estimates, not scaling evidence or guaranteed bounds. See
 `00_docs/RUNTIME_ESTIMATE.md`; staged B-first and A-pilot commands preserve the
 measurement rules. Phase 4a executed neither a 10k/100k/1M engine benchmark nor
 a final robustness decision. Long data generation alone is outside timing.
+
+### Amendment decided 2026-11-22 BEFORE long measurements
+
+Laurin / Claude (chat) reviewed Phase 4a; Phase 4a is committed. No long
+measurements have started. This amendment supersedes the original baseline
+repeat rule: A is a baseline, not a candidate. A uses the full warm-up plus
+five measured trials at 1k and 10k. At 100k and 1M, A gets one measured trial
+without warm-up, or `stopped` at 600 s. This is a declared protocol deviation;
+all speedups at these sizes must explicitly say **A: single trial**. It also
+applies when M means Q7 initial book size. B1/B2/B3 retain warm-up plus five
+measured trials everywhere. Separate instrumentation/GC/limits stay as declared.
+
+Fallback in the selection rule: If no candidate passes the robustness filter,
+one targeted revision per violation is allowed (one change per revision;
+e.g. B3 with heap rebuild when stale heap keys > 2 x live levels, or an adaptive
+price index with a measured threshold), measured and judged with the same rules.
+All violations are reported. No fallback revision is implemented now.
+
+Keep committed raw CSVs, summaries, environment/spec/test evidence and compact
+planning artifacts. Per-cell journals, logs and jobs remain local for diagnosis
+and resumption; `.gitignore` excludes `03_results/runs/*/cells/` and
+`03_results/runs/*/jobs/`. Existing tracked smoke internals remain historical;
+ignoring does not untrack them. The superseded 003530Z smoke is moved intact to
+`scratch/20261122T003530Z_5d8d15a-dirty_smoke/`, not deleted. Full-run file/byte
+planning estimates and the precise commit policy are in BENCHMARK_PLAN.md.

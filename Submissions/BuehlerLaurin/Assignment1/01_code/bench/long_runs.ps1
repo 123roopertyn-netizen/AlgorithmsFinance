@@ -15,12 +15,14 @@ $benchmarkPython = Join-Path $env:USERPROFILE '.venvs\aif-a1\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $benchmarkPython)) { throw 'Use the existing aif-a1 venv from README.md.' }
 # Complete all candidate measurements first; the slow baseline is a separate batch.
 $benchmarkArguments = @('run.py','bench.run_all','--part',$Part,'--allow-long','--session',$Session,
-                        '--max-size',$MaxSize.ToString(),'--skip-after-stop')
+                        '--max-size',$MaxSize.ToString(),'--skip-after-stop',
+                        '--baseline-protocol','single-large')
 if (-not $BaselineOnly) {
     & $benchmarkPython @benchmarkArguments --versions 'B1,B2,B3'
     if ($LASTEXITCODE -ne 0) { throw 'Candidate batch failed; inspect saved cells/logs before continuing.' }
 }
 if (-not $CandidatesOnly) {
+    Write-Output 'Declared deviation (2026-11-22): A at 100k/1M has one measured trial, no warm-up; report A: single trial. A at 1k/10k and all B candidates retain warm-up + 5 repeats.'
     & $benchmarkPython @benchmarkArguments --versions 'A'
     if ($LASTEXITCODE -ne 0) { throw 'Baseline batch failed; inspect saved cells/logs.' }
 }

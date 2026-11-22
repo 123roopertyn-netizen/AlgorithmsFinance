@@ -93,3 +93,19 @@ no final exclusion/winner is declared. No 10k/100k/1M engine benchmark was run.
 BENCHMARK_PLAN.md and RUNTIME_ESTIMATE.md hand long execution to Laurin after
 review/commit. No algorithm optimization, adaptive variant or speed claim was
 introduced in this phase.
+
+## Phase 4a amendment, 2026-11-22: protocol and artifact policy
+
+Before long measurements, Laurin declared one measured A trial without warm-up
+at 100k/1M, with explicit A: single trial labelling. A at 1k/10k and every B
+keep warm-up + five trials. Shared benchmark scheduling, workers, summaries,
+PowerShell wrapper and estimates are updated; no engine algorithm is revised.
+Fourteen new pipeline tests were seen red/green with only tiny synthetic inputs.
+If every B fails robustness, the new declared fallback permits one targeted
+change per violation with the same measurement rules; none is implemented now.
+The old smoke is moved intact to scratch (663 files, every sha256 preserved).
+Future jobs/journals/logs are ignored while root raw CSVs/metadata stay committed.
+Revised planning reduces total estimated work from roughly 8-55 to 8-32 hours;
+this is smoke-based planning, not a measured performance improvement. B's
+protocol and estimates are unchanged. No long run, deletion, install or git
+mutation was executed.

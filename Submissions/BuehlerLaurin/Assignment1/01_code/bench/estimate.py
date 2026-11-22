@@ -8,6 +8,7 @@ from pathlib import Path
 
 from bench.catalog import load
 from bench.core import VERSIONS
+from bench.protocol import timing_plan
 from bench.run_all import MODES, PARTS, cases_for, rows_from
 
 
@@ -35,6 +36,32 @@ def phase_times(directory, case_id, version, mode):
         if event.get("action") == "end":
             phases[event["bench_phase"]] += event["elapsed_s"]
     return phases
+
+
+def storage_estimate(directory):
+    """Coarse full-coverage file/byte planning from saved smoke artifacts only."""
+    catalog = load()
+    jobs = sum(1 for part in PARTS for case in cases_for(part, catalog)
+               for _ in VERSIONS for mode in MODES if part != "churn" or mode == "memory")
+    smoke_jobs = len(rows_from(directory/"cells.csv"))
+    root_files = [p for p in directory.iterdir() if p.is_file()]
+    local_files = [p for name in ("cells", "jobs") for p in (directory/name).rglob("*") if p.is_file()]
+    root_bytes = sum(p.stat().st_size for p in root_files)
+    local_bytes = sum(p.stat().st_size for p in local_files)
+    ratio = jobs / smoke_jobs
+    # Extra digits/metadata and latency histogram bins can grow. These factors
+    # are planning allowances, not measured bounds. Stops reduce coverage/files.
+    def byte_range(value):
+        return [math.ceil(value*ratio*1.2), math.ceil(value*ratio*2.5)]
+    return {"basis": str(directory), "full_coverage_workers": jobs,
+            "local_files": jobs*3, "committed_root_files_approx": len(root_files)+1,
+            "total_files_approx": jobs*3+len(root_files)+1,
+            "smoke_workers": smoke_jobs, "smoke_root_files": len(root_files),
+            "smoke_local_files": len(local_files), "smoke_root_bytes": root_bytes,
+            "smoke_local_bytes": local_bytes,
+            "projected_committed_bytes": byte_range(root_bytes),
+            "projected_local_bytes": byte_range(local_bytes),
+            "assumptions": "all 2032 planned workers complete; job+journal+log per worker; optional stops.csv; 1.2..2.5x byte allowance beyond worker ratio; planning only, no hard size bound; fewer A repeat rows and skips can reduce size"}
 
 
 def build_estimate(directory):
@@ -77,7 +104,8 @@ def build_estimate(directory):
                                 elif replay > 600:
                                     total += construction + 600; timing_stopped = True
                                 else:
-                                    total += 6 * (construction + replay)
+                                    warmups, repeats, _ = timing_plan(version, case["size"])
+                                    total += (warmups + repeats) * (construction + replay)
                             else:
                                 for name in ("construction", "latency", "memory_peak", "memory_curve", "counts"):
                                     if name not in observed:
@@ -114,20 +142,27 @@ def build_estimate(directory):
                             "A growing-book scenarios quadratic; constant-live churn linear",
                             "B variants approximately linear at bounded price count; deep-book B1/B2 linear-to-quadratic",
                             "0.5x..3x sensitivity; not confidence bounds; stop-policy discontinuities possible",
+                            "2026-11-22 deviation: A at 100k/1M one measured trial, no warm-up; A: single trial",
                             "600s per engine phase; skip other instrumentation only after a timing stop",
                             "startup/parse included; latency postprocessing/allocator/GC/cache scaling uncertain"],
-            "parts": parts, "baseline_large_replays": baseline, "cells": details}
+            "parts": parts, "baseline_large_replays": baseline, "cells": details,
+            "storage_estimate": storage_estimate(directory)}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_dir", type=Path)
+    parser.add_argument("--output-dir", type=Path, help="write revised planning separately from historical smoke")
     args = parser.parse_args()
     report = build_estimate(args.run_dir)
-    (args.run_dir/"runtime_estimate.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    output = args.output_dir or args.run_dir
+    output.mkdir(parents=True, exist_ok=True)
+    (output/"runtime_estimate.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     lines = ["# Phase 4 runtime planning (M=1000 smoke extrapolation)", "",
              "These are planning ranges, not measurements, confidence intervals or guaranteed bounds.",
              "Per-phase 600s stopping and --skip-after-stop are included; all B repeats are unchanged.", "",
+             "Declared 2026-11-22 BEFORE long measurements: A at 100k/1M uses one measured trial, no warm-up.",
+             "Report large-size speedups as A: single trial. A at 1k/10k retains warm-up + 5 repeats.", "",
              "| Part | A hours | B1+B2+B3 hours | Total hours |", "|---|---|---|---|"]
     for row in report["parts"]:
         lo, hi = row["A_low_s"] + row["B_low_s"], row["A_high_s"] + row["B_high_s"]
@@ -138,13 +173,19 @@ def main():
     for row in report["baseline_large_replays"]:
         lines.append(f"| {row['scenario']} | {row['size']} | {row['unconstrained_replay_s']:.1f} | {row['predicted_stop']} |")
     lines += ["", "Assumptions:", ""] + ["- "+text for text in report["assumptions"]]
+    storage = report["storage_estimate"]
+    lines += ["", "Full-run artifact planning (all parts in one session, no engines executed):", "",
+              f"- {storage['full_coverage_workers']} workers; approximately {storage['total_files_approx']} files, of which {storage['local_files']} local job/journal/log files.",
+              f"- Commit about {storage['committed_root_files_approx']} root files, {storage['projected_committed_bytes'][0]/2**20:.1f}-{storage['projected_committed_bytes'][1]/2**20:.1f} MiB.",
+              f"- Local internals: {storage['projected_local_bytes'][0]/2**20:.1f}-{storage['projected_local_bytes'][1]/2**20:.1f} MiB.",
+              "- Derived from smoke bytes per worker with 1.2..2.5x allowance, not a hard bound; stops/skips and fewer A trials reduce artifacts."]
     lines += ["", "Recommendation: run the three B variants first, then A in a separate resumable batch.",
               "The Q7 construction/rebuild trials dominate the full baseline schedule; leave them overnight.",
               "Do not silently reduce B warm-up/repeats. A's first over-limit trial stops the cell and omits its remaining repeats.",
               "Use --skip-after-stop to avoid repeating known-stopped A cells in slower instrumentation; those modes are not_run, not invented results.",
               "Review the first completed 10k cells before launching 100k/1M if the extrapolation is off."]
     text = "\n".join(lines)+"\n"
-    (args.run_dir/"runtime_estimate.md").write_text(text, encoding="utf-8")
+    (output/"runtime_estimate.md").write_text(text, encoding="utf-8")
     Path("00_docs/RUNTIME_ESTIMATE.md").write_text(text, encoding="utf-8")
     print(text)
     print("RESULT: PASS (runtime estimates only; no engine replay executed)")

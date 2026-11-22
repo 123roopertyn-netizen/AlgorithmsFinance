@@ -133,9 +133,15 @@ python run.py bench.catalog --verify
 The complete protocol, limits, estimates and exact long-run PowerShell commands
 are in [BENCHMARK_PLAN.md](00_docs/BENCHMARK_PLAN.md). Fixed selection criteria
 are in SPEC.md. Primary replay uses pre-parsed events, fresh books, counters off,
-GC enabled, one warm-up and five measured repeats; seconds and raw trials are
+GC enabled, one warm-up and five measured repeats for B and small A; seconds and raw trials are
 saved. Parsing and construction are separate. Liquidation rebuilds each bid
 book before the measured sale. Throughput is events / median replay seconds.
+Declared 2026-11-22 before long measurements: A at 100k/1M uses one measured
+trial, no warm-up (or stopped at 600 s); speedups must say **A: single trial**.
+For these A cells, throughput uses that sole observation. Selection fallback
+and the CSV/metadata commit policy are in BENCHMARK_PLAN.md. Future per-cell
+jobs/journals/logs stay local through .gitignore; the superseded smoke is archived
+intact in scratch. Historical final smoke results remain unchanged.
 Independent runs measure nearest-rank latency p50/p95/p99 in ns, traced memory
 including book/current fills but excluding parsed input/history, and operation
 counts. Traced memory is not RSS. Missing/stopped values remain explicit.
@@ -163,7 +169,7 @@ growth experiment. Smoke does not choose the final B. Long runs remain pending.
 
 ## Evidence block
 Commit to audit: <hash> (filled in by Laurin)
-Tests (Phase 4a): `python -m pytest -q --tb=short --basetemp=scratch/pytest-phase4a --junitxml=05_evidence/phase4a-all-tests.xml` -> `517 passed in 176.97s` (per-file table in `00_docs/AI_LOG.md`)
+Tests (Phase 4a amendment): `python -m pytest -q --tb=short --basetemp=scratch/pytest-phase4a-amendment --junitxml=05_evidence/phase4a-amendment-all-tests.xml` -> `531 passed in 181.67s` (per-file table in `00_docs/AI_LOG.md`)
 Benchmark (Phase 4a smoke only): `python run.py bench.run_all --part smoke --session phase4a_smoke_final` -> `03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/`, 216/216 cells OK; full grid pending.
 Fresh-venv check: pending Phase 7 (existing pinned venv used through Phase 4a)
 

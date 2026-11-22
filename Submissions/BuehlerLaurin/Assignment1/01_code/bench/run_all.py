@@ -17,12 +17,13 @@ import sys
 
 from bench.catalog import MANIFEST, ROOT, SCENARIOS, load
 from bench.core import VERSIONS
+from bench.protocol import BASELINE_PROTOCOL, timing_plan
 from bench.harness import append_rows, new_run_dir, run_with_timeout
 
 PARTS = ("official", "million", "queue", "liquidation", "adversarial", "churn")
 MODES = ("timing", "latency", "memory", "counts")
 COMMON = ("case_id", "experiment", "workload", "size", "events", "replayed_events", "seed", "levels",
-          "own", "percent", "version", "mode", "input_sha256", "requested_sell_qty_units", "status")
+          "own", "percent", "version", "mode", "input_sha256", "requested_sell_qty_units", "status", "timing_protocol")
 EXTRA = {
     "timing": ("phase", "repeat", "seconds", "warmup", "repeats_requested", "reason", "limit_s", "limit_bytes"),
     "latency": ("event_type", "segment", "n", "p50_ns", "p95_ns", "p99_ns", "max_ns", "convention", "label"),
@@ -108,13 +109,14 @@ def summarize(directory):
     summaries = []
     for (case, version, phase), raw in groups.items():
         measured = [r for r in raw if r["status"] == "ok" and r["warmup"] == "False" and r["seconds"]]
-        requested = 1 if phase == "parse" else 5
+        first = raw[0]
+        requested = 1 if phase == "parse" else int(first.get("repeats_requested") or 5)
         cell = cells.get((case, version), {})
         complete = len(measured) == requested and (phase == "parse" or cell.get("status") == "ok")
         seconds = statistics.median(float(r["seconds"]) for r in measured) if complete else ""
-        first = raw[0]
         summaries.append({**{k: first.get(k, "") for k in COMMON if k not in ("status", "mode")},
                           "phase": phase, "median_s": seconds,
+                          "statistic": "single_trial" if requested == 1 else "median",
                           "completed_repeats": len(measured), "repeats_requested": requested,
                           "status": "ok" if complete else cell.get("status", "partial"),
                           "throughput_events_s": float(first["replayed_events"])/seconds
@@ -146,6 +148,8 @@ def get_run(args):
     env = json.loads(env_path.read_text(encoding="utf-8"))
     env.update(source_sha256=code, source_dirty_paths=dirty, gc_policy="enabled for every version",
                per_replay_limit_s=args.limit_s, traced_peak_limit_bytes=args.limit_bytes,
+               baseline_protocol=BASELINE_PROTOCOL,
+               baseline_deviation="A: single trial without warm-up at 100k/1M; warm-up + 5 at 1k/10k",
                selection="SPEC.md Phase 4a: robustness then 15-cell geometric mean; 5% simplicity tie")
     env_path.write_text(json.dumps(env, indent=2), encoding="utf-8")
     (directory/"spec_snapshot.md").write_text(Path("SPEC.md").read_text(encoding="utf-8"), encoding="utf-8")
@@ -161,6 +165,7 @@ def main():
     ap.add_argument("--part", choices=("smoke", *PARTS), default="smoke")
     ap.add_argument("--manifest", type=Path, default=MANIFEST)
     ap.add_argument("--allow-long", action="store_true")
+    ap.add_argument("--baseline-protocol", choices=(BASELINE_PROTOCOL,), default=BASELINE_PROTOCOL)
     ap.add_argument("--plan-only", action="store_true", help="list coverage only; never construct a book")
     ap.add_argument("--max-size", type=int, choices=(1000, 10000, 100000, 1000000), default=1000000)
     ap.add_argument("--session")
@@ -208,7 +213,8 @@ def main():
         base = {"case_id": case["id"], "experiment": case["part"], "workload": case["label"],
                 "size": case["size"], "events": case["events"], "seed": case["seed"],
                 "levels": case["levels"], "own": case["own"], "percent": case.get("percent", ""),
-                "input_sha256": case["sha256"], "version": version, "mode": mode}
+                "input_sha256": case["sha256"], "version": version, "mode": mode,
+                "timing_protocol": timing_plan(version, case["size"])[2]}
         if args.skip_after_stop and mode != "timing" and timing.get("status") == "stopped":
             cell = {**base, "status": "not_run", "wall_s": 0.0, "stopped_phase": "",
                     "limit_s": args.limit_s, "limit_bytes": args.limit_bytes,
@@ -238,7 +244,7 @@ def main():
                     stop = {**base, "status": guarded["status"], "phase": stop_phase,
                             "repeat": "", "seconds": "", "limit_s": args.limit_s,
                             "limit_bytes": args.limit_bytes, "reason": reason, "observed": "",
-                            "repeats_requested": 5 if mode == "timing" else 1}
+                            "repeats_requested": timing_plan(version, case["size"])[1] if mode == "timing" else 1}
                     records.append({"kind": "stops", "row": stop}); stops = [stop]
                 if mode == "timing":
                     records.append({"kind": "timing", "row": {**stops[-1], "warmup": False}})

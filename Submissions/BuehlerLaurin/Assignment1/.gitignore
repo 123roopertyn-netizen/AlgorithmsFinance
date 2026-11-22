@@ -12,6 +12,9 @@ __pycache__/
 # exploratory output
 scratch/
 03_results/runs/*_quick/
+# Local benchmark diagnostics/resume files; commit the root CSVs and metadata.
+03_results/runs/*/cells/
+03_results/runs/*/jobs/
 # OS / editor
 .DS_Store
 Thumbs.db

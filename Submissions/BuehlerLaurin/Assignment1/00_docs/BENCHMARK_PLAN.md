@@ -4,6 +4,29 @@ Base: `5d8d15a` (Phase 3b, committed by Laurin). This checkpoint covers the
 benchmark plan, generated inputs and an end-to-end smoke run only. No engine
 benchmark at 10k, 100k or 1M was executed. No final B has been selected.
 
+## Amendment decided 2026-11-22 BEFORE long measurements
+
+Phase 4a was reviewed by Claude (chat) and committed by Laurin (`6df503c`);
+current base also includes Laurin's agent-instruction commit `6c2a8d1`.
+These decisions precede every long measurement:
+
+- **Declared baseline deviation:** A is not a candidate. A keeps one warm-up
+  plus five measured trials at 1k and 10k. At 100k and 1M, A gets one measured
+  trial without warm-up (or `stopped` at 600 s). This uses M as initial Q7 book
+  size too. All speedups at 100k/1M must say **A: single trial**. B1/B2/B3 keep
+  warm-up plus five repeats everywhere. Separate instrumentation is unchanged.
+- **Selection fallback:** If no candidate passes the robustness filter, one
+  targeted revision per violation is allowed (one change per revision;
+  e.g. B3 with heap rebuild when stale heap keys > 2 x live levels, or an adaptive
+  price index with a measured threshold), measured and judged with the same
+  rules. All violations are reported. No such revision is implemented now.
+- **Artifact policy:** commit raw CSVs, summaries, env/spec/tests and compact
+  planning evidence. Keep per-cell jobs, journals and logs local as below.
+  The superseded smoke is archived intact in scratch.
+
+This amendment supersedes the original A repeat rule and runtime estimate,
+while preserving the committed historical smoke results unchanged.
+
 ## Selection rule fixed before measurement
 
 The controlling rule is in SPEC.md, recorded before this phase's measurements:
@@ -57,7 +80,9 @@ python run.py bench.catalog --verify
 
 `bench.run_all` defaults to smoke. Each input/version/mode gets an isolated
 worker; primary timing uses fresh books for one warm-up plus five measured
-replays, counters off and GC enabled identically. Inputs are pre-parsed.
+replays for B candidates and small A, counters off and GC enabled identically.
+A at 100k/1M uses one measured replay without warm-up, labelled A: single trial.
+Inputs are pre-parsed.
 Parsing is timed once separately, book construction is timed for every trial,
 and replay includes public dispatch, validation, matching, mutation and result
 allocation. For Q7, replay is the one sale and construction includes all bids.
@@ -106,6 +131,13 @@ checks and tests.txt. Interrupted sessions resume by source+limit identity;
 completed and stopped cells are not repeated, duplicate timing keys are rejected.
 New long sessions require committed source and explicit `--allow-long`.
 
+The wrapper explicitly passes `--baseline-protocol single-large`. The shared
+schedule drives worker trials, stopped metadata and estimates. Raw rows, cells
+and summaries carry `timing_protocol`. Summaries retain the schema's `median_s`
+numeric field for compatibility; for one trial, `statistic=single_trial` makes
+clear that the value is the sole observation. Reports/speedups must preserve
+its label; it is not a five-repeat estimate.
+
 ## Smoke evidence (pipeline only)
 
 Final run:
@@ -114,7 +146,10 @@ Its verification.json checks 216/216 cells OK, 15 cases, only M=1000 / seed 42,
 all four versions, 988 raw timing records, 208 phase summaries, 372 latency
 rows, 3132 memory rows, 1360 count rows and 216 sample checks. Semantic counts
 agree across versions. No stopped/error cells. The earlier smoke is preserved
-in `20261122T003530Z_5d8d15a-dirty_smoke/`; use the final run for planning.
+in `scratch/20261122T003530Z_5d8d15a-dirty_smoke/`; use the final run for planning.
+The authorized move preserved all 663 files / 6,847,781 bytes and every sha256.
+The superseded folder was untracked before the move; no tracked result was
+deleted. The final smoke retains its historical source/protocol metadata.
 
 Official replay medians in milliseconds, smoke only:
 
@@ -140,8 +175,11 @@ quadratically; constant-live churn linearly. B is approximately linear at
 bounded P; deep B1/B2 range up to quadratic. Ranges vary these assumptions by
 0.5x..3x and include parsing/startup and per-phase stops. They are planning
 estimates, not measured long runtimes, confidence intervals or guaranteed bounds.
-Near 600 s, completing five repeats versus stopping the first trial creates a
-large discontinuity. Tracing/allocator/GC/cache effects add uncertainty.
+Near 600 s, a timing stop also skips optional instrumentation and creates a
+discontinuity. The new single-trial A rule reduces repeat cost, but separate
+traced/counted A runs can still dominate. Tracing/allocator/GC/cache effects
+add uncertainty. Revised planning JSON/MD are saved separately under
+`00_docs/phase4_plan_20261122/`; historical smoke estimates are not overwritten.
 
 At 100k, A's unconstrained single-replay estimates are buildup 656 s, crowded
 722 s, mixed 152 s, sweep 599 s, cancel_churn 0.25 s. At 1M: approximately
@@ -154,18 +192,18 @@ and resumes the common `phase4` session. None was executed in Phase 4a.
 
 | Part | Exact PowerShell command | B-only hours | Full A+B hours |
 |---|---|---:|---:|
-| official | `& .\01_code\bench\long_runs.ps1 -Part official -AllowLong` | 0.14-0.43 | 2.61-15.75 |
-| million | `& .\01_code\bench\long_runs.ps1 -Part million -AllowLong` | 0.29-1.18 | 0.98-1.91 |
-| queue | `& .\01_code\bench\long_runs.ps1 -Part queue -AllowLong` | 0.06-0.17 | 1.13-7.19 |
-| liquidation | `& .\01_code\bench\long_runs.ps1 -Part liquidation -AllowLong` | 0.09-0.32 | 1.76-14.83 |
-| adversarial | `& .\01_code\bench\long_runs.ps1 -Part adversarial -AllowLong` | 0.10-3.43 | 1.66-14.65 |
+| official | `& .\01_code\bench\long_runs.ps1 -Part official -AllowLong` | 0.14-0.43 | 2.30-8.71 |
+| million | `& .\01_code\bench\long_runs.ps1 -Part million -AllowLong` | 0.29-1.18 | 0.98-1.90 |
+| queue | `& .\01_code\bench\long_runs.ps1 -Part queue -AllowLong` | 0.06-0.17 | 1.13-4.59 |
+| liquidation | `& .\01_code\bench\long_runs.ps1 -Part liquidation -AllowLong` | 0.09-0.32 | 1.76-7.21 |
+| adversarial | `& .\01_code\bench\long_runs.ps1 -Part adversarial -AllowLong` | 0.10-3.43 | 1.66-9.02 |
 | churn | `& .\01_code\bench\long_runs.ps1 -Part churn -AllowLong` | 0.07-0.30 | 0.09-0.39 |
 
 To keep work manageable, append `-CandidatesOnly` to each command first; all
 B warm-ups/repeats stay unchanged. Then use `-BaselineOnly -MaxSize 10000` for
 an A pilot and inspect observed scaling. Resume the same command with
 `-BaselineOnly` to fill larger A cells, allowing overnight execution; no
-completed cells repeat. All six full parts total roughly 8-55 hours under the
+completed cells repeat. All six full parts total roughly 8-32 hours under the
 model, dominated by A construction and instrumented growing-book work.
 An A stop skips its remaining repeats and optional instrumentation visibly.
 Do not silently discard required B cells or choose B from partial results.
@@ -177,14 +215,42 @@ deliberately rejected rather than merged silently.
 Open questions: none about implementation. Long timings, robust-memory
 conclusions, winner, dashboard and fresh-venv reproduction remain later work.
 
+## Full-run storage and commit policy (2026-11-22)
+
+All six parts in one session plan 2,032 workers. Each successful worker produces
+a job JSON, journal JSONL and log: 6,096 local files. With about 16 root result
+files, a full folder is approximately 6,112 files. Scaling saved smoke bytes
+per worker with a 1.2..2.5x allowance for digits/metadata/histogram bins gives
+22.2-46.3 MiB committed and 52.0-108.3 MiB local (roughly 74-155 MiB combined).
+These are planning ranges, not hard bounds; stops/skips and fewer A repeats
+reduce output. Revised planning JSON records the storage_estimate calculation.
+
+Commit root `timing.csv`, `summary.csv`, `cells.csv`, `checks.csv`, `counts.csv`,
+`latency.csv`, `latency_histogram.csv`, `memory.csv`, `result.csv`, `stops.csv`
+when present, plus `env.json`, `spec_snapshot.md`, `tests.txt` and compact
+verification/planning JSON/MD when present. Root cells.csv is retained as the
+coverage/stop ledger. No raw timing repeat is removed from the CSVs.
+
+Keep `cells/` (journals/logs) and `jobs/` local for resume/debugging, with:
+
+```gitignore
+03_results/runs/*/cells/
+03_results/runs/*/jobs/
+```
+
+The rules affect untracked files; the already tracked final smoke's internals
+remain historical evidence. No untracking/git mutation is executed. No local
+internals are deleted. Completed-cell resume reads the CSV ledger; in-flight
+diagnosis still requires local journals. The archived smoke remains intact.
+
 ## Proposed commit (Laurin only; not executed)
 
 From Assignment1:
 
 ```powershell
-git add -- 01_code/bench 01_code/datagen/benchmark_own.py 02_tests/test_bench_pipeline.py SPEC.md README.md 00_docs 05_evidence 03_results/runs/20261122T003530Z_5d8d15a-dirty_smoke 03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke
-git commit -m "Assignment1 Phase 4a: benchmark plan, data manifest and smoke pipeline"
+git add -- .gitignore 01_code/bench 02_tests/test_bench_pipeline.py SPEC.md README.md 00_docs 05_evidence
+git commit -m "Assignment1 Phase 4a: declare large-A trials, selection fallback and artifact policy"
 ```
 
-Generated data and scratch are excluded. A pre-existing modification to
-`../AGENTS.md` is outside this phase's scope and is excluded from this proposal.
+Generated data, scratch and future per-cell internals are excluded. No long run
+or git mutation was executed. The archive move was explicitly authorized.

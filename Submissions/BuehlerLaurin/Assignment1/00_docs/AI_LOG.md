@@ -315,3 +315,83 @@ passed. The failed command and all prior evidence are retained. No engine or
 test change was needed. No git mutation or long-run command was executed.
 
 STOP: await Claude (chat) review and Laurin.
+
+## Phase 4a amendment, 2026-11-22, BEFORE long measurements
+
+Laurin reports Claude (chat) reviewed Phase 4a and Laurin committed it. Read-only
+history confirms `6df503c`; current HEAD `6c2a8d1` adds Laurin's aif-attack
+instruction reference. No long measurements have started. Applied aif-exercise,
+aif-bench, test-first pipeline checks and aif-verify. No delegation or installs.
+
+Accepted all three explicit decisions: A at 1k/10k keeps full warm-up + five;
+A at 100k/1M gets one measured trial, no warm-up, or stopped at 600 s. This is
+labelled `A: single trial` in every future speedup and in new row/cell/summary
+metadata; B1/B2/B3 remain warm-up + five. A shared protocol module drives worker,
+summary metadata and estimates; the PowerShell wrapper explicitly selects it.
+Summary's compatible median_s field holds the sole observation when
+statistic=single_trial; it does not become five-repeat evidence. Independent
+instrumentation/GC/limits stay unchanged. A is not a candidate.
+
+SPEC and BENCHMARK_PLAN record the dated fallback: only if all candidates fail
+robustness, allow one targeted change per violation, judged under the same rules,
+with all violations reported. No heap/adaptive/engine revision is implemented.
+
+Red evidence `20261122T011036Z_6c2a8d1-dirty_phase4a-amendment-red.txt`:
+12 failed / 2 passed (new shared schedule stub; old large-A trials/summary).
+Green `20261122T011200Z_6c2a8d1-dirty_phase4a-amendment-green.txt`: 30 pipeline
+cases pass. Fourteen new cases cover schedule boundaries for all B candidates,
+explicit single-trial summary, and actual worker control flow with four-event
+synthetic inputs. Large size labels in those tests only exercise scheduling;
+they do not execute 100k/1M events. Existing expected results are not changed.
+
+Authorized archive move: source absolute path and scratch destination were
+checked inside Assignment1 before native Move-Item. Saved archive evidence
+`20261122T011203Z_6c2a8d1-dirty_phase4a-archive-smoke.txt`: all 663 files,
+6,847,781 bytes and each relative-path sha256 preserved in
+`scratch/20261122T003530Z_5d8d15a-dirty_smoke/`. No files deleted; no git
+mutation. The superseded folder was untracked. Final committed smoke unchanged.
+
+Estimates were recomputed only from historical 1k artifacts and the code-based
+cost model. New JSON/MD go to `00_docs/phase4_plan_20261122/`; original smoke
+results/planning are not overwritten. New total planning ranges (hours):
+official 2.30-8.71; million 0.98-1.90; queue 1.13-4.59; liquidation 1.76-7.21;
+adversarial 1.66-9.02; churn 0.09-0.39. B estimates are unchanged. These are
+uncertain planning estimates, not long measurements. Full suite/staged commands
+remain for Laurin after review/commit; no long-run command was executed.
+
+Full-folder estimate: 2,032 workers, roughly 6,112 files, of which 6,096 local
+job/journal/log files. About 16 root files (raw CSVs including coverage/stops,
+summaries, env/spec/tests and compact verification/planning) are committed:
+22.2-46.3 MiB; local internals 52.0-108.3 MiB, using smoke per-worker bytes and
+1.2..2.5x allowance. New .gitignore rules exclude cells/ and jobs/ directories,
+not cells.csv. Already tracked final-smoke internals stay tracked as historical
+evidence; there is no untracking/deletion. No hard storage bound is claimed.
+
+Fresh verification:
+[full suite](../05_evidence/20261122T011345Z_6c2a8d1-dirty_phase4a-amendment-all-tests.txt)
+reports **531 passed in 181.67s**, no failures/errors/skips/warnings.
+
+| File | Passed |
+|---|---:|
+| test_contract.py | 256 |
+| test_validation.py | 184 |
+| test_mutants.py | 22 (17 kills, naming, four real controls) |
+| test_own_datasets.py | 4 |
+| test_replay.py | 15 |
+| test_b_internal.py | 17 |
+| test_stateful.py | 3 (A vs B1/B2/B3) |
+| test_bench_pipeline.py | 30 |
+| Total | 531 |
+
+[Final review](../05_evidence/20261122T011803Z_6c2a8d1-dirty_phase4a-amendment-final-review.txt)
+checks original pipeline-test AST preservation, unchanged engines/expectations/
+committed smoke, archive count/bytes, unchanged B runtime projections, storage
+arithmetic, PowerShell syntax without execution, scope and whitespace. Codex
+also read the benchmark code diff, new shared policy, added tests and generated
+planning/docs for unrelated behavior, names, comments and content. No traces of
+the logged injection or NEW embedded instructions found. Every write stayed
+inside Assignment1. No dependencies, deletions, engine revisions, git mutations
+or long measurements. No fresh-venv reproduction is claimed.
+
+Proposed git paths/message (not executed): BENCHMARK_PLAN.md final section.
+STOP for Claude (chat) review and Laurin.
