@@ -1,0 +1,10 @@
+{"bench_phase": "input_hash", "action": "start"}
+{"bench_phase": "input_hash", "action": "end", "elapsed_s": 0.0009763999842107296}
+{"bench_phase": "parse", "action": "start"}
+{"bench_phase": "parse", "action": "end", "elapsed_s": 0.0064508000505156815}
+{"bench_phase": "sample_check", "action": "start"}
+{"bench_phase": "sample_check", "action": "end", "elapsed_s": 0.010937899991404265}
+{"bench_phase": "construction", "action": "start"}
+{"bench_phase": "construction", "action": "end", "elapsed_s": 1.5099998563528061e-05}
+{"bench_phase": "latency", "action": "start"}
+{"bench_phase": "latency", "action": "end", "elapsed_s": 0.005290700006298721}

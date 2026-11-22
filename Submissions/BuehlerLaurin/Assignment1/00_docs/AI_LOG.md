@@ -216,3 +216,102 @@ git commit -m "Assignment1 Phase 3b: B2/B3 variants, pytest internals and verifi
 ```
 
 Checkpoint: STOP. Await Claude (chat) review and Laurin's next phase instruction.
+
+## Phase 4a, 2026-11-22: fixed plan and smoke only (base `5d8d15a`)
+
+Laurin confirmed Phase 3b committed. Read-only git confirms commit `5d8d15a`.
+Laurin reports: Claude (chat) verified B1, B2 and B3 against an independent
+reference on all five supplied 10k streams and 135,000 own stress events in three
+regimes (few prices/long queues, many crossing prices, drifting stale heap keys):
+zero differences for every variant. This is attributed external review, not a
+new independent reference implementation or run by Codex.
+
+Skills applied: aif-exercise routes this continuation, aif-bench supplies the
+measurement protocol, aif-tdd for new helpers, aif-debug for the two runner
+defects below, and aif-verify for saved checkpoint evidence. No delegation.
+Accepted: Laurin's three-part selection rule, recorded BEFORE measurement in
+SPEC.md; full official/queue/own input grid; isolated warm-up/five-repeat
+pipeline; separate latency, memory and count modes; explicit time/memory stops;
+bounded A sample check; default smoke and explicit human-run long gate.
+No final B/adaptive implementation chosen. No dependency/install/delete actions.
+
+Inputs: 114 catalog entries, 105 distinct gzip files (113456936 bytes), generated
+outside timing in 196.2 s and subsequently hash-verified. Supplied generator stays
+byte-identical to course MANIFEST. Commands and archive/content sha256 are in
+DATA_MANIFEST.json; large data are ignored. Own data are explicitly labelled;
+drift is deterministic across seed labels. Q7 sells use ceil 10/100/200% of the
+fresh book, construction timed separately. Full case definitions, measurement
+boundaries, stopped/not_run semantics and six human PowerShell commands are in
+BENCHMARK_PLAN.md. Existing engine/test expectations were not changed.
+
+Corrected Codex suggestions, diagnosed with minimal regressions:
+
+- The initial sample checker used dict(event), which failed on legitimate
+  non-object rejection inputs. Red: phase4a-sample-checker-regression-red
+  (20261122T003523Z); fixed with deepcopy, green pipeline run003527Z.
+- An exact completed-over-limit auxiliary phase initially lost its phase name.
+  Red: phase4a-stop-phase-regression-red (003928Z); ResourceStop now preserves
+  phase, green004241Z. No timing callable or engine algorithm changed.
+- Initial generator/runner NotImplemented reds and all intermediate evidence
+  remain in 05_evidence/INDEX.md. The initial smoke is retained rather than
+  overwritten. Final Python/test sources were frozen before the final smoke.
+
+Final smoke run: `03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/`.
+216/216 cells OK; 15 cases, only M1000/seed42, all four versions. Verified 988 raw
+timing rows, 208 phase summaries, 372 latency rows, 3132 memory rows, 1360 count
+rows and 216 A sample checks; semantic counters agree. Earlier smoke folder
+`20261122T003530Z_5d8d15a-dirty_smoke/` remains labelled smoke. No long engine
+benchmark was launched. Short synthetic deadline/peak tests exercise stopping;
+the saved per-replay-budget proof demonstrates deadline reset across trials.
+
+Memory observation, smoke only: own drift at 200 -> 1000 events, current traced
+bytes A 1344 -> 1376, B1 3416 -> 3448, B2 2552 -> 2584, B3 16056 -> 56760. Each ends with two
+live orders; B3 has 501 heap entries. This supports the predicted stale-key risk;
+it does not choose the final B or establish a general memory bound.
+Smoke medians and full runtime planning table are in BENCHMARK_PLAN.md. The
+M1000 extrapolation suggests roughly 8-55 h for all planned parts including A,
+with wide uncertainty and stop-policy discontinuities. Recommendation: complete
+B batches unchanged first, then a 10k A pilot and resumable larger A work with
+600 s first-attempt stopping. Long runs and final selection remain unexecuted.
+
+Fresh full suite saved in
+`05_evidence/20261122T005136Z_5d8d15a-dirty_phase4a-all-tests.txt`:
+`517 passed in 176.97 s`, no failures/errors/skips/warnings.
+
+| Test file | Passed |
+|---|---:|
+| test_contract.py | 256 |
+| test_validation.py | 184 |
+| test_mutants.py | 22 (17 kills, naming, 4 real controls) |
+| test_own_datasets.py | 4 |
+| test_replay.py | 15 |
+| test_b_internal.py | 17 |
+| test_stateful.py | 3 (A vs B1/B2/B3) |
+| test_bench_pipeline.py | 16 |
+| Total | 517 |
+
+Stateful settings remain 300 examples / 60 steps with every-event result/book,
+invariants and conservation comparisons. Original contract assertions, expected
+data, engine sources and dependency pins remain unchanged. Fresh environment,
+full official scaling, candidate selection and dashboard are still later work.
+The full test evidence is copied to both smoke folders as tests.txt.
+
+Checkpoint: STOP for Claude (chat) review and Laurin. Proposed git commands are
+in BENCHMARK_PLAN.md; Codex ran no git mutation and no long-run command.
+
+Final Codex review: read the new benchmark/generator/test/verifier code, the
+harness diff, manifest metadata and checkpoint documents for behavior, names,
+comments or content unrelated to the requirements. No traces of the logged
+injection and no NEW embedded instructions were found. No source changes
+after the final smoke; its measured Python/test fingerprint still matches.
+Read-only protected-path diff confirms all engines, original tests, expected
+data, supplied generator and dependency pins unchanged. Generated data stay
+ignored. The pre-existing ../AGENTS.md modification is outside this phase and
+was left untouched. Final review evidence:
+[scope/source/artifact checks](../05_evidence/20261122T005749Z_5d8d15a-dirty_phase4a-final-review-file.txt).
+An earlier review command failed because PowerShell stripped nested native
+argument quotes (005707Z); rerunning the same checks from a scratch script
+passed. The failed command and all prior evidence are retained. No engine or
+test change was needed. No git mutation or long-run command was executed.
+
+STOP: await Claude (chat) review and Laurin.

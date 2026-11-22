@@ -68,3 +68,28 @@ Raw evidence: `03_results/runs/20261121T234816Z_b5411d4-dirty_phase3b_sanity_not
 Formal measurements choose final B in Phase 4. B3's lazy heap can retain distinct
 cancelled prices until they reach its root; there is no unrequested heap
 compaction/adaptive index. Adaptive switching is only considered after Phase 4.
+
+## Phase 4a, 2026-11-22: measurement pipeline, no engine revision
+
+Base `5d8d15a`. Selection criteria were fixed in SPEC before generation/smoke.
+Added a data catalog with exact commands/hashes; generated and verified the full
+planned inputs outside measurement (114 entries, 105 physical files). Added
+isolated primary timing and separate latency/memory/count workers, per-replay
+watchdogs, explicit stops, metadata, sample oracle checks and raw repeat CSVs.
+Added own Q7/drift generators and a counted A observer adapter; A and every B
+engine remain unchanged. The existing harness gains optional phase watchdog
+and non-retained curve-observer support; its existing default timing path is
+preserved. Sixteen new pipeline tests accompany the unchanged 501 engine tests.
+
+Corrected two runner defects before the final smoke: sample cloning must support
+non-object rejected events (deepcopy, not dict conversion); completed over-limit
+phases must retain their actual phase in the stop record. Each has saved minimal
+red/green evidence. These changes do not alter order-book behavior or expectations.
+
+Final smoke at 1k/seed42: 216 cells OK, five repeats plus warm-up, separate
+instrumentation and counter parity. Full suite: 517 passed in 176.97s. B3 drift
+retains501 heap keys at two live orders, consistent with its documented risk;
+no final exclusion/winner is declared. No 10k/100k/1M engine benchmark was run.
+BENCHMARK_PLAN.md and RUNTIME_ESTIMATE.md hand long execution to Laurin after
+review/commit. No algorithm optimization, adaptive variant or speed claim was
+introduced in this phase.

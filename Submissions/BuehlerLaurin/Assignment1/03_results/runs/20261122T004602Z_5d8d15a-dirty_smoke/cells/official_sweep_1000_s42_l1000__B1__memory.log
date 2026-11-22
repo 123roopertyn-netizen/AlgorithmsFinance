@@ -1,0 +1,10 @@
+{"bench_phase": "input_hash", "action": "start"}
+{"bench_phase": "input_hash", "action": "end", "elapsed_s": 0.0013419999741017818}
+{"bench_phase": "parse", "action": "start"}
+{"bench_phase": "parse", "action": "end", "elapsed_s": 0.00605819997144863}
+{"bench_phase": "sample_check", "action": "start"}
+{"bench_phase": "sample_check", "action": "end", "elapsed_s": 0.006626399990636855}
+{"bench_phase": "memory_peak", "action": "start"}
+{"bench_phase": "memory_peak", "action": "end", "elapsed_s": 0.024980499991215765}
+{"bench_phase": "memory_curve", "action": "start"}
+{"bench_phase": "memory_curve", "action": "end", "elapsed_s": 0.027475799957755953}

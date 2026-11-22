@@ -116,22 +116,56 @@ python run.py datagen.check_reproduction --generator 06_data/supplied/generate_o
 
 **Own data (labelled *own*, separate from the supplied files):**
 - `06_data/own/`: 18 small hand-designed edge-case streams with hand-calculated expected results (`<case>.expected.json`), written by `python run.py datagen.own_cases`; `python run.py datagen.own_cases --check` verifies that the committed files match the generator. Overview: `06_data/own/INDEX.md`.
-- `01_code/datagen/adversarial.py`: own adversarial benchmark scenarios for Phase 4 (`deep_book`, `mid_queue_cancels`, `repeated_full_sweeps`; see SPEC.md). Not run yet; output will go to `06_data/generated/own/`.
+- `01_code/datagen/adversarial.py`: own adversarial benchmark scenarios (`deep_book`, `mid_queue_cancels`, `repeated_full_sweeps`; see SPEC.md). Phase 4 inputs are generated under ignored `06_data/generated/phase4/own/`.
 
-Benchmark streams (M = 1k / 10k / 100k, seeds 42 / 43 / 44, five scenarios, 1M attempted) will be generated outside timing into `06_data/generated/` (git-ignored); the exact commands and their sha256 will be listed here.
+Phase 4a generated the full planned data grid outside timing: official 1k/10k/100k
+at seeds 42/43/44, 1M seed 43, queue concentration and own adversarial/Q7/drift
+inputs. [DATA_MANIFEST.json](00_docs/DATA_MANIFEST.json) contains 114 catalog
+entries (105 distinct gzip files), exact commands, settings and sha256. Generated
+data remain ignored; commit the manifest. Generate and verify with:
+
+```powershell
+python run.py bench.catalog
+python run.py bench.catalog --verify
+```
 
 ## Measurement definitions
-Units, what each phase contains, per call vs per batch, percentile convention, memory boundary.
+The complete protocol, limits, estimates and exact long-run PowerShell commands
+are in [BENCHMARK_PLAN.md](00_docs/BENCHMARK_PLAN.md). Fixed selection criteria
+are in SPEC.md. Primary replay uses pre-parsed events, fresh books, counters off,
+GC enabled, one warm-up and five measured repeats; seconds and raw trials are
+saved. Parsing and construction are separate. Liquidation rebuilds each bid
+book before the measured sale. Throughput is events / median replay seconds.
+Independent runs measure nearest-rank latency p50/p95/p99 in ns, traced memory
+including book/current fills but excluding parsed input/history, and operation
+counts. Traced memory is not RSS. Missing/stopped values remain explicit.
+
+Safe default (only M=1000, seed 42, all experiments and versions):
+
+```powershell
+python evidence.py phase4-smoke -- python run.py bench.run_all --part smoke
+```
+
+Long runs require explicit authorization flags and committed source. Laurin runs
+the six commands in BENCHMARK_PLAN.md after review/commit; they have not been
+executed here. The wrapper uses the existing venv and supports B-only batches,
+A pilots and resumption without reducing B repeats.
 
 ## Results summary (3–5 lines)
+
+Phase 4a final smoke: `03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/`.
+All 216 cells and sampled A comparisons pass; 988 raw timing records and separate
+latency/memory/count CSVs are saved. B3's drift heap grows with a two-order live
+book (501 retained heap entries at event 1000); investigate using the planned
+growth experiment. Smoke does not choose the final B. Long runs remain pending.
 
 ## Revision summary
 
 ## Evidence block
 Commit to audit: <hash> (filled in by Laurin)
-Tests (Phase 3b): `python -m pytest -q --tb=short --basetemp=scratch/pytest-phase3b --junitxml=05_evidence/phase3b-all-tests.xml` -> `501 passed in 175.51s` (per-file table in `00_docs/AI_LOG.md`)
-Benchmark: <command> → 03_results/runs/<run folder>/
-Fresh-venv check: pending Phase 7 (existing pinned venv used through Phase 3b)
+Tests (Phase 4a): `python -m pytest -q --tb=short --basetemp=scratch/pytest-phase4a --junitxml=05_evidence/phase4a-all-tests.xml` -> `517 passed in 176.97s` (per-file table in `00_docs/AI_LOG.md`)
+Benchmark (Phase 4a smoke only): `python run.py bench.run_all --part smoke --session phase4a_smoke_final` -> `03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/`, 216/216 cells OK; full grid pending.
+Fresh-venv check: pending Phase 7 (existing pinned venv used through Phase 4a)
 
 Q11 completed 2026-11-22: `06_data/supplied/generate_orders.py` was copied
 byte-for-byte from the course package and checked against its MANIFEST.json

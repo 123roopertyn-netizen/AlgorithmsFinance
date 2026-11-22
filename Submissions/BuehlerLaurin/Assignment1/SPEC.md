@@ -505,3 +505,98 @@ Phase 3b sanity remains **sanity, not a benchmark**: exactly one replay per
 A/B1/B2/B3 on each supplied 10k file, counters off, no warm-up/repeats/medians,
 fresh books, parsing/setup/replay separate, equality checks after the clock.
 Final B selection and any adaptive proposal wait for Phase 4 measurements.
+
+## Phase 4a benchmark selection and protocol (fixed 2026-11-22 BEFORE measuring)
+
+Selection criteria, fixed BEFORE measuring; the decision itself is made after
+Phase 4 and justified in the report:
+
+1. Robustness filter: a B variant is excluded if it hits a declared limit
+   (600 s per replay, 4 GiB traced peak), is more than 3x slower than the best B
+   variant on any own adversarial or official scenario at the largest M measured,
+   or its traced memory grows with event count rather than the live book
+   (e.g. stale heap keys under drifting prices).
+2. Speed: among remaining variants, the lowest geometric mean of median replay
+   time over the five official scenarios at M=100000, seeds 42/43/44, wins.
+   Within 5% of the fastest eligible mean choose the simpler: B1 < B2 < B3.
+3. Report every result, including scenarios where the selected variant loses
+   (e.g. cancel_churn). A is the baseline, not an eligible final B candidate.
+
+Apply the 3x comparison per scenario/seed at its largest measured size, using
+complete five-repeat medians and the fastest B variant on that same input.
+The speed score has 15 equally weighted cells (five scenarios x three seeds).
+Missing, partial, stopped or failed required cells do not get imputed; no final
+selection is made from incomplete coverage or smoke results. Assess memory
+against the live-size/heap-entry curves, not just one finite peak; the rule does
+not invent a numerical slope threshold that Laurin has not specified.
+
+Phase 4a execution is limited to data generation and M=1000 / seed 42 smoke
+measurements. No 10k/100k/1M engine benchmark is authorized in this phase.
+All official and own data are generated outside timing with commands/sha256 in
+a manifest. Official data: M=1k/10k/100k, seeds 42/43/44, five scenarios, levels
+1000; M=1M only seed 43. Queue concentration uses buildup at levels 4 vs 1000.
+Q7 books: 1k/10k/100k bids, 1000 prices, seeds 42/43/44, independent 10/100/200%
+sells. Own adversarial data retain the three agreed scenarios; memory-only
+drifting-price cancellation churn is a diagnostic for the stated robustness
+filter, separate from the three adversarial speed scenarios.
+
+Primary timing: fresh book per warm-up/repeat, pre-parsed events, one warm-up
+plus five measured repeats; save raw repeats, setup/replay/parse separately,
+medians only for complete cells. GC enabled for all versions. Parsing, printing,
+correctness checks, profiling, counters and tracemalloc are outside replay timing.
+For liquidation rebuild the book before each trial and time construction apart
+from the sell. Parent watchdogs enforce 600 s on each individual replay; after
+the first stopped replay omit remaining trials for that cell, for A and B alike.
+Worker/phase errors remain visible. No stopped observation is filled in or used
+as a speed ratio. Smoke exercises shortened limits in tests, never waits 600 s.
+
+Latency, memory and operation counts use independent worker runs. Latency uses
+perf_counter_ns and nearest-rank p50/p95/p99 by event type and early/late deciles.
+Memory starts tracing after input parsing, includes newly constructed book and
+current-event fills but no retained history; save peak and growth curve with live
+orders/levels/heap entries. Enforce 4 GiB traced peak in that separate run.
+Counts use default-off engine counters enabled only for that run; baseline A
+uses a separately tested counting adapter without changing the A algorithm.
+Every worker first checks the measured public replay path on a bounded sample
+against A outside timing, comparing each result/book. Full engine correctness
+continues to be checked by the existing contract/stateful suite.
+
+### Phase 4a implementation details and limits
+
+See `00_docs/BENCHMARK_PLAN.md` and `00_docs/DATA_MANIFEST.json` for the exact
+case grid, own event budgets, generation commands and hashes. The fixed selection
+rule above is unchanged after the smoke measurements. No final B is selected.
+
+The bounded sample is first 64 + last 64 input events replayed on a fresh book;
+it does not reconstruct the skipped middle. Q7 uses sampled bids and its derived
+sale. Each mode compares every sampled result/book. Existing independent
+expected files and three per-event stateful differentials remain unchanged.
+Latency distributions are saved as log2 histograms as well as exact nearest-rank
+quantiles; no network/queueing delay is included. A counting adapter delegates
+all actual mutations to A, with observer overhead only in counted runs.
+A's memory curve leaves price-level count at -1 to avoid tracing observer sets;
+its separate counted run supplies the exact price peak. Pre-parsed input and
+preallocated curve buffers are outside tracing; current fill allocation is inside.
+Traced allocation is distinct from auxiliary space and RSS/native memory.
+
+The 600 s watchdog resets per replay and also caps each separate auxiliary
+phase (construction, sample/hash/parse, latency, memory and counts). The 4 GiB
+traced-peak cap is checked each event during memory runs, never during primary
+timing. A memory allocation failure remains visible; input preload cost is not
+silently recast as engine allocation. A streaming fallback would need an explicit
+protocol amendment before comparison. All versions retain identical GC policy.
+
+`--skip-after-stop` records other modes as `not_run_after_timing_stop` after a
+version/input timing stop, without fabricating instrumentation measurements.
+The recommended human-run wrapper enables it; every actual B limit hit remains
+visible for the robustness filter. No repeats are reduced for successful B cells.
+New long runs require `--allow-long` and committed source; sessions pin measured
+Python/test source and limits. Raw repeated timing keys are rejected. Source,
+environment, limits, case metadata, stopped reasons and the spec are saved.
+
+Runtime estimates are derived from only the 1k smoke and the code's workload
+structure (B/P/F), with 0.5x..3x sensitivity and 600 s stop discontinuities.
+They are planning estimates, not scaling evidence or guaranteed bounds. See
+`00_docs/RUNTIME_ESTIMATE.md`; staged B-first and A-pilot commands preserve the
+measurement rules. Phase 4a executed neither a 10k/100k/1M engine benchmark nor
+a final robustness decision. Long data generation alone is outside timing.

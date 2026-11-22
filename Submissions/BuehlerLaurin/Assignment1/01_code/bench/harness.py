@@ -160,7 +160,8 @@ def peak_traced_bytes(setup: Callable[[], Any], run: Callable[[Any], Any], *,
 
 
 def traced_curve(process: Callable[[Any, Any], Any], state: Any, items: Sequence[Any], *,
-                 every: int = 1000, setup: Callable[[], Any] | None = None) -> list[dict]:
+                 every: int = 1000, setup: Callable[[], Any] | None = None,
+                 observe: Callable[[Any], tuple] | None = None) -> list[dict]:
     """Memory over time: traced *current* bytes retained by the state at checkpoints.
 
     Measurement boundary (state it in the report):
@@ -180,6 +181,7 @@ def traced_curve(process: Callable[[Any, Any], Any], state: Any, items: Sequence
     n = len(items)
     n_samples = n // every + 2                    # checkpoints + processed=0 + final
     buf = array("q", bytes(8 * 3 * n_samples))    # (processed, current, peak) per sample
+    stats = array("q", bytes(8 * 4 * n_samples)) if observe is not None else None
     gc.collect()
     tracemalloc.start()
     k = 0
@@ -188,6 +190,8 @@ def traced_curve(process: Callable[[Any, Any], Any], state: Any, items: Sequence
             state = setup()
         cur, peak = tracemalloc.get_traced_memory()
         buf[0], buf[1], buf[2] = 0, cur, peak; k = 1
+        if stats is not None:
+            stats[0:4] = array("q", observe(state))
         i = 0
         for item in items:
             process(state, item)
@@ -196,10 +200,17 @@ def traced_curve(process: Callable[[Any, Any], Any], state: Any, items: Sequence
                 cur, peak = tracemalloc.get_traced_memory()
                 j = 3 * k
                 buf[j], buf[j + 1], buf[j + 2] = i, cur, peak; k += 1
+                if stats is not None:
+                    j = 4 * (k - 1)
+                    stats[j:j+4] = array("q", observe(state))
     finally:
         tracemalloc.stop()
-    return [{"processed": buf[3 * j], "current_bytes": buf[3 * j + 1], "peak_bytes": buf[3 * j + 2],
-             "includes_initial_state": setup is not None} for j in range(k)]
+    out = [{"processed": buf[3 * j], "current_bytes": buf[3 * j + 1], "peak_bytes": buf[3 * j + 2],
+            "includes_initial_state": setup is not None} for j in range(k)]
+    if stats is not None:
+        for j, row in enumerate(out):
+            row.update(zip(("live_orders", "price_levels", "heap_entries", "stale_heap_prices"), stats[4*j:4*j+4]))
+    return out
 
 
 TIMING_KEY = ("version", "workload", "seed", "size", "phase", "repeat")
@@ -242,11 +253,14 @@ def append_rows(path: str | Path, rows: Iterable[dict], *, unique_by: Sequence[s
         w.writerows(rows)
 
 
-def run_with_timeout(cmd: Sequence[str], timeout_s: float) -> dict:
+def run_with_timeout(cmd: Sequence[str], timeout_s: float, *, phase_protocol: bool = False) -> dict:
     """Run one benchmark cell as a subprocess with a declared time limit (Windows-safe).
 
     A run that hits the limit is reported as status 'stopped', never silently dropped.
     """
+    if phase_protocol:
+        from bench.guard import run_phased
+        return run_phased(cmd, timeout_s)
     t0 = time.perf_counter()
     try:
         cp = subprocess.run(list(cmd), capture_output=True, text=True, encoding="utf-8",

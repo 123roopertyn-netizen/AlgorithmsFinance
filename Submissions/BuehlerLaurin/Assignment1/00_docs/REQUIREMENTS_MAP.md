@@ -58,49 +58,49 @@ Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/
 | R34 | Own matching logic; no existing matching engine; library lists/dicts/queues/sorting/heaps allowed (R §Implement and revise; S13) | All variants implemented | Own standard-library matching logic; OrderedDict is used for B2 FIFO, deque for B1/B3; never plain dict FIFO. A/B1 untouched, B2/B3 share public semantics by inheritance. |
 | R35 | Pseudocode + runtime/space for insertion, cancellation, market sell in the measured versions, using B, P, M, F; include validation, output construction, index updates, inactive entries, cleanup; state worst-case/expected/amortized (R §Implement and revise; S13) | All variant code arguments; official scaling Phase 4 | SPEC.md B2/B3 worst/expected/amortized time/space arguments include output, hash capacity, price shifts, deque credits and heap K=P+S_h; predictions recorded before sanity. |
 | R36 | Preserve both versions; rerun unchanged tests after revision; add tests for found bugs without weakening expectations (R §Implement and revise; S13) | A/B1 and expectations preserved; coverage expanded | Contract.py, original data/expected files and A/B1/shared validator unchanged. Internal assertions promoted into pytest; stateful and CLI cases extended across all variants. |
-| R37 | Record what changed and why, and AI suggestions accepted / corrected / rejected (R §Implement and revise; S13) | Phase 3b recorded | AI_LOG.md/REVISION.md: attributed independent B1 review, Q11 sha, plan, variants, red/green runs, internal mutation probes, sanity and limitations. |
+| R37 | Record what changed and why, and AI suggestions accepted / corrected / rejected (R §Implement and revise; S13) | Phase 4a recorded | AI_LOG.md / REVISION.md record benchmark helpers, red/green regressions, smoke evidence and deferred long measurements. |
 
 ## Data
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
 | R38 | Use only synthetic data; no historical exchange data; state it is not calibrated (R §Synthetic data, §What is shared; S15, S25) | documented | SPEC.md Model boundaries/Input domain; supplied data and explicitly own synthetic cases only; no real exchange data. |
-| R39 | Generate larger inputs with the supplied generator **outside timing**; record commands + sha256 (R §Synthetic data; S16) | partial; Q11 complete; official larger grid Phase 4 | Copied generate_orders.py is 4019 bytes, matches course MANIFEST sha256; new local copy reproduces all five supplied seed-42 10k hashes. New checksum/provenance evidence linked below. |
+| R39 | Generate larger inputs with the supplied generator **outside timing**; record commands + sha256 (R §Synthetic data; S16) | Phase 4a generated and hash-verified | 00_docs/DATA_MANIFEST.json: 114 entries / 105 files, exact commands and sha256; phase4a-generate-data and phase4a-manifest-verified evidence. Supplied generator unchanged. |
 
 ## Benchmarks
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R40 | M ∈ {1k, 10k, 100k}; seeds 42, 43, 44; all five workloads; same workload and limits for both versions (R §Benchmark experiments; S16) | todo | |
-| R41 | Try 1M events; declare time/memory limit; report stopped runs, never invent results (R §Benchmark experiments; S16) | todo | |
-| R42 | Submission flood: construction + full replay scaling; active-order and price-level peaks (R §Benchmark experiments 1; S16, S17) | todo | |
-| R43 | Large liquidation: same fresh bid book, 10 % (ceil, ≥ 1 unit) / 100 % / 200 %; count makers touched, levels visited, fills, unfilled; never reuse a depleted book (R §Benchmark experiments 2; S17) | todo | |
-| R44 | Queue concentration: fixed initial order count, vary prices (e.g. 4 vs 1,000); correctness and speed (R §Benchmark experiments 3; S16) | todo | |
-| R45 | Cancellation churn: time and memory with few active orders; detect stale-entry / history growth (R §Benchmark experiments 4; S17, S20) | todo | |
-| R46 | Operation counts in separate small diagnostic runs; counters separate from primary timing; no 1-D extrapolation without controlling depth, fills, mix (R §Benchmark experiments; S17, S18) | partial Phase 3b; official instrumentation Phase 4 | Default-off counters verified across B1/B2/B3, including heap work fields on B3; official counts.csv and controlled driver sweeps remain Phase 4. Quotes clean B3 heaps without counting replay work. |
-| R47 | `time.perf_counter`, warm-up, 5 repeats, every raw repeat + median; same pre-generated events; fresh empty book per replay (R §Time and latency; S18) | todo | |
-| R48 | Parsing (JSON/gzip) reported separately from engine replay; total application time optional; book construction/copying not hidden (R §Time and latency; S18) | todo | |
-| R49 | Fixed-book sell tests: construction/reset separate; measured sell incl. matching, state updates, fill-list construction (R §Time and latency; S18) | todo | |
-| R50 | Exclude tests, printing, AI calls, dashboard rendering from timing (S18) | todo | |
-| R51 | Throughput = events / replay seconds (R §Time and latency; S19) | todo | |
-| R52 | Separate instrumentation run: per-event times, median / p95 / p99 with documented convention; split by event type; early vs late in floods; not from 1/throughput; state exclusions (queueing/network) (R §Time and latency; S19, S17) | todo | |
-| R53 | `tracemalloc` in a separate run: peak traced bytes, state what is included (input, book, fills, history) (R §Memory; S20) | todo | |
-| R54 | Book growth during insertion and after cancellation churn; explain stale entries / delayed cleanup (R §Memory; S20) | todo | |
-| R55 | Explain why traced allocation ≠ auxiliary space ≠ process/native memory; stream input if preloading too large, boundary explicit (R §Memory; S20) | todo | |
+| R40 | M ∈ {1k, 10k, 100k}; seeds 42, 43, 44; all five workloads; same workload and limits for both versions (R §Benchmark experiments; S16) | Data complete; smoke only measured | Full official grid generated; 1k seed42 smoke covers all versions/scenarios. Full long grid pending; BENCHMARK_PLAN.md. |
+| R41 | Try 1M events; declare time/memory limit; report stopped runs, never invent results (R §Benchmark experiments; S16) | 1M data ready; engine runs deferred | 600 s per replay / 4 GiB traced peak declared, stopped/no-imputation paths tested. Laurin runs million part after review; no 1M engine attempt in Phase 4a. |
+| R42 | Submission flood: construction + full replay scaling; active-order and price-level peaks (R §Benchmark experiments 1; S16, S17) | Pipeline smoke verified; scaling pending | Separate construction/replay plus active/price peaks in smoke CSVs; full scaling requires Phase 4 long runs. |
+| R43 | Large liquidation: same fresh bid book, 10 % (ceil, ≥ 1 unit) / 100 % / 200 %; count makers touched, levels visited, fills, unfilled; never reuse a depleted book (R §Benchmark experiments 2; S17) | Q7 pipeline smoke verified; large measurements pending | Fresh book each trial, ceil 10/100/200 percent sells, query/construction counts; test_bench_pipeline.py plus final smoke counts.csv/timing.csv. |
+| R44 | Queue concentration: fixed initial order count, vary prices (e.g. 4 vs 1,000); correctness and speed (R §Benchmark experiments 3; S16) | Pipeline smoke verified; larger cells pending | 1k seed42 buildup levels4/1000 tested; full 18-case data ready, commands in BENCHMARK_PLAN.md. |
+| R45 | Cancellation churn: time and memory with few active orders; detect stale-entry / history growth (R §Benchmark experiments 4; S17, S20) | Pipeline smoke verified; growth study pending | Independent official churn + own drift memory curves; B3 retained501 heap entries with two live orders. No bounded-memory claim or final selection. |
+| R46 | Operation counts in separate small diagnostic runs; counters separate from primary timing; no 1-D extrapolation without controlling depth, fills, mix (R §Benchmark experiments; S17, S18) | Separate count pipeline smoke verified | Counters off for timing; independent counts.csv and A observer adapter; counted/public parity on all own expected files. Larger diagnostics pending. |
+| R47 | `time.perf_counter`, warm-up, 5 repeats, every raw repeat + median; same pre-generated events; fresh empty book per replay (R §Time and latency; S18) | Protocol and smoke verified | 988 raw timing rows; one warmup plus five measured repeats per primary cell, complete medians only. test_bench_pipeline.py and verification.json. |
+| R48 | Parsing (JSON/gzip) reported separately from engine replay; total application time optional; book construction/copying not hidden (R §Time and latency; S18) | Protocol and smoke verified | parse once plus fresh construction/replay/total each trial in timing.csv; verify_run checks208 phase summaries. |
+| R49 | Fixed-book sell tests: construction/reset separate; measured sell incl. matching, state updates, fill-list construction (R §Time and latency; S18) | Protocol and smoke verified | Q7 construction is separate, sale includes public matching/result path; fresh-book/ceil test and smoke evidence. |
+| R50 | Exclude tests, printing, AI calls, dashboard rendering from timing (S18) | Protocol and smoke verified | worker.measure wraps only callable in shared harness; phase markers, journal I/O and oracle samples outside replay clock. |
+| R51 | Throughput = events / replay seconds (R §Time and latency; S19) | Smoke throughput saved; long rates pending | summary.csv uses replayed_events / median_s; fixed-book sale has one replayed event. |
+| R52 | Separate instrumentation run: per-event times, median / p95 / p99 with documented convention; split by event type; early vs late in floods; not from 1/throughput; state exclusions (queueing/network) (R §Time and latency; S19, S17) | Latency pipeline smoke verified | Independent worker, perf_counter_ns, exact nearest-rank quantiles by type/all/early/late, log2 histograms; service-time boundary in BENCHMARK_PLAN.md. |
+| R53 | `tracemalloc` in a separate run: peak traced bytes, state what is included (input, book, fills, history) (R §Memory; S20) | Memory pipeline smoke verified | Separate peak/curve passes, tracing after parse; book/current fills included, history excluded. Per-event4GiB guard regression exercised at short limit. |
+| R54 | Book growth during insertion and after cancellation churn; explain stale entries / delayed cleanup (R §Memory; S20) | Smoke curves saved; long growth pending | memory.csv includes live size and B3 heap growth; compare largest-M curves before robustness decision. |
+| R55 | Explain why traced allocation ≠ auxiliary space ≠ process/native memory; stream input if preloading too large, boundary explicit (R §Memory; S20) | Boundaries documented; full preload feasibility pending | BENCHMARK_PLAN.md distinguishes traced allocations, auxiliary space and RSS; 1M parsed-input feasibility not yet measured, allocation errors explicit. |
 
 ## Results, dashboard, submission
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
-| R56 | Machine-readable CSV/JSON results: version, scenario, seed, event count, active/level peaks, requested sell qty, fill count, phase, repeat, elapsed s, traced peak bytes; timing vs memory runs distinguishable (R §Results and dashboard) | todo | |
-| R57 | Record Python, dependencies, machine, OS, code version, generator settings (R §Results and dashboard; S23) | todo | |
+| R56 | Machine-readable CSV/JSON results: version, scenario, seed, event count, active/level peaks, requested sell qty, fill count, phase, repeat, elapsed s, traced peak bytes; timing vs memory runs distinguishable (R §Results and dashboard) | Smoke machine-readable artifacts verified | Final smoke CSVs/journals include required metadata and counts; verification.json checks216 cells and semantic count parity. Full grid pending. |
+| R57 | Record Python, dependencies, machine, OS, code version, generator settings (R §Results and dashboard; S23) | Smoke metadata saved | Final smoke env.json, source hash, limits, GC policy, jobs, spec_snapshot.md; data generation settings/hashes in DATA_MANIFEST.json. |
 | R58 | Dashboard loads saved results only (no rerun) (R §Results and dashboard; S22) | todo | |
 | R59 | Dashboard shows construction, replay and individual-sale scaling; A vs B; throughput and latency distributions; memory incl. post-cancellation; correctness table; workload settings; raw repeats; units; missing/stopped runs labelled (R §Results and dashboard; S22) | todo | |
 | R60 | Explain at least one measured bottleneck with code, operation counts and complexity; revision need not win everywhere (R §Results and dashboard; S22) | todo | |
 | R61 | Submission path `Submissions/BuehlerLaurin/Assignment1/`; course folders and other students' work unchanged (R §Submit; S23) | partial | Folder scaffolded 2026-11-21; final check at Phase 7 |
-| R62 | Include both versions, tests, own generators and exact run commands (R §Submit; S23) | partial; four implementations and current commands present | A/B1/B2/B3, expanded tests, original own generators and manifest-checked supplied generator present; official benchmark commands/grid remain later phases. |
-| R63 | Include saved raw results, environment/settings metadata, dashboard code, dependency versions (R §Submit; S23) | todo | |
+| R62 | Include both versions, tests, own generators and exact run commands (R §Submit; S23) | Implementations and runner commands present; long execution pending | A/B1/B2/B3 unchanged; BENCHMARK_PLAN.md has six exact PowerShell commands, staged execution and estimates. |
+| R63 | Include saved raw results, environment/settings metadata, dashboard code, dependency versions (R §Submit; S23) | Partial Phase 4a | Smoke raw results/environment/settings and dependency versions saved; dashboard and full long results pending. |
 | R64 | Short report: specification, correctness, runtime, memory, profiling, revision, limitations (R §Submit; S23) | todo | |
-| R65 | README: clean-environment run path, expected worked-example output, measured-data definitions (R §Submit; S23) | partial Phase 3b | README current 501-test/replay/internal/sanity commands, Q11 generator sha row and local regeneration path; formal measured-data/fresh-venv work remains later phases. |
+| R65 | README: clean-environment run path, expected worked-example output, measured-data definitions (R §Submit; S23) | Partial Phase 4a | README adds safe smoke, full generation/verification and measurement boundaries; fresh-venv and final measured claims remain pending. |
 | R66 | Submitted commit identifier recorded (R §Submit; S23) | todo | |
-| R67 | No million-event datasets uploaded; generator commands + checksums instead (R §Submit; S23) | todo | |
+| R67 | No million-event datasets uploaded; generator commands + checksums instead (R §Submit; S23) | Phase 4a local scope verified; final check pending | Generated105 gzip files stay ignored; only small DATA_MANIFEST.json is proposed for commit. No upload or git mutation by Codex. |
 | R68 | No credentials or proprietary data in the public submission (R §Submit) | todo | |
 | R69 | Due 26 Nov 2026, 18:00:00h (R §Task, §Submit; S23) | todo | |
 
@@ -218,3 +218,29 @@ all checks after timing. Raw sanity.json/env.json/tests.txt are in
 All three B variants match A on each of the 50000 event results and five final
 books. No final B is chosen. Formal grid/repeats/latency/memory/count measurements
 remain Phase 4; adaptive switching only considered after Phase 4.
+
+## Phase 4a verification (2026-11-22, base `5d8d15a`, uncommitted)
+
+[Full suite](../05_evidence/20261122T005136Z_5d8d15a-dirty_phase4a-all-tests.txt):
+517 passed in 176.97s, no failures/errors/skips/warnings. Original 501 tests
+and all engine sources/expected inputs are unchanged; 16 new pipeline tests.
+Per-file counts are recorded in AI_LOG.md. All 17 original mutants remain killed
+and three A/B stateful machines retain every-event result/book/conservation checks.
+
+[Final smoke verification](../05_evidence/20261122T005130Z_5d8d15a-dirty_phase4a-smoke-verified-final.txt):
+216/216 cells OK, all four versions, 15 cases, only M=1000 / seed42. Raw data:
+`03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/` (tests.txt,
+verification.json, CSVs, env.json, spec snapshot, cell journals/jobs/logs).
+988 raw timing rows, 208 phase summaries and separate instrumentation verified.
+
+[Data manifest](DATA_MANIFEST.json): 114 entries / 105 physical gzip files,
+all hashes verified, all generated outside measurement, large data ignored.
+[Benchmark plan](BENCHMARK_PLAN.md) records selection fixed before measuring,
+boundaries/limits, smoke observations, estimates and exact human long commands.
+[Runtime estimate](RUNTIME_ESTIMATE.md) is smoke extrapolation only.
+
+R40-R60 are not complete official-result claims: the full long grid, largest-M
+robustness analysis, final B selection, bottleneck report and dashboard remain
+pending. No 10k/100k/1M engine benchmark was run in this phase. No fresh-venv
+reproduction is claimed. A source-pinned long-run session requires Laurin's
+commit and explicit long-run command after review.
