@@ -59,6 +59,18 @@ each step in `REVISIONS.md`.
 Cumulative speed-up of kept steps: mixed -19.0%, buildup -23.5% (0.1995 -> 0.1617 s and
 0.2285 -> 0.1748 s). Numbers depend on this machine and are repeated in `REVISIONS.md`.
 
+## Phase 4: own generator and A-vs-B equivalence
+
+| Suggestion | Decision | Reason / evidence |
+|---|---|---|
+| `tools/gen_small.py`: stdlib-only, stateless generator with four profiles (`tight`, `wide`, `single_level`, `dirty`): small price and id pools, ids whose text order differs from arrival order, reused and duplicate live ids, unknown cancels, oversized market sells, `seq` gaps and non-increasing `seq`, corrupted and non-dict events | accepted | deterministic per seed (test); sample output checked by hand: a BUY reusing a live SELL id is rejected as `duplicate_live_order_id` |
+| `tests/test_equivalence.py`: 40 seeds x 250 events x 4 profiles in lock step; both books go through `helpers.step()` (independent I1-I7) and then results, snapshots, best bid/ask must be equal after EVERY event | accepted | 12 new tests, 345 in total pass |
+| Same comparison on the five supplied 10,000-event files | corrected to a cheaper check | a full snapshot after every event is O(M*B) on `buildup`/`crowded`. Now results and best prices are compared after every event, the full book every 200 events and at the end. Stated in the test docstring |
+| Coverage test so the comparison cannot be vacuous | accepted | requires every status, all 11 reason codes, >=3 fills, fills over >=2 levels and 2 makers at one price to occur |
+| Mutation check of the new tests (bugs planted in B, then restored; `git status` clean afterwards) | accepted | (1) touching prices no longer cross, (2) a partial fill moves the maker to the back of its queue, (3) cancel leaves an empty price level: all three fail. Mutation 1 fails with `crossed book: bid 104 >= ask 104` from the independent checker, not from a crash |
+| My first mutation run | corrected | two `sed -i` commands failed on macOS (needs `-i ''`), so mutation 1 never ran and "4 passed" meant nothing. Redone with Python edits |
+| Pyright: `__doc__.splitlines()` may be `None` | accepted | fixed with `(__doc__ or "")`; pyright reports 0 errors on the new files |
+
 ## Accepted
 
 ## Corrected
