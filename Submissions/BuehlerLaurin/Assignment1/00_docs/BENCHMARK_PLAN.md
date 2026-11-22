@@ -261,6 +261,19 @@ or git mutation was executed. The archive move was explicitly authorized.
 
 ## Tonight's B3r session (Laurin decisions, 2026-11-22)
 
+**Declared A scope deviation, decided 2026-11-22 BEFORE any A measurement in
+phase4_b3r_20261122:** A is not a candidate. A runs the official part through
+100k (1k/10k warm-up+5; 100k one measured trial without warm-up) and the official
+1M attempt (one trial, or stopped at 600 s). A runs queue, liquidation,
+adversarial, churn and post_attack only through 10k (`--max-size 10000`). All
+larger A cells there are **not measured (declared scope)**. They are not
+stopped/failed observations; no extrapolation is presented as a measurement.
+Growth statements for A there must cite the measured sizes and their range.
+Reason: A supplies baseline speedups/scaling; supplementary 100k cells with all
+instrumentation would dominate an estimated 8-30 h without changing conclusions.
+This rationale is a planning judgment, not a measured duration claim.
+B3r and the B1/B2/B3 comparator protocol and coverage stay unchanged.
+
 Attack report read in full: `07_attack/ATTACK_REPORT.md`, committed at 958c8b4.
 Claude (chat) independently re-verified hash collisions and far_end_flicker,
 according to Laurin. SPEC.md records D1-D4, the >2x-live example / >live brief
@@ -305,8 +318,8 @@ unchanged. All new inputs are generated/hashed outside timing.
 
 Throughput cases use size=n as the controlled live/historical-level driver,
 not total JSON lines. events, prefill_events, query_events and driver_n record
-the exact counts. Their A schedule uses n as book scale: full 1k/10k, single
-trial 100k. Memory cases use size=total events and driver_n=P; no primary timing
+the exact counts. Their A scope uses n as book scale: full 1k/10k; 100k is not
+measured (declared scope). Memory cases use size=total events and driver_n=P; no primary timing
 is requested for these two. Do not compare event counts without these labels.
 
 Each repeat rebuilds the complete prefill and times it separately. Timing and
@@ -344,29 +357,31 @@ new data before timing, and uses combined manifest
 
 1. B3r: official, million, queue, liquidation, adversarial, churn, post_attack.
 2. B1/B2/B3: post_attack only.
-3. A: all seven parts, with the declared baseline protocol (1k/10k warm-up+5;
-   100k/1M one measured trial without warm-up; label **A: single trial**).
+3. A: official through 100k and official million attempt, with the declared
+   baseline protocol (1k/10k warm-up+5; 100k/1M one measured trial without warm-up;
+   label **A: single trial**). Other five parts use --max-size 10000 only.
 
 B candidates keep warm-up+5 everywhere they have timing cells. Expected full
-coverage: B3r 564 workers, old comparators 168, A 564; total 1296 (304 timing,
-304 latency, 304 counts, 384 memory). Stops and skip-after-stop can reduce actual
+coverage: B3r 564 workers, old comparators 168, A 436; total 1168 (276 timing,
+276 latency, 276 counts, 340 memory). The 128 excluded A workers are not measured
+(declared scope). Stops and skip-after-stop can reduce actual
 instrumentation; no missing time/median is filled in. Limits remain 600 s per
 replay/phase and 4 GiB traced peak. New sessions require committed source; source
 and limits are pinned on resume. Keep root raw CSVs/summaries/env/spec/tests and
 planning provenance committed; cells/jobs remain local by the existing rules.
 
-The previous runtime estimate is historical and does not estimate B3r or these
-cases. No duration is asserted from B3's numbers: rebuild overhead and extra
-construction/instrumentation need measurement. A remains the likely dominant
-cost; completed cases resume without changing the declared trial counts.
+The revised RUNTIME_ESTIMATE.md filters the prior A planning model to the new
+scope; it is not measurement data. It does not estimate unmeasured B3r or the
+added cases from B3's numbers. Rebuild overhead and extra instrumentation need
+measurement. Completed cases resume without changing declared trial counts.
 The estimator now explicitly omits unmeasured versions/parts rather than
 inventing B3r measurements. No long engine run was executed at this checkpoint.
 
 Proposed git commands, not executed:
 
 ```powershell
-git add -- 01_code/lob/__init__.py 01_code/lob/book_b3r.py 01_code/lob/replay.py 01_code/bench 01_code/datagen/attack_cases.py 02_tests/test_b3r.py 02_tests/test_replay_regressions.py 02_tests/test_post_attack_pipeline.py SPEC.md README.md 00_docs 05_evidence
-git commit -m "Assignment1 B3r: per-side heap rebuild, replay regressions and post-attack plan"
+git add -- 01_code/bench/tonight_b3r.ps1 SPEC.md 00_docs/BENCHMARK_PLAN.md 00_docs/AI_LOG.md 00_docs/RUNTIME_ESTIMATE.md 05_evidence
+git commit -m "Assignment1: declare and apply supplementary A scope for B3r session"
 ```
 
 No B1/B2/B3 engine, existing test/expected file or attack artifact is changed.

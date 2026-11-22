@@ -21,9 +21,14 @@ foreach ($revisionPart in $revisionParts) {
     $revisionJobs += @{Part=$revisionPart;Versions='A'}
 }
 foreach ($revisionJob in $revisionJobs) {
+    # Laurin's declared baseline scope, fixed 2026-11-22 before A measurements.
+    $revisionMaxSize = 1000000
+    if ($revisionJob.Versions -eq 'A' -and $revisionJob.Part -notin @('official','million')) {
+        $revisionMaxSize = 10000
+    }
     $revisionArgs = @('run.py','bench.run_all','--part',$revisionJob.Part,
         '--versions',$revisionJob.Versions,'--session',$Session,'--manifest',$revisionManifest,
-        '--baseline-protocol','single-large','--skip-after-stop')
+        '--baseline-protocol','single-large','--skip-after-stop','--max-size',$revisionMaxSize.ToString())
     if ($PlanOnly) { $revisionArgs += '--plan-only' } else { $revisionArgs += '--allow-long' }
     & $revisionPython @revisionArgs
     if ($LASTEXITCODE -ne 0) { throw 'Revision batch failed; inspect the saved records before continuing.' }

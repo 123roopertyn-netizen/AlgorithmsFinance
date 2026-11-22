@@ -530,3 +530,60 @@ engine runs. No final B3r performance/selection or fresh-venv claim is made.
 
 Proposed git paths/message and exact preview/start commands are at the end of
 BENCHMARK_PLAN.md. STOP for Claude (chat) review and Laurin.
+
+## Declared supplementary A scope (Laurin, 2026-11-22, BEFORE A measurements)
+
+Laurin's decision applies to session phase4_b3r_20261122; no long run has
+started. Current base `6d93da6` commits the B3r build. A is not a candidate:
+official through 100k (1k/10k warm-up+5; 100k one measured trial, no warm-up), plus
+official 1M (one trial or stopped at 600 s). Queue, liquidation, adversarial,
+churn and post_attack A cells are restricted to --max-size 10000. All larger
+A cells there are **not measured (declared scope)**. They are not recorded as
+stopped/failed times or extrapolated measurements. A growth statements there
+must cite and label the sizes actually measured.
+
+Reason accepted: A supplies baseline speedups and scaling; supplemental 100k
+instrumentation would consume most of an estimated 8-30 h without changing any
+conclusion. This is the declared rationale, not new timing evidence. B3r and
+B1/B2/B3 comparator coverage, warm-up/repeats and worker order stay unchanged.
+Only the PowerShell wrapper is changed in executable source: A outside
+official/million receives --max-size 10000; data prep stays first, then B3r all
+parts, old comparators post_attack, then A. Engine/Python runner/test/expected/
+data files and dependency pins are unchanged. No new tests are written.
+
+The preview requests 1168 workers: B3r 564 + comparators 168 + A 436. It omits 128
+former A workers / 44 cases by declaration. Mode counts are 276 timing, 276
+latency, 276 counts, 340 memory. The added A memory scenarios all have catalog
+size>10000 and are therefore outside scope. No result CSV rows are invented;
+the declared plan labels these omissions. Estimates are recalculated only by
+filtering the old stored planning model to included A cases. The original-parts
+A subtotal is 3.15-10.70 h; post_attack A, B3r and the new comparator cases remain
+unestimated rather than being presented as measured. Historical planning
+JSON/MD and all result/data files are preserved.
+
+Fresh -PlanOnly and the complete standard test suite are saved as evidence.
+No long run, data generation, git mutation or dependency/install/delete action.
+Only SPEC, BENCHMARK_PLAN, AI_LOG, RUNTIME_ESTIMATE, the nightly wrapper and
+evidence are proposed for this commit; the requirements map is left untouched
+under Laurin's explicit "change nothing else" scope.
+
+Applied aif-exercise / aif-bench for the protocol update and aif-verify for the
+checkpoint. No delegation or algorithm change. Fresh evidence:
+
+- [Plan-only preview](../05_evidence/20261122T123818Z_6d93da6-dirty_a-scope-plan-only.txt)
+  lists all 15 batches with engine_executed=false and 1168 requested workers.
+- [Runtime planning](../05_evidence/20261122T123940Z_6d93da6-dirty_a-scope-runtime-estimate-final.txt)
+  records the filtered model, per-part estimates and all 44 excluded A cases
+  labelled not measured (declared scope); no engine is run.
+- [Complete standard suite](../05_evidence/20261122T123822Z_6d93da6-dirty_a-scope-all-tests.txt):
+  **644 passed in 197.52s**, no failures/errors/skips/warnings. Original tests
+  are unchanged, including four A/B stateful differentials and 17 mutant kills.
+- [Final review](../05_evidence/20261122T124514Z_6d93da6-dirty_a-scope-final-review.txt)
+  compares the new preview with the old one: all B batches and official/million
+  A batches are identical; supplementary A sizes are <=10000; order preserved.
+  It verifies all644 XML cases and protected files, including prior models.
+
+Read the complete wrapper diff and changed planning/spec/log prose for scope,
+unrelated behavior/names/comments and the known injection: no traces found and
+no NEW embedded instructions encountered. Whitespace and scope checks pass.
+Proposed git paths/message are in BENCHMARK_PLAN.md. STOP for review and Laurin.

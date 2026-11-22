@@ -1,54 +1,42 @@
-# Phase 4 runtime planning (M=1000 smoke extrapolation)
+# Runtime planning after declared A scope reduction (2026-11-22)
 
-These are planning ranges, not measurements, confidence intervals or guaranteed bounds.
-Per-phase 600s stopping and --skip-after-stop are included; all B repeats are unchanged.
+Decided BEFORE any A measurement in phase4_b3r_20261122; no long run has started.
+A is not a candidate. These are planning estimates, not observations or guaranteed bounds.
 
-Declared 2026-11-22 BEFORE long measurements: A at 100k/1M uses one measured trial, no warm-up.
-Report large-size speedups as A: single trial. A at 1k/10k retains warm-up + 5 repeats.
+| Part | A largest requested size | Requested A workers | Outside scope | A planning hours |
+|---|---:|---:|---:|---:|
+| official | 100000 | 180 | 0 | 2.158-8.279 |
+| million | 1000000 | 20 | 0 | 0.689-0.722 |
+| queue | 10000 | 48 | 24 | 0.075-0.427 |
+| liquidation | 10000 | 72 | 36 | 0.160-0.926 |
+| adversarial | 10000 | 72 | 36 | 0.063-0.346 |
+| churn | 10000 | 12 | 8 | 0.001-0.003 |
+| post_attack | 10000 | 32 | 24 | not estimated (new cases) |
 
-| Part | A hours | B1+B2+B3 hours | Total hours |
-|---|---|---|---|
-| official | 2.16-8.28 | 0.14-0.43 | 2.30-8.71 |
-| million | 0.69-0.72 | 0.29-1.18 | 0.98-1.90 |
-| queue | 1.08-4.42 | 0.06-0.17 | 1.13-4.59 |
-| liquidation | 1.66-6.89 | 0.09-0.32 | 1.76-7.21 |
-| adversarial | 1.57-5.59 | 0.10-3.43 | 1.66-9.02 |
-| churn | 0.02-0.09 | 0.07-0.30 | 0.09-0.39 |
+Original-parts A subtotal: 3.15-10.70 hours, plus unestimated post_attack A.
+B3r and the post_attack comparator timings have no new measurements; the entire session duration is not estimated.
 
-A predicted single-replay seconds before the 600s cap:
+Protocol and interpretation:
 
-| Scenario | M | Extrapolated seconds | Predicted first-attempt stop |
-|---|---|---|---|
-| buildup | 100000 | 655.9 | True |
-| crowded | 100000 | 721.6 | True |
-| mixed | 100000 | 151.5 | False |
-| sweep | 100000 | 598.5 | False |
-| cancel_churn | 100000 | 0.2 | False |
-| buildup | 1000000 | 65590.8 | True |
-| crowded | 1000000 | 72157.3 | True |
-| mixed | 1000000 | 15153.0 | True |
-| sweep | 1000000 | 59850.6 | True |
-| cancel_churn | 1000000 | 2.5 | False |
+- Official: A through 100k; 1k/10k warm-up+5, 100k one measured trial without warm-up.
+- Official million: one A trial, or stopped at 600 s. Large-size speedups say A: single trial.
+- Queue/liquidation/adversarial/churn/post_attack: A only through 10k (--max-size 10000).
+- All larger A cells there: **not measured (declared scope)**, never filled with extrapolated measurements.
+- Any growth statement for supplementary A uses and labels its measured size range.
+- B3r and B1/B2/B3 comparator coverage/repeats remain unchanged.
+- No rows are fabricated in result CSVs for the excluded cells; this plan supplies their scope label.
 
-Assumptions:
+Coverage: B3r 564 + old comparators 168 + A 436 = 1168 requested workers (previously 1296).
+Modes: 276 timing, 276 latency, 276 counts, 340 memory; 128 former A workers / 44 cases are outside scope.
+The added memory cases all have catalog size>10000, so A does not run them. B coverage is unchanged.
 
-- M=1000 seed42 only; fixed workload B/P/F relationships from generators
-- A growing-book scenarios quadratic; constant-live churn linear
-- B variants approximately linear at bounded price count; deep-book B1/B2 linear-to-quadratic
-- 0.5x..3x sensitivity; not confidence bounds; stop-policy discontinuities possible
-- 2026-11-22 deviation: A at 100k/1M one measured trial, no warm-up; A: single trial
-- 600s per engine phase; skip other instrumentation only after a timing stop
-- startup/parse included; latency postprocessing/allocator/GC/cache scaling uncertain
+Estimate provenance and limits:
 
-Full-run artifact planning (all parts in one session, no engines executed):
-
-- 2032 workers; approximately 6112 files, of which 6096 local job/journal/log files.
-- Commit about 16 root files, 22.2-46.3 MiB.
-- Local internals: 52.0-108.3 MiB.
-- Derived from smoke bytes per worker with 1.2..2.5x allowance, not a hard bound; stops/skips and fewer A trials reduce artifacts.
-
-Recommendation: run the three B variants first, then A in a separate resumable batch.
-The Q7 construction/rebuild trials dominate the full baseline schedule; leave them overnight.
-Do not silently reduce B warm-up/repeats. A's first over-limit trial stops the cell and omits its remaining repeats.
-Use --skip-after-stop to avoid repeating known-stopped A cells in slower instrumentation; those modes are not_run, not invented results.
-Review the first completed 10k cells before launching 100k/1M if the extrapolation is off.
+- Filtered the unchanged prior model at `00_docs/phase4_plan_20261122/runtime_estimate.json` to exactly the included A cases.
+- Source: 1k smoke extrapolation with code-based growth assumptions, 0.5x..3x sensitivity and per-phase 600 s stops.
+- No excluded 100k supplementary A projection is presented as a measurement or used for a growth claim.
+- Historical source JSON/MD and all data/results remain unchanged.
+- Reason for the scope decision: full supplementary 100k instrumentation would dominate an estimated 8-30 h without changing conclusions.
+- The earlier 8-32 h full-plan figure is superseded for this scoped session; it was also a planning estimate.
+- Session order stays data prep; B3r all parts; old comparators post_attack; A last.
+- Actual stops/skip-after-stop may reduce completed work; no missing time is imputed.

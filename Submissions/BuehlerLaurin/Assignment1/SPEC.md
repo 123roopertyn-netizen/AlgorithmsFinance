@@ -695,3 +695,24 @@ The original manifest and pre-registered run stay unchanged; a new combined
 manifest contains the additions. See BENCHMARK_PLAN.md for driver definitions,
 prefill/query boundaries and exact human-run commands. No long runs in this
 implementation checkpoint; no B3r performance/selection claim yet.
+
+### Declared baseline scope deviation (Laurin, 2026-11-22, BEFORE any A measurement)
+
+Applies to session `phase4_b3r_20261122`; no long run has started. A is not a
+candidate. A runs official through 100k (1k/10k: warm-up+5; 100k: one measured
+trial without warm-up) and the official 1M attempt (one trial, or stopped at
+600 s). On queue, liquidation, adversarial, churn and post_attack, A runs only
+through 10k (`--max-size 10000`). Larger A cells on these parts are explicitly
+**not measured (declared scope)**, never stopped/failed results and never
+extrapolated as measurements. Any A growth statement for those parts must use
+the measured sizes and identify that restricted range.
+
+Reason: A provides baseline speedups and scaling. Supplementary 100k cells with
+all instrumentation would consume most of an estimated 8-30 h without changing
+any conclusion. This is an agreed scope choice, not evidence of their runtime.
+B3r and B1/B2/B3 comparators retain their full protocol and coverage unchanged.
+Order remains data preparation, B3r all parts, old B comparators post_attack,
+then A. The wrapper applies the cap only to A outside official/million.
+New full requested coverage is 1168 workers: B3r 564, comparators 168, A 436;
+128 former A workers are outside declared scope. The restriction uses the
+catalog's size field (including documented driver definitions for added cases).
