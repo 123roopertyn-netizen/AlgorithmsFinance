@@ -18,7 +18,8 @@ from __future__ import annotations
 from bisect import bisect_left, insort
 from collections import OrderedDict
 
-from lob.common import BUY, CANCEL, LIMIT, SELL, rejected_result, validate
+from lob.common import (BUY, CANCEL, LIMIT, SELL, is_valid_fast, rejected_result,
+                        validate)
 
 QTY, SEQ = 0, 1     # positions inside an order record [qty, arrival_seq]
 
@@ -79,9 +80,10 @@ class OrderBookB:
 
     # --- entry point -------------------------------------------------------------
     def process(self, event: dict) -> dict:
-        reason = validate(event, self.last_seq, self._index.__contains__)
-        if reason is not None:
-            return rejected_result(event, reason)      # last_seq stays unchanged
+        if not is_valid_fast(event, self.last_seq, self._index.__contains__):
+            reason = validate(event, self.last_seq, self._index.__contains__)
+            if reason is not None:
+                return rejected_result(event, reason)  # last_seq stays unchanged
         self.last_seq = event["seq"]
         if event["type"] == LIMIT:
             return self.AddLimitOrder(event)

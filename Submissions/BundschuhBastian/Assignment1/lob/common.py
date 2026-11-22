@@ -132,3 +132,41 @@ def validate(event: object, last_seq: int, is_live: Callable[[str], bool]) -> st
     if is_live(event["order_id"]):
         return DUPLICATE_LIVE_ORDER_ID
     return None
+
+
+def is_valid_fast(event: object, last_seq: int, live: Callable[[str], bool]) -> bool:
+    """Cheap accept test for well-formed events (used by Version B on the hot path).
+
+    True means: `validate()` would return None. False means "not sure": the caller then runs
+    the reference `validate()` to get the reason, so reason codes cannot differ.
+    It must never return True for an event that `validate()` rejects (checked by a fuzz
+    test in tests/test_validation_fast.py).
+    """
+    if type(event) is not dict:
+        return False
+    try:
+        seq = event["seq"]
+        event_id = event["event_id"]
+        etype = event["type"]
+        if (type(seq) is not int or seq <= last_seq or type(event_id) is not str
+                or not event_id or PARSE_ERROR_KEY in event or type(etype) is not str):
+            return False
+        if etype == "LIMIT":
+            side = event["side"]
+            order_id = event["order_id"]
+            price = event["price_ticks"]
+            qty = event["qty_units"]
+            return (type(order_id) is str and order_id != "" and type(side) is str
+                    and (side == "BUY" or side == "SELL") and type(price) is int
+                    and price > 0 and type(qty) is int and qty > 0 and not live(order_id))
+        if etype == "CANCEL":
+            target = event["target_order_id"]
+            return type(target) is str and target != ""
+        if etype == "MARKET_SELL":
+            order_id = event["order_id"]
+            qty = event["qty_units"]
+            return (type(order_id) is str and order_id != "" and type(qty) is int
+                    and qty > 0 and not live(order_id))
+    except KeyError:
+        return False
+    return False
