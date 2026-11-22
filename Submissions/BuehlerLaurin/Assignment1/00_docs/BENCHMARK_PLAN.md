@@ -491,3 +491,98 @@ supplied/own file and all 32 attack families in both counter modes. The
 [final review](../05_evidence/20261122T194837Z_3c95836-dirty_b3r-fast-final-review.txt)
 verify source/coverage/reference/preview. Correctness proof is ready for the
 human-run session. No fast timings exist; B3r remains final, adoption pending.
+
+## Binding rematch decision (Laurin, 2026-11-22; BEFORE new measurement)
+
+The committed cross-session trial at 20261122T200528Z remains **tried and
+rejected** under its original per-cell rule (geometric-mean ratio 0.88746).
+It is not deleted or retroactively reclassified. Session noise confounds that
+comparison: original B3r buildup 10k s42 was 0.0233 s and sweep 100k s43 was 0.2829 s,
+roughly 2x faster than the older B versions/other B3r seeds; fast was normal
+there. A 5% bound across sessions cannot isolate code effects from this noise.
+The report must retain both the cross-session result and the corrected method.
+
+One same-session attempt is authorized for later execution; its result is
+binding either way. No further re-measurement. B3r+B3r_fast, official and
+post_attack, timing only; latency/memory/counts already exist. Fresh book per
+trial, warm-up+5, existing inputs/GC/limits. Alternate per case, not per repeat:
+case 1 B3r/fast, case 2 fast/B3r, continuously through 45 official and 12 eligible
+post-attack cases. Memory-only cases are not timed and do not affect parity.
+Expected 114 workers; post-attack offset 45 makes its first case fast/B3r.
+
+Acceptance: current-source correctness verify-gates; geometric mean of the 15
+official 100k fast/B3r median ratios <= 0.90; and EVERY workload x size scenario
+has median(seed ratios) <= 1.05 (single ratio for a one-seed case). All 57 pairs
+must be complete/matched; no imputation. Preserve individual ratios/outliers
+in the report while applying the new per-scenario bound. This supersedes the
+per-cell bound only for this rematch, not for the committed historical trial.
+No result is claimed here; preview/tests cannot select the final version.
+
+### Rematch execution and binding result
+
+The current entry point is `01_code/bench/rematch_fast.ps1`, fixed session
+`phase4_b3r_fast_rematch_20261122`. It has no session override or retry option.
+The new runner flag --interleave applies only to B3r,B3r_fast and timing mode;
+without the flag, the old ordering is unchanged. The official batch uses
+offset 0 and post_attack offset 45. Preview lists all 114 worker positions and
+case numbers, plus 45/12 timing-eligible case counts (memory-only entries are
+not measured). Each version's whole warm-up+5 cell runs before the next one.
+
+```powershell
+& .\01_code\bench\rematch_fast.ps1 -PlanOnly
+& .\01_code\bench\rematch_fast.ps1 -AllowLong
+```
+
+Only -PlanOnly is executed at this checkpoint. After review and commit,
+-AllowLong first checks a NEW current-source proof at
+`05_evidence/b3r_fast_rematch_correctness.json` and committed source. The old
+proof and both old run folders stay unchanged. Then it atomically creates
+`scratch/b3r_fast_rematch_attempt.json` with exclusive file creation. A second
+claim, an existing fixed-session pointer or result folder blocks measurement.
+Do not remove those files to obtain another attempt. Preflight failure before
+claiming starts no measurement; after claiming, interruption/failure consumes
+the attempt. A partial attempt is a binding failure, not a reason to rerun.
+
+After the two timing batches (or an early pipeline failure), assessment checks
+all 114 successful rows in exactly the alternating order, complete matching
+five-repeat medians, current-source correctness proof and the two numerical
+conditions. It writes `fast_rematch_acceptance.json` and a readable
+`fast_rematch_acceptance.md` in the new run folder. If no run folder could be
+created, the binding failure report goes to scratch/b3r_fast_rematch_no_run.
+An existing JSON decision is returned unchanged, never recomputed/overwritten.
+The result records both the historical cross-session per-cell losses and the
+new 27 per-scenario medians (15 official + 12 post-attack), with all 57 seed/case
+ratios retained. No latency/memory/count diagnostic is remeasured.
+
+If interrupted before automatic assessment, analyze the existing files only:
+
+```powershell
+python run.py bench.assess_rematch assess <same_rematch_run_dir>
+```
+
+That command runs no engine. Do not restart measurements. A completed decision
+is binding whether accepted or rejected. Acceptance selects B3r_fast; every
+failed condition keeps B3r. Until the actual attempt finishes, B3r remains final.
+
+The final report presents the unchanged earlier rejection and its per-cell
+bound, the noise finding, the dated correction, this same-session design,
+per-scenario seed-median bound and binding outcome. No selective dropping of
+cases or further measurement is allowed. Tests here use synthetic saved rows
+only for acceptance/immutability checks and never count as measured evidence.
+
+Checkpoint evidence (no rematch measurement):
+
+- [PlanOnly](../05_evidence/20261122T205140Z_ddbc434-dirty_rematch-plan-only-final.txt): 90 + 24 timing workers, with all 57 alternating pairs listed.
+- [Standard tests](../05_evidence/20261122T205138Z_ddbc434-dirty_rematch-all-tests.txt): 848 passed in 713.71 s.
+- [Attack tests](../05_evidence/20261122T205139Z_ddbc434-dirty_rematch-attack-suite.txt): 1,697 passed in 80.63 s.
+- [Current-source proof](../05_evidence/b3r_fast_rematch_correctness.json) and [final review](../05_evidence/20261122T210349Z_ddbc434-dirty_rematch-final-review.txt): all correctness gates and complete preview checked; historical files unchanged, real attempt unused.
+
+After review, Laurin commits the protocol and runner before using -AllowLong.
+No long run, acceptance result or new speed claim is produced at this checkpoint.
+
+Proposed commands for Laurin, not executed:
+
+```powershell
+git add -- 01_code/bench/run_all.py 01_code/bench/assess_rematch.py 01_code/bench/rematch_fast.ps1 SPEC.md README.md 00_docs 05_evidence
+git commit -m "Assignment1: one binding interleaved fast rematch with scenario-level rule"
+```

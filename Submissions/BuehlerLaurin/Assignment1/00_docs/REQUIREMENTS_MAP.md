@@ -337,3 +337,29 @@ key order, counter drift), separately from the original 17 mutants.
 [Plan-only](../05_evidence/20261122T193658Z_3c95836-dirty_b3r-fast-plan-only.txt):
 official 180 +post_attack 56, only fast, no engine execution. Source/standard/
 attack proof hashes are in `05_evidence/b3r_fast_correctness.json`.
+
+## Binding rematch protocol (Laurin, 2026-11-22, BEFORE measurement)
+
+R37/R47/R56/R57/R60/R65: SPEC, BENCHMARK_PLAN and AI_LOG record the session-noise
+finding and corrected single-attempt method. The old cross-session rejection
+and data remain unchanged. Same-session B3r/fast, timing only, global alternating
+case order; warm-up+5. Require current correctness gates, 15 official 100k
+geometric-mean ratio <= 0.90 and every workload x size median(seed ratios) <= 1.05.
+No further re-measurement; no result claimed before the single actual attempt.
+
+Implementation: bench/rematch_fast.ps1, minimal explicit runner interleaving,
+and assess_rematch for atomic attempt claim and immutable JSON/Markdown output.
+Synthetic checks cover numerical/statistical boundaries, ordering, default-path
+preservation, incomplete/mismatched observations, duplicate claim and binding
+decision preservation. No existing engine/test/expected file changes.
+Plan-only: 114 timing workers (90 official+ 24 post_attack), 57 pairs, offsets 0/45;
+no actual attempt consumed. Fresh current-source gates are recorded separately
+at `05_evidence/b3r_fast_rematch_correctness.json`; old proof stays historical.
+
+Fresh evidence: [848 standard tests](../05_evidence/20261122T205138Z_ddbc434-dirty_rematch-all-tests.txt),
+[1,697 attack tests](../05_evidence/20261122T205139Z_ddbc434-dirty_rematch-attack-suite.txt),
+[complete preview](../05_evidence/20261122T205140Z_ddbc434-dirty_rematch-plan-only-final.txt),
+[synthetic binding checks](../05_evidence/20261122T205047Z_ddbc434-dirty_rematch-binding-checks.txt)
+and [final source/proof/order review](../05_evidence/20261122T210349Z_ddbc434-dirty_rematch-final-review.txt).
+Implementation/verification complete; actual binding measurement and performance
+decision remain pending. The single real attempt has not been claimed.

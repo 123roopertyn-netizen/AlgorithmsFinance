@@ -705,3 +705,76 @@ no traces and no NEW embedded instructions found. Scope/whitespace checks pass;
 dependency pins are unchanged. No deletes/installs, remote actions or git
 mutations. B3r remains final. Exact benchmark start command and proposed git
 paths/message are in BENCHMARK_PLAN.md; STOP before any long run for review.
+
+## One binding same-session rematch (Laurin, 2026-11-22, BEFORE measuring)
+
+Base ddbc434 commits the cross-session fast trial and its tried-and-rejected
+decision. Laurin identifies session noise: B3r 20261122T130145Z buildup 10k s42
+0.0233s and sweep 100k s43 0.2829s were around 2x faster than comparable old B
+results/other seeds, while fast 20261122T200528Z was normal. The old per-cell 5%
+comparison cannot isolate code effects. Its committed result is preserved and
+will be reported unchanged alongside the rematch and this reasoning.
+
+Decision recorded before any new measurement: ONE attempt, binding either
+way, no further re-measurement. Same session, B3r+B3r_fast, official + post_attack,
+timing only, unchanged warm-up+5. Per-case order alternates globally (B3r/fast,
+fast/B3r), including the boundary after 45 official cases. Accept only with
+current-source correctness gates, 15-cell official 100k geometric mean <= 0.90
+and every workload x size median OF seed ratios <= 1.05 (single ratio if one
+seed). Otherwise B3r remains final. No engine, test or expected-file changes.
+
+Implementation adds a fixed atomic attempt claim, no retry/session override,
+and immutable assessment output fast_rematch_acceptance.json. PlanOnly does
+not measure/claim. A claim consumes the attempt even if interrupted or partial;
+preflight failure before claiming performs no measurement. No rematch starts
+in this build checkpoint. Apply aif-exercise/aif-bench and evidence verification.
+
+New control-plane code only: ordered_requests preserves the default runner's
+sort and alternates the explicit B3r/fast timing pair by global case rank.
+The post-attack offset is 45, so its first pair (case 46) is fast/B3r. Every
+timing worker retains fresh construction and warm-up+5, unchanged worker code.
+No engine/shared validator/test/expected/data/old result file is edited.
+
+Synthetic rule checks were written against NotImplemented helpers and failed
+as expected (red 204557Z), then passed after implementation (green 204848Z).
+They check parity/default order, exact 10%/5% limits, single-seed losses,
+outlier robustness, median OF ratios rather than ratio OF medians, and missing
+data. assess_rematch reuses the original completeness/input/15-cell checks and
+replaces only the old per-cell 5% condition with the declared scenario median.
+The original assessor and original rejection are unchanged.
+
+Binding checks 205047Z use saved-row fixtures in isolated scratch directories:
+a second atomic claim fails and leaves the first unchanged; accept, reject,
+partial coverage, wrong order and wrong-source cases select the required final
+version. Reassessment returns the first JSON byte-for-byte even if fixture
+rows change afterward. Correctness proof verification is independently checked
+with fresh complete suites, not inferred from these synthetic fixtures. No
+real attempt marker/pointer is created by the checks.
+
+Final plan-only preview 205140Z lists 90 official + 24 post-attack workers, timing
+only, all 114 positions in the declared global alternation. It creates no books
+or session. Memory-only cases do not enter the 57-case alternation. New assess
+output includes old cross-session loss rows/decision/hash and new scenario
+tables, numerical gates, correctness/source/claim/order/coverage and the binding
+final-version decision. Existing result folders remain immutable.
+
+Fresh verification after the final Python source change:
+
+- [Standard suite](../05_evidence/20261122T205138Z_ddbc434-dirty_rematch-all-tests.txt): **848 passed in 713.71 s**, exit 0; no failures/skips. Includes all 17 mutant kills, reference/fast validator and every-event engine gates, plus both stateful differentials.
+- [Attack suite](../05_evidence/20261122T205139Z_ddbc434-dirty_rematch-attack-suite.txt): **1,697 passed in 80.63 s**, exit 0, including B3r_fast.
+- [New correctness proof](../05_evidence/b3r_fast_rematch_correctness.json): G1/G2/G3 true; source SHA-256 `4911010c34d0bd0f385c15fcfec9fb700db3b7e4859de57c4a7d1030b7569c64`, with hashes of both fresh XML reports. The original proof is untouched.
+- [Final review](../05_evidence/20261122T210349Z_ddbc434-dirty_rematch-final-review.txt): independently verifies every preview position, default-order preservation, current-source proof, protected files and retained old rejection. No real attempt marker, session pointer or result folder exists.
+
+Standard counts by file: contract 384, validation 184, fast_equivalence 115,
+b_internal 27, b3r 6, mutants 24, own_datasets 4, replay 21,
+replay_regressions 24, bench_pipeline 30, fast_assessment 10,
+post_attack_pipeline 13, stateful 6 (five A-vs-B variants and B3r-vs-fast).
+G1 reports 1,797,952 exhaustive comparisons; G2 checks supplied/own and all
+32 attack stream families in both counter modes after every event.
+
+Reviewed the full generated diff and both new source files for the logged
+injection: no traces and no new embedded instructions. No engine/test/expected
+or historical result changes, installs, dependency changes, moves or git
+mutations. No new benchmark measurement; the sole attempt remains unused.
+STOP for Claude (chat) review and Laurin's commit. B3r remains final pending
+the one binding outcome; no performance claim from these correctness checks.

@@ -749,3 +749,35 @@ in this build checkpoint. Compare a later B-only B3r_fast official/post_attack
 session with committed B3r results from phase4_b3r_20261122. Correctness gates
 alone do not select fast; B3r remains final until every acceptance condition
 has fresh evidence. No optimization is presumed successful.
+
+## Binding same-session rematch (Laurin, 2026-11-22, BEFORE new measurement)
+
+The cross-session comparison between B3r 20261122T130145Z and fast 20261122T200528Z
+is confounded by session noise. In the former, official buildup 10k s42 was
+0.0233 s and sweep 100k s43 was 0.2829 s, about 2x faster than the comparable older
+B versions/other B3r seeds; fast was normal there. The cross-session per-cell
+5% rule cannot separate code effects from that noise. Preserve the committed
+run and its "tried and rejected" decision unchanged; report both comparisons.
+
+Corrected method fixed now: ONE attempt only, binding either way; no further
+re-measurement. Measure B3r and B3r_fast in the SAME new session on official
+and post_attack, TIMING ONLY (existing latency/memory/counts remain evidence).
+Each version keeps fresh construction, one warm-up+5 repeats, same input/GC/
+limits. Alternate version order by case: case 1 B3r then fast, case 2 fast then
+B3r, etc., continuously across both parts. Only timing-eligible cases count
+toward the alternation (45 official + 12 post-attack; 114 workers).
+
+Adopt fast iff (1) verify-gates passes for current source, (2) geometric mean
+of fast/B3r median ratios over the 15 official 100k cells <= 0.90, and (3) EVERY
+scenario (workload x size) has median(seed ratios) <= 1.05, or the single ratio
+for one-seed cases. Compute the median OF ratios, not a ratio of median times.
+Incomplete/stopped/duplicate/mismatched data cannot promote fast. If all pass,
+fast becomes final B; otherwise B3r stays final. This result is binding.
+
+rematch_fast.ps1 has an atomic fixed attempt claim before measuring; after a
+claim, failure/interruption/partial coverage consumes the attempt. Preview
+does not claim or measure. Source/gate/data preflight failure before the claim
+does not start a measurement. No automatic retry or new-session override.
+Assessment writes immutable fast_rematch_acceptance.json, preserving the old
+cross-session result alongside the new per-scenario method and rationale.
+This implementation checkpoint executes tests/preview only, no rematch.

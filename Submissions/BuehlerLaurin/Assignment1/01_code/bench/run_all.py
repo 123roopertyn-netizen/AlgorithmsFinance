@@ -89,6 +89,18 @@ def mode_applies(case, mode):
     return mode in case.get("modes", ("memory",) if case["part"] == "churn" else MODES)
 
 
+def ordered_requests(cases, versions, modes, *, interleave=False, offset=0):
+    """Default ordering is preserved; rematch alternates the two timing versions."""
+    requested = [(c,v,m) for c in cases for v in versions for m in modes if mode_applies(c,m)]
+    if not interleave:
+        return sorted(requested, key=lambda item:(item[0]['id'],item[1],MODES.index(item[2])))
+    if versions != ['B3r','B3r_fast'] or modes != ['timing'] or offset < 0:
+        raise ValueError('interleave requires B3r,B3r_fast, timing only and a nonnegative offset')
+    rank = {key:i+offset for i,key in enumerate(sorted({c['id'] for c,v,m in requested}))}
+    return sorted(requested, key=lambda item:(item[0]['id'],
+        versions.index(item[1]) if rank[item[0]['id']] % 2 == 0 else 1-versions.index(item[1])))
+
+
 def rows_from(path):
     if not path.exists():
         return []
@@ -158,6 +170,8 @@ def get_run(args):
                baseline_protocol=BASELINE_PROTOCOL,
                baseline_deviation="A: single trial without warm-up at 100k/1M; warm-up + 5 at 1k/10k",
                selection="SPEC.md Phase 4a: robustness then 15-cell geometric mean; 5% simplicity tie")
+    if getattr(args, 'interleave', False):
+        env['interleaving'] = 'B3r/fast then fast/B3r by global case; timing only'
     env_path.write_text(json.dumps(env, indent=2), encoding="utf-8")
     (directory/"spec_snapshot.md").write_text(Path("SPEC.md").read_text(encoding="utf-8"), encoding="utf-8")
     if pointer:
@@ -174,6 +188,8 @@ def main():
     ap.add_argument("--allow-long", action="store_true")
     ap.add_argument("--baseline-protocol", choices=(BASELINE_PROTOCOL,), default=BASELINE_PROTOCOL)
     ap.add_argument("--plan-only", action="store_true", help="list coverage only; never construct a book")
+    ap.add_argument('--interleave', action='store_true', help='alternate B3r/fast version order by timing case')
+    ap.add_argument('--interleave-offset', type=int, default=0, help='number of preceding timing cases across parts')
     ap.add_argument("--max-size", type=int, choices=(1000, 10000, 100000, 1000000), default=1000000)
     ap.add_argument("--session")
     ap.add_argument("--versions", default=",".join(VERSIONS))
@@ -196,19 +212,25 @@ def main():
     cases = [case for case in cases if case["size"] <= args.max_size]
     if not cases:
         ap.error("no data entries match part")
+    try:
+        requested = ordered_requests(cases, versions, modes, interleave=args.interleave, offset=args.interleave_offset)
+    except ValueError as exc:
+        ap.error(str(exc))
     if args.plan_only:
-        count = sum(1 for c in cases for v in versions for m in modes if mode_applies(c, m))
-        print(json.dumps({"part": args.part, "cases": len(cases), "versions": versions,
-                          "modes": modes, "cells": count, "sizes": sorted({c["size"] for c in cases}),
-                          "engine_executed": False}))
+        plan = {"part": args.part, "cases": len(cases), "versions": versions,
+                "modes": modes, "cells": len(requested), "sizes": sorted({c["size"] for c in cases}),
+                "engine_executed": False}
+        if args.interleave:
+            plan['interleave_offset'] = args.interleave_offset
+            plan['timing_cases'] = len(requested)//2
+            plan['timed_sizes'] = sorted({c['size'] for c,v,m in requested})
+            plan['execution_order'] = [dict(case_id=c['id'], version=v, mode=m,
+                case_number=args.interleave_offset+i//2+1) for i,(c,v,m) in enumerate(requested)]
+        print(json.dumps(plan))
         return 0
     directory = get_run(args)
     jobs_dir = directory/"jobs"; jobs_dir.mkdir(exist_ok=True)
     done = {(r["case_id"], r["version"], r["mode"]): r for r in rows_from(directory/"cells.csv")}
-    requested = [(c, v, m) for c in cases for v in versions for m in modes
-                 if mode_applies(c, m)]
-    # Explicit order: timing first, other independent workers only afterwards.
-    requested.sort(key=lambda item: (item[0]["id"], item[1], MODES.index(item[2])))
     errors = 0
     for number, (case, version, mode) in enumerate(requested, 1):
         key = case["id"], version, mode

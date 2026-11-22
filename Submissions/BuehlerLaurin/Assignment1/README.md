@@ -1,15 +1,15 @@
 # Assignment 1, limit order book: Laurin Bühler
 
-> Status (2026-11-22): Phase 3b variants A/B1/B2/B3 ready for review; 501 tests pass.
+> Status (2026-11-22): binding B3r/fast rematch pipeline ready for review; 848 standard and 1,697 attack tests pass.
 > B is the compatibility registry key for B1; B1 is also accepted by replay.
-> Final B is selected from Phase 4 measurements; adaptive switching is deferred.
+> B3r remains final pending the single authorized same-session rematch; adaptive switching is deferred.
 
 ## Clean-environment run path (PowerShell, from this folder)
 ```powershell
 python -m venv "$env:USERPROFILE\.venvs\aif-a1"
 & "$env:USERPROFILE\.venvs\aif-a1\Scripts\Activate.ps1"
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # Phase 3b: 501 passed
+python -m pytest -q                                   # latest checkpoint: 848 passed
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
 python run.py bench.run_all                           # (planned) writes 03_results/runs/<run>/
 python -m streamlit run 04_dashboard/app.py           # (planned) http://localhost:8501, reads 03_results/ only
@@ -150,9 +150,25 @@ constant-factor variant: exact-builtin common-case validation with reference
 fallback, inlined process dispatch and local bindings in unchanged matching.
 It preserves B3r's structures, thresholds, API, output order and counters.
 Direct methods retain the inherited reference validator. No speedup is claimed
-before the optional B-only session. The current preview/start commands are in
-BENCHMARK_PLAN.md, "Optional B3r_fast session"; the stored B3r session is the
-comparison baseline. No long run is started by this checkpoint.
+from correctness tests. The completed optional B-only session and its original
+cross-session rejection remain historical. The corrected comparison follows.
+
+Rematch decision (2026-11-22, before new measurement): the completed
+cross-session trial stays **tried and rejected**. Session noise confounded its
+per-cell 5% bound, so Laurin permits ONE binding same-session timing-only attempt.
+Both versions alternate order by case on official + post_attack, warm-up+5.
+Require current correctness proof, 15-cell official 100k geometric mean <= 0.90,
+and median(seed ratios) <= 1.05 for every workload x size scenario. Otherwise
+B3r stays final; no further re-measurement. The current command is
+`& .\01_code\bench\rematch_fast.ps1 -PlanOnly` (or -AllowLong after review/commit).
+The old cross-session wrapper/result remain historical; do not rerun them.
+BENCHMARK_PLAN.md records the corrected method, one-attempt guard and report
+that preserves both comparisons. No rematch measurement starts here.
+Fresh [standard tests](05_evidence/20261122T205138Z_ddbc434-dirty_rematch-all-tests.txt)
+passed (848 in 713.71 s), as did the [attack suite](05_evidence/20261122T205139Z_ddbc434-dirty_rematch-attack-suite.txt)
+(1,697 in 80.63 s). The [new proof](05_evidence/b3r_fast_rematch_correctness.json)
+binds both to the current source; the previous proof remains historical.
+
 Independent runs measure nearest-rank latency p50/p95/p99 in ns, traced memory
 including book/current fills but excluding parsed input/history, and operation
 counts. Traced memory is not RSS. Missing/stopped values remain explicit.
