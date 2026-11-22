@@ -10,8 +10,8 @@ Stages 7-9 are implemented and have current canonical evidence:
 3. fresh `tracemalloc` runs with explicit inclusion boundaries.
 
 The tracked `results/` archive and generated `REPORT.md` were replaced after
-the measurement-integrity audit. The current archive is revision 3 evidence
-from clean commit `3d4bacb5eb2527ac9b5be709d8cfad74b2c4da90` and contains
+the measurement-integrity audit. The current archive is revision 4 evidence
+from clean commit `e3a5ee630b7d221722953b953bb9ae2c5cd9acc5` and contains
 73 datasets plus 3,744 records. The earlier commit
 `ffb474170b4849af850e31588f9a1a70dcf08da3` remains historical provenance only.
 

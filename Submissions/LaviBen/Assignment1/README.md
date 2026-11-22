@@ -38,7 +38,7 @@ ask-side FIFO, residual priority, repeat pairing, bounded diagnostics,
 object-lifecycle cleanup, strict report validation, missing-repeat disclosure,
 saved-sample latency ECDF, pooled raw-repeat reporting, cross-record summary
 reconciliation, canonical-evidence completeness, and root-level discovery. The
-verified result is `Ran 71 tests` followed by `OK` (190.470 seconds on the
+verified result is `Ran 71 tests` followed by `OK` (190.969 seconds on the
 recorded development machine).
 
 Replay the worked example with either version:
@@ -54,14 +54,14 @@ Both traces fill makers `b1`, `b2`, `b3`, then `b4`, leave four BTC on `b4`,
 leave the two-BTC ask unchanged and imply gross proceeds of `359400.00` USD.
 
 The replacement canonical benchmark was run from clean measurement commit
-`3d4bacb5eb2527ac9b5be709d8cfad74b2c4da90`. It contains 73 datasets and
+`e3a5ee630b7d221722953b953bb9ae2c5cd9acc5`. It contains 73 datasets and
 3,744 records, including the declared one-million-event mixed attempt. All 76
 completed correctness rows agree; 15 bounded correctness attempts stopped,
 and no timing summary is missing a repeat. The archive records five raw repeats,
 latency samples, memory, operation counts, environment, settings, checksums and
 explicit stopped/partial evidence. `dashboard.py` and `build_report.py` load
 these saved results only; they never rerun benchmarks. Both builders require
-`measurement_integrity_revision: 3` before granting clean evidence canonical
+`measurement_integrity_revision: 4` before granting clean evidence canonical
 status.
 
 Rebuild the two derived artifacts using:

@@ -133,7 +133,7 @@ After every accepted event:
   bounded diagnostics, memory boundaries, report validation,
   timeout-instrumentation boundaries, between-repeat cleanup, repeat pairing,
   expected/stopped/missing summaries, and explicit stopped or unattempted work.
-  Dashboard and short-report tests verify the saved-sample ECDF, revision-3
+  Dashboard and short-report tests verify the saved-sample ECDF, revision-4
   evidence gate, diagnostic coverage, required views, and byte-stable
   generation. Inspector follow-up tests require pooled raw-repeat medians,
   timing-summary/raw-row reconciliation, nonempty canonical evidence, and
@@ -213,7 +213,8 @@ Rejected suggestions:
 
 Passing tests and cross-version agreement are evidence, not proof of
 correctness. The earlier canonical archive is superseded because its
-measurement lifecycle predates revision 3. After an eight-dataset smoke check,
+measurement lifecycle predates revision 3. After revision-4 regressions and a
+full-grid smoke check,
 the replacement canonical run recorded 73 datasets and 3,744 records from the
 clean measurement commit. It measures rather than assumes that Version B is
 faster or smaller on every workload. Declared stops, partial or missing repeat

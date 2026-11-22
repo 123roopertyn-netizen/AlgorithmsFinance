@@ -378,7 +378,8 @@ def render_report(report: dict[str, object]) -> str:
         ),
         "",
         "Latency is instrumented separately with `perf_counter_ns`, retained per event, and "
-        "summarized with nearest-rank percentiles. Saved records also separate LIMIT, CANCEL, "
+        "summarized with nearest-rank percentiles after pooling saved samples across seeds. "
+        "Saved records also separate LIMIT, CANCEL, "
         "and MARKET_SELL events and compare the first and last 10% (capped at 1,000 events).",
         "",
         "## Memory",
