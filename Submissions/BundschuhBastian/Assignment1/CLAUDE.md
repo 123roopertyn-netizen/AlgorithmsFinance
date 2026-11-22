@@ -9,9 +9,7 @@ in SPEC.md without asking Bastian.
 
 ## How to work with Bastian
 - Work phase by phase. Stop after each phase, show what changed and the test result, and wait.
-- Bastian must be able to explain the code and every performance claim in the exam.
-  After each phase: 2–3 check questions, a short "Handwritten notes" block (formatted as on
-  paper), and 2–4 "Questions for the lecture".
+- After each phase: a short summary of what changed and the test result, then stop and wait.
 - Plain English, short sentences, define each technical term once. No analogies or
   "imagine…" stories. Explain hard parts (complexity, amortized costs, invariants) again in
   simple German, technical terms in English.
