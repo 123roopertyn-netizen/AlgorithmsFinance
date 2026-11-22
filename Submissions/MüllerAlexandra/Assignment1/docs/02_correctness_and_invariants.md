@@ -15,7 +15,21 @@ After every accepted event:
 Validation is performed before dispatch. A rejected event therefore cannot
 partially match, cancel, rest, or advance the accepted sequence.
 
-## Baseline matching pseudocode
+## Baseline dispatcher pseudocode
+
+For every event:
+
+```text
+build the set of active order identifiers
+validate the complete event before changing the book
+if validation fails:
+    return rejected without changing the book or accepted sequence
+dispatch LIMIT, MARKET_SELL, or CANCEL to its operation
+record the event sequence as the last accepted sequence
+return only this event's result
+```
+
+## Baseline limit insertion pseudocode
 
 For an incoming limit order:
 
@@ -30,11 +44,40 @@ for each maker while incoming quantity remains:
     remove an exhausted maker
 if incoming limit quantity remains:
     append it with its original sequence
-accept the event sequence and return only this event's fills
+return only this event's fills and residual
 ```
 
-`FillMarketSell` uses the same loop over all bids ordered by decreasing price
-then increasing arrival sequence. It discards rather than rests any residual.
+## Baseline market-selling pseudocode
+
+For an incoming market sell:
+
+```text
+validate the complete event
+collect every resting bid
+sort bids by decreasing price, then increasing arrival sequence
+for each maker while incoming quantity remains:
+    execute min(incoming remainder, maker remainder)
+    record a fill at the maker's resting price
+    subtract the same quantity from seller and maker
+    remove an exhausted maker
+return any unmatched market quantity as unfilled; never rest it
+return only this event's fills and unfilled quantity
+```
+
+## Baseline cancellation pseudocode
+
+For a cancellation:
+
+```text
+validate the complete event
+scan active orders in the list for target_order_id
+if the target is active:
+    remember its current residual quantity
+    remove the order
+    return cancelled with exactly that residual quantity
+otherwise:
+    return not_found with cancelled quantity zero
+```
 
 ## Why the invariants are preserved
 

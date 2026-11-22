@@ -23,19 +23,34 @@ rejected with the reason and the verification performed.
   visible state invariants, rather than treating agreement between submitted
   implementations as independent correctness evidence.
 
-## Corrected so far
+## Pending suggestions
 
-- The lecture's read-only, aggregated `FillMarketSell` is not the assignment
-  engine: Assignment 1 requires individual FIFO makers and live-book mutation.
-- The first sequence-state test rejected an event whose sequence equalled the
-  last accepted sequence. That could not detect an erroneous state advance.
-  Before implementation, it was replaced by an invalid sequence-3 event
-  followed by a valid sequence-2 event, and float/Boolean sequence cases were
-  added. Both pre-implementation runs remain preserved.
-- The first baseline test attempt exposed an incorrect standard-library
-  import: `AbstractSet` was imported from `collections.abc` instead of
-  `typing`. The import was corrected before behavioral tests could run; no
-  expected result or test was changed.
+- For Version B, consider an active-order dictionary, FIFO containers grouped
+  by price, and heaps for locating the best bid and ask. This remains pending:
+  it will be accepted, corrected, or rejected only after Version A is measured
+  and the data structures, invariants, and trade-offs are reviewed.
+
+## AI-assisted output corrected so far
+
+- AI specification review identified that the lecture's read-only, aggregated
+  `FillMarketSell` is not the assignment engine: Assignment 1 requires
+  individual FIFO makers and live-book mutation.
+- AI review identified a flaw in the first AI-assisted sequence-state test: it
+  rejected an event whose sequence equalled the last accepted sequence, which
+  could not detect an erroneous state advance. Before implementation, the test
+  was replaced by an invalid sequence-3 event followed by a valid sequence-2
+  event, and float/Boolean sequence cases were added. Both pre-implementation
+  runs remain preserved.
+- The first baseline test attempt exposed an AI-generated incorrect
+  standard-library import: `AbstractSet` was imported from `collections.abc`
+  instead of `typing`. AI corrected the import before behavioral tests could
+  run; no expected result or test was changed.
+- During the walkthrough, the user identified that the pre-implementation
+  suite included the supplied worked example and hand-calculated contract
+  cases but omitted the requested small generated streams. Four deterministic
+  60-event streams and a separate test-only reference model had been added only
+  after Version A and before Version B. The original evidence and expectations
+  are preserved; the later tests are not represented as pre-Version-A tests.
 
 ## Rejected so far
 
