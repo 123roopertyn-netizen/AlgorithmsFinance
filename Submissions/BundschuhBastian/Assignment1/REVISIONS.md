@@ -41,3 +41,10 @@ list records vs the current `[qty, seq]` lists; inlining validation into `proces
 
 New test from this step, kept: `tests/test_process_fuzz.py` feeds fuzzed good and bad events to A and B `process()` and requires identical results and snapshots (covers every reason code and every status).
 | 6 (rejected) | Best price with a heap + lazy deletion (bids stored as `-price`; emptied levels stay in the heap until they reach the top) instead of the sorted list + bisect. | 0.1610 s -> 0.1682 s (+4.5%) | 0.1736 s -> 0.1856 s (+7.0%) | 333 pass; not kept. With ~1,000 levels, `list.insert` / `del` is one C memmove and cheaper than heap pushes plus stale-entry cleanup. Amortized cost of the heap is also worse for memory (stale entries grow with cancel churn). |
+| 7 (rejected) | Order record as a `__slots__` class (`rec.qty`, `rec.seq`) instead of the list `[qty, seq]`. | 0.1622 s -> 0.1646 s (+1.5%) | 0.1771 s -> 0.1845 s (+4.2%) | 333 pass; not kept (creating an object costs more than creating a small list) |
+| 8 (rejected) | Order record as an immutable tuple `(qty, seq)`, replaced on a partial fill. | 0.1621 s -> 0.1604 s (-1.1%) | 0.1793 s -> 0.1750 s (-2.4%) | 333 pass; not kept (inside the ~2% noise; buildup minimum got worse) |
+
+Final state after steps 1-8: kept 1, 2, 4. Rejected 3, 5, 6, 7, 8. Profile of what is left (mixed,
+100,000 events): `is_valid_fast` ~25%, `AddLimitOrder` ~18%, `_take` ~17%, `process` ~15%. What remains is
+mostly the work the interface requires (one result dict per event, one fill dict per fill) and the
+checks that make the engine safe against bad input.
