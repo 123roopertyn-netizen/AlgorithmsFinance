@@ -5,7 +5,7 @@ import importlib
 
 import pytest
 
-VERSIONS = ["lob_a"]  # add "lob_b" here once Version B exists
+VERSIONS = ["lob_a", "lob_b_sorted", "lob_b_heap"]
 
 
 @pytest.fixture(params=VERSIONS)
