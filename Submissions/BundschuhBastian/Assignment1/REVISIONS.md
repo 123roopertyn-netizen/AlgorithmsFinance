@@ -48,3 +48,17 @@ Final state after steps 1-8: kept 1, 2, 4. Rejected 3, 5, 6, 7, 8. Profile of wh
 100,000 events): `is_valid_fast` ~25%, `AddLimitOrder` ~18%, `_take` ~17%, `process` ~15%. What remains is
 mostly the work the interface requires (one result dict per event, one fill dict per fill) and the
 checks that make the engine safe against bad input.
+
+## 3. All five scenarios, Version B final (100,000 events, seed 42, `gc` off, median of 11)
+
+| Scenario | median | min | max | fills | max B | price levels at end (bids+asks) |
+|---|---|---|---|---|---|---|
+| mixed | 0.1633 s | 0.1591 | 0.1784 | 38,988 | 15,118 | 1+845 |
+| buildup | 0.1762 s | 0.1715 | 0.1933 | 0 | 100,000 | 1000+1000 |
+| sweep | 0.2096 s | 0.2018 | 0.2193 | 50,035 | 80,000 | 0+1000 |
+| crowded | 0.1644 s | 0.1563 | 0.1702 | 0 | 100,000 | 4+4 |
+| cancel_churn | 0.1221 s | 0.1201 | 0.1287 | 0 | 1 | 0+0 |
+
+No scenario is out of line. A was not run at 100,000 events except on `cancel_churn` (B <= 1, so A is
+cheap there): A and B replay output is identical. A on the other 100,000-event streams is a Phase 6
+question (it is quadratic and may hit the run limit).
