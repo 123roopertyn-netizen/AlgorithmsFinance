@@ -1,7 +1,7 @@
 """Shared, non-matching code for both order book versions.
 
 Contains: units, reason codes (SPEC.md D9), event reading, canonical snapshot order (D15),
-USD display (D17), and the validation entry point (stub until Phase 2).
+USD display (D17), and the validation entry point.
 No matching logic lives here; each version implements matching on its own.
 """
 from __future__ import annotations
@@ -82,10 +82,53 @@ def proceeds_usd(value_units: int) -> str:
     return str(usd.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
-def validate(event: dict, last_seq: int, is_live: Callable[[str], bool]) -> str | None:
+def _is_pos_int(x: object) -> bool:
+    # D1: type(x) is int, so True/False and floats are rejected
+    return type(x) is int and x > 0
+
+
+def _is_id(x: object) -> bool:
+    return type(x) is str and x != ""
+
+
+def rejected_result(event: object, reason: str) -> dict:
+    """D14: result for a rejected event. event_id only if it is a non-empty string."""
+    event_id = event.get("event_id") if isinstance(event, dict) else None
+    return {"event_id": event_id if _is_id(event_id) else None,
+            "status": "rejected", "reason": reason, "fills": []}
+
+
+def validate(event: object, last_seq: int, is_live: Callable[[str], bool]) -> str | None:
     """Return None if the event is valid, else the first failing reason code (D1-D9).
 
     `is_live(order_id)` must answer whether that order is currently active in the book.
-    Implemented in Phase 2 (tests first).
+    Checks run in the fixed order of SPEC.md D9. Never raises for any input.
     """
-    raise NotImplementedError("validate: Phase 2")
+    if not isinstance(event, dict) or PARSE_ERROR_KEY in event:
+        return MALFORMED_EVENT
+    if not _is_pos_int(event.get("seq")):
+        return INVALID_SEQ
+    if event["seq"] <= last_seq:
+        return NONINCREASING_SEQ
+    if not _is_id(event.get("event_id")):
+        return INVALID_EVENT_ID
+    etype = event.get("type")
+    if type(etype) is not str or etype not in EVENT_TYPES:
+        return UNKNOWN_TYPE
+
+    if etype == CANCEL:
+        return None if _is_id(event.get("target_order_id")) else INVALID_TARGET_ORDER_ID
+
+    if not _is_id(event.get("order_id")):
+        return INVALID_ORDER_ID
+    if etype == LIMIT:
+        side = event.get("side")
+        if type(side) is not str or side not in (BUY, SELL):
+            return UNKNOWN_SIDE
+        if not _is_pos_int(event.get("price_ticks")):
+            return INVALID_PRICE
+    if not _is_pos_int(event.get("qty_units")):
+        return INVALID_QTY
+    if is_live(event["order_id"]):
+        return DUPLICATE_LIVE_ORDER_ID
+    return None
