@@ -14,6 +14,14 @@ rejected with the reason and the verification performed.
 - Add a project-local `.gitattributes` policy that keeps text files at LF and
   marks compressed/media files as binary. Git's Windows line-ending warnings
   and the earlier peer-audit reproducer showed why byte-stable checkouts matter.
+- Use a list of individual orders for Version A so price-time behavior and
+  state mutation remain directly inspectable. Preserve its whole-book scans,
+  candidate sorting, and list-removal costs as the baseline rather than
+  prematurely introducing the revised data structure.
+- Add deterministic small generated streams before Version B. Each engine is
+  checked event by event against a separate test-only reference model and
+  visible state invariants, rather than treating agreement between submitted
+  implementations as independent correctness evidence.
 
 ## Corrected so far
 
@@ -24,6 +32,10 @@ rejected with the reason and the verification performed.
   Before implementation, it was replaced by an invalid sequence-3 event
   followed by a valid sequence-2 event, and float/Boolean sequence cases were
   added. Both pre-implementation runs remain preserved.
+- The first baseline test attempt exposed an incorrect standard-library
+  import: `AbstractSet` was imported from `collections.abc` instead of
+  `typing`. The import was corrected before behavioral tests could run; no
+  expected result or test was changed.
 
 ## Rejected so far
 

@@ -6,3 +6,6 @@
 *.png binary
 *.pdf binary
 
+# Pytest tracebacks reproduce source lines verbatim, including their spacing.
+evidence/**/test_run.log -whitespace
+

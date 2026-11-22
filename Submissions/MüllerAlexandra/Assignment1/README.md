@@ -62,8 +62,20 @@ files belong under `data/generated/` and are not committed.
 
 ## Development status
 
-1. Specification and independent tests: in progress.
-2. Transparent baseline: not implemented.
+1. Specification and independent tests: complete for the initial engine contract.
+2. Transparent baseline: implemented and passing its selected contract tests.
 3. Revised implementation: not implemented.
 4. Measurements and dashboard: not started.
+
+Validate the baseline against all supplied 10,000-event streams:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python.exe scripts\03_validate_supplied.py --version baseline
+```
+
+The baseline deliberately uses a list of individual resting orders. It scans
+and sorts that list during matching and scans it during cancellation. This is
+the transparent Version A to preserve before a measured data-organization
+revision.
 
