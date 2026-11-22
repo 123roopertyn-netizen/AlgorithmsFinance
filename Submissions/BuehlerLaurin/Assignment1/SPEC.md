@@ -8,7 +8,7 @@
 | Decision | Choice | Why (requirement / scale / preference) |
 |---|---|---|
 | Task profile | Stateful engine | Event-by-event order book with live state, priorities and per-event outputs (R §Task, S7). |
-| Versions | A (transparent baseline, also the oracle) + B (fast) | Baseline + justified revision, both preserved and compared after every event, are required (R §Implement and revise, S13). |
+| Versions | A baseline/oracle + B1, B2, B3 variants | Phase 3b decision (2026-11-22): compare all four in Phase 4; choose final B from measurements; adaptive index only considered afterward. |
 | Benchmarks | Full: time, throughput, latency percentiles, memory, operation counts | All five are explicitly required (R §Benchmark experiments, §Time and latency, §Memory; S16–S20). |
 | Dashboard | Full contract (`aif-bench` §8) | Dashboard from saved results is required (R §Results and dashboard, S22). |
 | Report artifacts | All: README, REPORT, TRACE, REQUIREMENTS_MAP, AI_LOG, LEARNING | README + report + AI record required (R §Submit, §Implement and revise); TRACE/MAP/LEARNING are Laurin's study and audit aids. |
@@ -16,13 +16,24 @@
 | Checkpoints | Every phase | Learning goal; Laurin approves each phase ("go"). |
 
 ## Task (one sentence)
+
+Phase 3b plan update (Laurin, 2026-11-22): B1 built first (Phase 3); B2 and B3
+added as variants; A, B1, B2, B3 compared in Phase 4; the final Version B is
+chosen from the measurements. An adaptive variant (online switch of the price
+index with hysteresis and a measured threshold, no lookahead) is only considered
+after Phase 4.
+
+Registry naming: `("lob", "B")` continues to mean B1 for compatibility;
+`("lob", "B2")` and `("lob", "B3")` are additional implementations.
+Replay accepts `B1` as an alias for `B`, while reports label it B1. No adaptive
+algorithm or lookahead is implemented in Phase 3b.
 Build a sequential, single-venue BTC limit order book in Python with your own `FillMarketSell`, as a transparent Version A and a faster Version B with identical results, test it first, and benchmark time, latency and memory on synthetic event streams with a dashboard over saved results (R §Task, S2).
 
 ## Model boundaries (state in README/REPORT, R §Task, S4)
 One venue, one event at a time, continuous matching at resting prices (no batch auction, S7). All orders eligible; no fees, balances, hidden orders, self-trade checks, network delays or simultaneous execution. Synthetic teaching data only, not calibrated to an exchange (R §Synthetic data, S15). Not a production trading system.
 
 ## Interface (proposal: signatures are our choice, but must be documented, R §Input files and interface)
-Package `lob` in `01_code/lob/`; registry `METHODS = {("lob", "A"): OrderBookA, ("lob", "B"): OrderBookB}` (factories: each call gives a fresh empty book).
+Package `lob` in `01_code/lob/`; registry `METHODS = {("lob", "A"): OrderBookA, ("lob", "B"): OrderBookB, ("lob", "B2"): OrderBookB2, ("lob", "B3"): OrderBookB3}` (factories: each call gives a fresh empty book).
 
 | Function (name required by R §Input files and interface, S6) | Proposed Python form | Returns |
 |---|---|---|
@@ -34,7 +45,7 @@ Package `lob` in `01_code/lob/`; registry `METHODS = {("lob", "A"): OrderBookA, 
 
 - All public entry points validate through **one shared module** `lob/validation.py`, so A and B cannot diverge on bad input (aif-tdd Layer 2). Validation rules get their own contract checks.
 - The engine never mutates the input event dict.
-- Replay command (implemented in Phase 2; both versions available in Phase 3): `python run.py lob.replay <file.jsonl[.gz]> --version A|B` → prints one result per event as JSON Lines (R §Input files and interface: "supply a command to replay a file").
+- Replay command (implemented in Phase 2; both versions available in Phase 3): `python run.py lob.replay <file.jsonl[.gz]> --version A|B1|B2|B3` (legacy `B` = B1) → prints one result per event as JSON Lines (R §Input files and interface: "supply a command to replay a file").
 - Trade history is **not** retained; each call returns only the current event's fills (R §Required results: history optional, must be declared as extra storage).
 
 ## Input domain
@@ -170,9 +181,9 @@ Symbols: B active orders, P occupied price levels (per side), F maker fills of o
 | Version | Data organisation | Insert (no cross) | Cancel | Market sell / crossing limit | Space |
 |---|---|---|---|---|---|
 | A (baseline) | one unsorted Python list per side; scan best order per fill | O(B+1) worst-case including validation; append alone O(1) amortized | O(B+1) worst-case | O((F+1)(B+1)) worst-case including validation, output and residual append | O(B+1) persistent; O(F) returned fills |
-| B1 (selected Phase 3) | live id dict, per-price deque with lazy cancellation/compaction; signed sorted prices, best at tail | O(1) existing level; O(P+1) new level, expected amortized incl. validation | O(1) expected amortized if level survives; O(P+1) if emptied | O(F+L+1) expected amortized after stale-cleanup credits, plus O(P+1) for a new residual level | O(B+P+S+1) logical, S <= B+32P; CPython dict capacity may retain past peaks |
-| B2 | per level an `OrderedDict` (true O(1) removal); same sorted price list | as B1 | O(1) expected (hash delete); O(P) if level empties mid-list | O(F + L) expected | O(B + P) |
-| B3 | heap of prices + `in_heap` set; per level FIFO queue | O(log P) new level, O(1) existing | O(1) + lazy level removal | O(F + L log P) amortized | O(B + P + stale heap entries) |
+| B1 (built Phase 3) | live id dict, per-price deque with lazy cancellation/compaction; signed sorted prices, best at tail | O(1) existing level; O(P+1) new level, expected amortized incl. validation | O(1) expected amortized if level survives; O(P+1) if emptied | O(F+L+1) expected amortized after stale-cleanup credits, plus O(P+1) for a new residual level | O(B+P+S+1) logical, S <= B+32P; CPython dict capacity may retain past peaks |
+| B2 (Phase 3b variant) | OrderedDict FIFO per level; id index and signed sorted prices as B1 | O(1) existing level, O(P+1) new level, expected amortized | O(1) expected if level survives; O(P+1) when emptied | O(F+L+1) expected amortized, plus O(P+1) for new residual level | O(B+P+1) live objects; allocated hash capacity extra |
+| B3 (Phase 3b variant) | heap + in_heap; same compacted FIFO deques as B1 | O(1) existing level / reactivated key; O(log(K+1)) new key, expected amortized; pending heap cleanup extra | O(1) expected amortized with deque credits; no immediate heap removal | O(F+L+1+J log(K_max+1)) expected amortized before charging heap pops; deque credits as B1 | O(B+P+S_h+1) logical; stale heap prices can grow with M |
 
 B1 was chosen explicitly by Laurin in Phase 3; its complete bounds, hashing/resize qualifications and compaction argument appear below. The other B candidates remain alternatives only. Engine containers are standard library only (Q12).
 
@@ -193,9 +204,10 @@ Same format and conventions as the supplied generator (bids at 6,000,000 − dep
 |---|---|
 | `contract.py` + `test_contract.py` | Named `check_*` rules for every version: worked example; matching rules (inline hand-calculated scenarios); cancellation; one check per validation rule family; interface (direct methods = `process()`, input not mutated, independent instances, snapshot is a copy, canonical order); `check_own_<case>` for each own dataset; invariants on the first 1,000 events of each supplied stream. Every replay runs the step checker (I1–I4, C1–C6, price-time priority, maker price) after each event. |
 | `test_validation.py` | The shared validator directly: every invalid row → its reason; valid events → `None`; rejection result shape. |
-| `test_stateful.py` | Hypothesis A/B differential after every event (results, books, invariants, step checker on A), incl. id reuse, repeated cancels and invalid events. |
-| `test_mutants.py` | 17 mutants (12 public-API + 5 internal), each runnable and killed with AssertionError by its named contract check; real-version controls parametrized separately for A/B. |
+| `test_stateful.py` | Hypothesis A vs each registered B variant after every event; original rule/assertion set retained. |
+| `test_mutants.py` | Original 17 A mutants killed by their named checks; real-version controls automatically run every registered version. |
 | `test_own_datasets.py` | `06_data/own/` equals what `own_cases.py` writes; every case has its check. |
+| `test_b_internal.py` | Promoted internal/counter checks for B1/B2/B3 where applicable, plus OrderedDict physical cancellation and lazy-heap reactivation/cleanup cases; no skips. |
 
 ## Ambiguities -> questions for Laurin
 Q1–Q15: **decided by Laurin on 2026-11-21, all as proposed** (the proposal column is the decision). Details added with the decisions: Q7 book construction is timed separately; Q9 the 1M run is attempted for both versions and A is recorded as `stopped` if it hits the limit; Q11 `generate_orders.py` is copied unchanged with its sha256 in the README; Q13 the missing uniqueness check is stated as an assumption with its reason.
@@ -375,3 +387,121 @@ no warm-up/repeats/medians; counters off. Read/parse outside replay timing, use
 fresh books, report setup and replay separately, compare every result and final
 snapshot outside timing. Use the existing harness with warmup=0/repeats=1 as
 the authorized exception; no official grid or speed conclusion in this phase.
+
+## Phase 3b: B2 and B3 code arguments (2026-11-22)
+
+A and B1's algorithms remain unchanged. B2/B3 inherit B1's constructor where
+appropriate, public dispatcher/direct methods, shared validation, result/status
+construction and accepted-event counting. They override their storage-specific
+paths. Thus common input semantics do not get copied into three validators.
+Every registered implementation still uses the same contract and own expected
+files. The internal checks now live in `02_tests/test_b_internal.py`; the old
+`lob.check_b` command is only a pytest compatibility launcher. Stateful machines
+run A against each of B1/B2/B3 separately with the same rules and assertions.
+
+### B2: OrderedDict FIFO levels, sorted signed prices
+
+`book_b2.py` uses the same live id index, slot order records, signed sorted price
+lists and constant-time best-price tails as B1. A level holds an OrderedDict
+from order_id to record, with no stale counter or tombstones. Cancel pops the id
+index entry, deletes that linked OrderedDict entry and removes an empty level
+and its price. Matching gets the first OrderedDict value and uses
+`popitem(last=False)` for exhausted makers. A partial maker is neither deleted
+nor reinserted. This is an OrderedDict FIFO, never a plain-dict FIFO.
+
+Let B, P, F and L have the B1 meanings. H includes allocated hash-table slots
+in the id/level indexes and the per-level OrderedDict tables; capacity may retain
+past peaks. Hash operations are expected O(1), hash resizing amortized O(1);
+pathological single lookups/rehashes may be O(H). Integer/key unit-cost
+qualifications remain as stated for A/B1. In the table, linked queue operations
+do not scan a level; any qualification comes from hashing or price-list storage.
+
+| Operation | Bound from the B2 code |
+|---|---|
+| Validate / reject | O(1) expected, O(H+1) worst case; same shared validator and rejection atomicity, including counters. |
+| Noncrossing limit, existing level | O(1) expected amortized for index/level access, OrderedDict insertion, fixed result; O(H+1) single-operation worst case due to collisions/rehash. |
+| Noncrossing limit, new level | O(P+1) expected amortized: bisect O(log(P+1)) plus up to P shifted/copied references and map insertion. O(H+P+1) single-operation worst case. |
+| Cancel, level survives | O(1) expected direct keyed deletion/unlinking, no stale marking or cleanup. O(H+1) worst case with hash collisions. This is the direct O(1) queue removal requested, with expected-hashing qualification. |
+| Cancel empties a level | O(P+1) expected, including bisect and middle price deletion/shrink; O(H+P+1) worst case. |
+| Market sell | O(F+L+1) expected amortized including fill-list output, id deletion, linked FIFO removals and best-price tail pops. A single-event worst-case upper bound is O((F+L+1)(H+1)+P), including table probes and possible price-list shrink. No stale/compaction term. |
+| Crossing limit | Matching cost above plus O(1) expected amortized residual insertion at an existing level or O(P+1) at a new level. Worst-case adds O(H+P+1). |
+| Best bid / ask | Inherited list-tail inspection: O(1) worst case in the unit-cost model. |
+| Snapshot | Walk signed price list and linked OrderedDict values: O(B+P+1) expected, O(B+1) copied output. Conservative hash-collision upper bound O((B+P+1)(H+1)). |
+| Storage | O(B+P+1) live objects/nodes with no stale records; allocated tables add O(H). Matching returns O(F) output; no history. OrderedDict linked nodes add a larger constant per live order than a deque. |
+
+### B3: deque levels, lazy heap of signed prices
+
+`book_b3.py` shares B1's `_Level`, slot order records, lazy cancel and exact
+`stale > live and stale > 32` deque compaction. Each side instead stores levels,
+a min-heap and an `in_heap` set: bid keys are negative, asks positive. On new
+level creation, push only if its key is absent from the set. Emptying a level
+deletes it from levels and releases its deque, leaving its heap/set key. A best
+peek pops missing-level roots and removes their keys from the set. Reactivating
+a price before its key is popped reuses that one heap entry. No duplicate keys
+or ghost prices can be returned. Snapshot sorts the live level prices and walks
+their live FIFO records; it does not sort or expose stale heap entries.
+
+Define S_d = cancelled records still in deques, S_h = heap prices with no live
+level, K = P + S_h (total heap entries), and J = stale heap roots popped by an
+operation. C/D/T denote deque rebuild scans / dead records released with empty
+levels / dead deque heads skipped in that operation. H includes retained
+capacity of id/level dictionaries and heap-membership sets. Use K_max for the
+largest heap size over the analyzed stream. As for B1, hash costs are expected,
+resizing amortized; heap comparison costs below are logarithmic, but a single
+Python list grow/shrink can copy O(K) references.
+
+| Operation | Bound from the B3 code |
+|---|---|
+| Validation | O(1) expected, O(H+1) worst case; does not peek/clean the heap before accepting/rejecting an event. |
+| Noncrossing limit, existing level | O(1) expected base work plus any opposite-side root cleanup O(J log(K_max+1)) expected amortized. Charged to preceding price pushes, the insertion's own base is O(1) expected amortized. Single-operation collision/resize/cleanup upper bound O((J+1)(H+log(K_max+1)+1)+K). |
+| New level | Same possible opposite-side cleanup, plus O(log(K+1)) expected amortized if the key needs pushing; O(1) expected amortized if an existing stale heap key is reactivated. No O(P) sorted-list shifts. Single-operation cost also includes O(H+K) table/list resize bounds. |
+| Cancel | O(1) expected base mark/index/count work; empty level deletion does not search the heap. Immediate deque compaction/disposal adds O(C+D). Same cancellation-credit amortization as B1 gives O(1) expected amortized. A single event can cost O(H+B+S_d+1); no sorted-price O(P) deletion. |
+| Market sell | O(F+L+T+C+D+1 + J log(K_max+1)) expected amortized for map/container work and fill output. Each emptied live level may cause a subsequent stale-root pop; J can also include old cancelled prices even when F=0. A conservative single-event worst bound includes O((F+L+J+1)(H+1)+J log(K_max+1)+K+T+C+D). |
+| Crossing limit | Same matching/cleanup costs, plus existing-level residual O(1) or a new heap key O(log(K+1)) expected amortized; table/heap resize costs remain possible. |
+| Best bid / ask | If root is live, O(1) expected lookup. With J stale roots: O(J log(K_max+1)+1) expected amortized, NOT worst-case O(1). A single call can also trigger O(K) list shrinking and worst-case O((J+1)(H+1)) hash probes. Public quotes may clean heap/set storage but do not change logical orders, seq or counters. |
+| Snapshot | Sorting live dictionary keys scans its allocated table, then sorts P keys and visits B+S_d records: O(H+P log(P+1)+B+S_d+1) expected; output O(B+1), sort workspace O(P). Collision bound can add O(P*(H+1)). |
+| Storage | B1 deque bound S_d <= B+32P still holds. Heap/set entries add K=P+S_h, so logical storage O(B+P+S_h+1), plus allocated-table O(H). S_h is NOT bounded by current P/B; see below. Fill output O(F); snapshot output/workspace O(B+P). |
+
+Deque cleanup uses exactly B1's cancellation-credit proof: each dead record pays
+once for skipping, disposal, or rebuild; at rebuild, fewer live than dead records
+are copied. Heap cleanup is a separate amortization: each absent price key is
+pushed once and popped at most once before being eligible for a fresh push.
+For N distinct push events over a stream, total push/pop heap work is
+O(N log(K_max+1)), plus O(1) expected best checks and live maker work. Reactivating
+an unpopped key does not push another key. Heap-pop costs can be assigned to the
+earlier price push using K_max; this is not a constant-latency quote guarantee.
+
+As explicitly specified, there is no heap compaction. Keeping one best price
+live while adding/cancelling distinct worse prices can make S_h grow with M,
+even when B=P=1. Internal pytest cases pin this behavior on both sides rather
+than claiming bounded heap memory. Phase 4 must measure this tradeoff. No
+unrequested heap-rebuild threshold or adaptive price-index switch is added.
+
+B2 uses the same default-off counters as B1; stale/compaction counts remain zero.
+B3 adds heap_pushes, heap_pops, heap_stale_pops and heap_entry_peak for accepted
+engine work. Public quote cleanup leaves counters unchanged so inspection and
+rejection checks do not count as replay work. Counter runs that interleave
+inspection can remove heap work before later events; Phase 4 replay counters
+must therefore use the same process-only event sequence as timing runs.
+
+### Phase 4 predictions for variants (before Phase 3b sanity)
+
+B2 should improve on B1 when long queues suffer many middle cancellations and
+later sweeps: direct deletion avoids deque rebuilds and dead-head skipping. The
+own `mid_queue_cancels` workload targets that benefit. Supplied `mixed` may show
+it if queue cancellations are frequent enough. On crowded/buildup without
+cancels, B1's compact deque records should often have lower constants than an
+OrderedDict node per order; very small cancel_churn books may also favor B1.
+
+B3 should improve on B1 when P is large and new/empty levels cause many sorted
+list shifts (own randomized `deep_book`, or frequent middle-level deletions).
+The supplied fixed-level buildup may gain during level creation but saturates
+at bounded P; crowded has very few prices, so B1's tails/insertions are cheap.
+On sweeps B1 removes best prices with O(1) amortized tail pops whereas B3 must
+pop stale heap roots logarithmically. B3 may therefore lose on supplied sweep,
+crowded, or churn; retained stale heap keys can hurt time and memory later.
+
+Phase 3b sanity remains **sanity, not a benchmark**: exactly one replay per
+A/B1/B2/B3 on each supplied 10k file, counters off, no warm-up/repeats/medians,
+fresh books, parsing/setup/replay separate, equality checks after the clock.
+Final B selection and any adaptive proposal wait for Phase 4 measurements.

@@ -37,3 +37,34 @@ These one-shot values are **sanity, not a benchmark**; raw parse/setup/replay an
 environment metadata are in `03_results/runs/20261121T224807Z_efee8d4-dirty_phase3_sanity_not_benchmark/`.
 B was observed slower on cancel_churn, where live books are small. Official
 measurements, profiling and any further optimization remain future phases.
+
+## Phase 3b, 2026-11-22: preserve A/B1; add B2 and B3 (base `b5411d4`)
+
+B2 replaces only the level queue organization with OrderedDict so keyed cancels
+physically remove their linked node, with no stale records or compaction. B3
+keeps B1's deque/compaction logic and replaces the sorted price list with a lazy
+heap/in_heap set. Public validation, status/result construction and counter
+flag semantics are shared from B1. A/B1 sources and all original expected data
+are unchanged. Internal assertions move into pytest; stateful and CLI checks
+are parametrized across variants without weakening their assertions.
+
+Fresh red stubs preceded algorithm code (142 failures for missing B2/B3);
+final verification: 501 passed. Targeted internal checks also detect the two
+in-memory compaction/heap faults with AssertionError. Q11 generator copy matches
+MANIFEST.json and regenerates all five supplied streams byte-identically.
+
+Predictions and full bound types were recorded in SPEC.md before the one-shot
+sanity. Observations below are **sanity, not a benchmark** (seconds):
+
+| Scenario (10k events) | A s | B1 s | B2 s | B3 s |
+|---|---|---|---|---|
+| `buildup` | 7.348022 | 0.053039 | 0.051708 | 0.053452 |
+| `crowded` | 7.984575 | 0.043179 | 0.047533 | 0.045571 |
+| `mixed` | 0.993087 | 0.047189 | 0.049398 | 0.075636 |
+| `sweep` | 7.888637 | 0.057057 | 0.055969 | 0.054018 |
+| `cancel_churn` | 0.029583 | 0.036689 | 0.049578 | 0.053755 |
+
+Raw evidence: `03_results/runs/20261121T234816Z_b5411d4-dirty_phase3b_sanity_not_benchmark/`.
+Formal measurements choose final B in Phase 4. B3's lazy heap can retain distinct
+cancelled prices until they reach its root; there is no unrequested heap
+compaction/adaptive index. Adaptive switching is only considered after Phase 4.

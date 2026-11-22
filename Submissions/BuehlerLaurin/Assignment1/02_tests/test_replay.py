@@ -7,16 +7,20 @@ import sys
 import pytest
 
 import contract
+from lob import METHODS
+
+VERSIONS = [key[1] for key in sorted(METHODS)] + ["B1"]
 
 
 @pytest.mark.parametrize("compressed", [False, True], ids=["jsonl", "jsonl-gzip"])
-def test_replay_command_a(tmp_path, compressed):
+@pytest.mark.parametrize("version", VERSIONS)
+def test_replay_command(tmp_path, compressed, version):
     events = (contract.SUPPLIED / "worked_example.jsonl").read_text(encoding="utf-8")
     path = tmp_path / ("worked.jsonl.gz" if compressed else "worked.jsonl")
     opener = gzip.open if compressed else open
     with opener(path, "wt", encoding="utf-8") as stream:
         stream.write(events)
-    command = [sys.executable, "run.py", "lob.replay", str(path), "--version", "A"]
+    command = [sys.executable, "run.py", "lob.replay", str(path), "--version", version]
     result = subprocess.run(command, cwd=contract.ROOT, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
     got = [json.loads(line) for line in result.stdout.splitlines()]
@@ -28,9 +32,10 @@ def test_replay_command_a(tmp_path, compressed):
     assert got == want
 
 
-def test_replay_keeps_rejections_in_input_order():
+@pytest.mark.parametrize("version", VERSIONS)
+def test_replay_keeps_rejections_in_input_order(version):
     command = [sys.executable, "run.py", "lob.replay",
-               str(contract.OWN / "invalid_fields.jsonl"), "--version", "A"]
+               str(contract.OWN / "invalid_fields.jsonl"), "--version", version]
     result = subprocess.run(command, cwd=contract.ROOT, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
     got = [json.loads(line) for line in result.stdout.splitlines()]

@@ -21,7 +21,7 @@ import contract
 from lob import METHODS
 
 A_CLS = METHODS[("lob", "A")]
-B_CLS = METHODS[("lob", "B")]
+B_VARIANTS = [(key, impl) for key, impl in sorted(METHODS.items()) if key[1] != "A"]
 
 
 def live_ids(book) -> list[str]:
@@ -35,9 +35,11 @@ REUSE_POOL = st.sampled_from(["r1", "r2", "r3"])     # small pool: live duplicat
 
 
 class DifferentialMachine(RuleBasedStateMachine):
+    B_CLS = METHODS[("lob", "B")]
+
     def __init__(self):
         super().__init__()
-        self.a, self.b = A_CLS(), B_CLS()
+        self.a, self.b = A_CLS(), self.B_CLS()
         self.seq = 0
         self.ids: list[str] = []
 
@@ -146,5 +148,10 @@ class DifferentialMachine(RuleBasedStateMachine):
         assert contract.assert_book(self.a) == contract.assert_book(self.b)
 
 
-TestDifferential = DifferentialMachine.TestCase
-TestDifferential.settings = settings(max_examples=300, stateful_step_count=60, deadline=None)
+for _key, _impl in B_VARIANTS:
+    _machine = type(f"DifferentialMachine_{_key[1]}", (DifferentialMachine,),
+                    {"B_CLS": _impl, "__module__": __name__})
+    _case = _machine.TestCase
+    _case.settings = settings(max_examples=300, stateful_step_count=60, deadline=None)
+    globals()[f"TestDifferential_{_key[1]}"] = _case
+del _key, _impl, _machine, _case

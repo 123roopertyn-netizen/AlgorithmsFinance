@@ -1,0 +1,2 @@
+# Preserve the supplied generator byte-for-byte against the course manifest.
+06_data/supplied/generate_orders.py -text

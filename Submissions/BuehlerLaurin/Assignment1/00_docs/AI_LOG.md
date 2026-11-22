@@ -129,3 +129,90 @@ git commit -m "Assignment1 Phase 3: B1 indexed deque book, counters and green A/
 ```
 
 Checkpoint: STOP. Await Claude (chat) review and Laurin's next phase instruction.
+
+## Phase 3b: B2/B3 variants checkpoint (2026-11-22, base `b5411d4`, uncommitted)
+
+Dates in this section are Europe/Berlin; evidence filenames use UTC (the runs
+began 20261121 and the final review is stamped 20261122).
+
+| Date | Agent | Suggestion / finding | Decision / evidence | Why |
+|---|---|---|---|---|
+| 2026-11-22 | Claude (chat), reported by Laurin | B1 verified against an independent reference on all five supplied 10k streams and 60,000 own stress events (long queues, middle cancels, 26 compactions, id reuse, invalid events): 0 differences. | Phase 3 committed by Laurin as `b5411d4`; this independent verification is attributed to Claude (chat), not a new Codex reference run | B1 stays unchanged; A remains the oracle for all variants. |
+| 2026-11-22 | Laurin / Codex | Promote `lob/check_b.py` assertions to `02_tests/test_b_internal.py`; retain the old command as a thin pytest launcher. | First port green: `05_evidence/20261121T233959Z_b5411d4-dirty_phase3b-internals-port-green.txt` (4 B1 checks); final suite includes 17 parametrized internal checks | Internal/counter/compaction assertions now run automatically. The original checks and hand expectations are retained, with the non-stale B2 case explicitly using zero stale work. |
+| 2026-11-22 | Laurin / Codex | Q11: copy the supplied generator unchanged and check it against the course MANIFEST.json. | `05_evidence/20261121T233959Z_b5411d4_phase3b-q11-generator-sha.txt`: 4019 bytes, sha256 ef7f31545addf576e6071cc20a5930f3e2ed93bfef96d4968150fad763d7fe7d; README checksum row added | Byte-for-byte copy; no package install or source edits. Newly copied generator reproduces all five supplied hashes: `05_evidence/20261121T234959Z_b5411d4-dirty_phase3b-copied-generator-reproduces.txt`. |
+| 2026-11-22 | Laurin / Codex | B1 built first; add B2/B3 variants; compare A/B1/B2/B3 in Phase 4 and choose final B from measurements. Adaptive online index with hysteresis/measured threshold/no lookahead considered only after Phase 4. | Recorded in SPEC.md before variant implementation | No adaptive code or final B selection introduced. Registry B stays the compatibility key for B1; CLI accepts B1 alias. |
+| 2026-11-22 | Codex | Implement B2 OrderedDict FIFO levels with physical indexed cancellation, and B3 deque levels with heap/in_heap price index, lazy root cleanup and unchanged B1 deque compaction. Share B1 public/validation/result/counter paths by inheritance. | Red stubs: `05_evidence/20261121T234202Z_b5411d4-dirty_phase3b-variants-red.txt` (142 failures, all missing B2/B3 implementation); B2 green 68 cases, B3 green 74 cases in saved targeted runs | B1 and A algorithm files, shared validator and original expectations remain unchanged. No B/A disagreement or corrective algorithm patch was needed. |
+| 2026-11-22 | Codex | Extend contract/own replay and real-version controls via registry; instantiate the original stateful rule/assertion set for A vs each B; parametrize replay CLI over A/B/B1/B2/B3. | Full suite `05_evidence/20261121T234932Z_b5411d4-dirty_phase3b-all-tests-green.txt`: 501 passed in 175.51s | Parametrization adds coverage; no expected result or original contract assertion was weakened. |
+| 2026-11-22 | Codex | New internal cases exercise exact compaction equality boundary, B2 physical middle cancellation, B3 duplicate prevention on price recreation, lazy heap cleanup and intentionally retained worse-price entries. | `05_evidence/20261121T234510Z_b5411d4-dirty_phase3b-internal-and-cli-green.txt`: 32 passed; two in-memory faults (>= compaction and duplicate heap key) killed by intended checks with AssertionError: `05_evidence/20261121T234742Z_b5411d4-dirty_phase3b-internal-mutation-probes.txt` | Original 17 A mutants remain unchanged; fault probes do not change source or registry outside their subprocess. |
+| 2026-11-22 | Codex | Write B2/B3 worst/expected/amortized code arguments and pre-timing predictions. | SPEC.md Phase 3b; no official performance claim | B3 heap size K=P+S_h can grow with past distinct prices, unlike its bounded deque tombstones. Heap quote cleanup is not constant worst-case; Phase 4 must measure this. |
+| 2026-11-22 | Codex | One-shot A/B1/B2/B3 sanity on all five supplied 10k streams, counters off, parse/setup separate, fresh books, all correctness comparisons after timing. | `05_evidence/20261121T234816Z_b5411d4-dirty_phase3b-sanity-not-a-benchmark.txt`; raw run folder below | Sanity, not a benchmark: no warm-up/repeated medians; fixed A/B1/B2/B3 order, uncontrolled caches/GC. No final winner chosen. |
+
+Full command (existing pinned README venv):
+`python evidence.py phase3b-all-tests-green -- python -m pytest -q --tb=short --basetemp=scratch/pytest-phase3b --junitxml=05_evidence/phase3b-all-tests.xml`.
+[Full output](../05_evidence/20261121T234932Z_b5411d4-dirty_phase3b-all-tests-green.txt);
+[every-case summary](../05_evidence/20261121T235750Z_b5411d4-dirty_phase3b-results-summary.txt).
+
+| Test file | Passed | Failed |
+|---|---|---|
+| `test_contract.py` | 256 (64 per registered version) | 0 |
+| `test_validation.py` | 184 | 0 |
+| `test_mutants.py` | 22 (17 kills, naming check, 4 real-version controls) | 0 |
+| `test_own_datasets.py` | 4 | 0 |
+| `test_replay.py` | 15 (includes B1 alias) | 0 |
+| `test_b_internal.py` | 17 (applicable B variants; no skips) | 0 |
+| `test_stateful.py` | 3 (A vs B1/B2/B3) | 0 |
+| Total | 501 | 0 |
+
+All three stateful machines retain max_examples=300 / stateful_step_count=60,
+compare results/books after every generated event, and check invariants and
+conservation. Each version also replays all 18 independent own expected files
+and the first 1000 events per supplied stream with the original step checker.
+The separate sanity compares each B variant's 50,000 results and five final books
+to A (150,000 result comparisons total); intermediate books over the complete
+10k streams are not compared in that timing run.
+
+**Sanity, not a benchmark**, replay seconds (single observations):
+
+| Scenario (10k events) | A s | B1 s | B2 s | B3 s |
+|---|---|---|---|---|
+| `buildup` | 7.348022 | 0.053039 | 0.051708 | 0.053452 |
+| `crowded` | 7.984575 | 0.043179 | 0.047533 | 0.045571 |
+| `mixed` | 0.993087 | 0.047189 | 0.049398 | 0.075636 |
+| `sweep` | 7.888637 | 0.057057 | 0.055969 | 0.054018 |
+| `cancel_churn` | 0.029583 | 0.036689 | 0.049578 | 0.053755 |
+
+Raw parse/setup/replay values, environment and the green full test output:
+`03_results/runs/20261121T234816Z_b5411d4-dirty_phase3b_sanity_not_benchmark/` (sanity.json, env.json, tests.txt).
+Result-list construction/retention is the same runner behavior for every version;
+books retain no history. These observations do not choose a final B or establish
+scaling. Formal workload grid, repeats, latency, memory and count runs remain Phase 4.
+
+Open specification questions: none. B3's retained stale-price heap and B2's
+OrderedDict overhead are explicit Phase 4 tradeoffs. Await Claude (chat) / Laurin
+review at this checkpoint; adaptive switching remains deferred.
+
+Final review by Codex: read the new engine files, pytest port and variant cases,
+test/CLI/sanity diffs and documentation changes for unrelated behavior, names,
+comments and content. No traces of the logged injection found and no new
+embedded instructions encountered. All writes are inside Assignment1; no
+deletions or installs. A, B1, shared validation, original contract assertions,
+expected data, own generators and dependency pins are unchanged. AST checks
+confirm the original stateful methods/rules (except constructor wiring) and
+all original CLI assertions are unchanged. Python 3.13.15, pytest 9.2.0,
+hypothesis 6.155.7; whitespace check clean. Source hashes and artifact checks:
+[final review](../05_evidence/20261122T000304Z_b5411d4-dirty_phase3b-final-review.txt).
+
+Q11 byte-preservation detail: added an exercise-local `.gitattributes` entry
+`06_data/supplied/generate_orders.py -text`, so Windows Git text/EOL conversion
+does not rewrite the supplied bytes. Current sha256/4019-byte size still match
+the course manifest. No checkout or other git mutation was run; a clean-clone
+verification remains Phase 7.
+
+Proposed commands for Laurin, from `Assignment1/` (not executed by Codex):
+
+```powershell
+git add -- .gitattributes 01_code 02_tests 00_docs 05_evidence 06_data/supplied/generate_orders.py 03_results/runs/20261121T234816Z_b5411d4-dirty_phase3b_sanity_not_benchmark SPEC.md README.md
+git commit -m "Assignment1 Phase 3b: B2/B3 variants, pytest internals and verified supplied generator"
+```
+
+Checkpoint: STOP. Await Claude (chat) review and Laurin's next phase instruction.
