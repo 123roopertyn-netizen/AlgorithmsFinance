@@ -716,3 +716,36 @@ then A. The wrapper applies the cap only to A outside official/million.
 New full requested coverage is 1168 workers: B3r 564, comparators 168, A 436;
 128 former A workers are outside declared scope. The restriction uses the
 catalog's size field (including documented driver definitions for added cases).
+
+## Optional B3r_fast acceptance rule (Laurin, 2026-11-22, BEFORE measuring)
+
+"B3r stays the final Version B unless B3r-fast passes every correctness gate
+below AND is >= 10 % faster (geometric mean of the 15 official 100k median
+replay times) AND no measured scenario is > 5 % slower than B3r. Otherwise
+B3r-fast is reported as tried and rejected."
+
+Operationally, require at least a10% reduction in the geometric mean replay
+time (fast/reference <=0.90), and fast/reference <=1.05 on every matched
+scenario/size/seed with a primary replay median in official +post_attack.
+Memory-only cases have no primary replay median; report their memory curves
+and all latency/count diagnostics separately, without fabricated speed ratios.
+Incomplete/stopped/missing required observations cannot promote the candidate.
+
+G1: exact validator equivalence on the exhaustive field/odd-value and paired
+field corpus, non-dicts, three event types, expected_type variants, int
+subclasses and bool, plus Hypothesis arbitrary JSON-like input.
+G2: B3r/fast compare every result (including dict key order), snapshot and
+best bid/ask after EVERY event on all supplied streams, own datasets and every
+07_attack stream family, counted and uncounted, plus a stateful differential.
+The existing A-vs-version stateful differential also includes B3r_fast.
+G3: every existing standard/attack check runs for the new registered version;
+all mutants remain killed. Existing engines, validator and tests/expectations
+are immutable. Fast code uses the same algorithm, records, heaps/deques,
+thresholds, API, result/rejection formatting and counter semantics.
+
+Claude (chat)'s supplied 10k profile (~one-third validation, plus process
+forwarding) is attributed guidance, not a new Codex measurement. No long run
+in this build checkpoint. Compare a later B-only B3r_fast official/post_attack
+session with committed B3r results from phase4_b3r_20261122. Correctness gates
+alone do not select fast; B3r remains final until every acceptance condition
+has fresh evidence. No optimization is presumed successful.

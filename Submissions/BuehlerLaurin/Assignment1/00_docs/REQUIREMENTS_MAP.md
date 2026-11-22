@@ -309,3 +309,31 @@ in evidence): [1419 passed in 69.78 s](../05_evidence/20261122T120132Z_958c8b4-d
 [Final scope/data/plan review](../05_evidence/20261122T120353Z_958c8b4-dirty_b3r-final-review.txt)
 checks every standard XML case, protected paths, byte-stable real manifest
 verification, all 20 input hashes and the 1296-worker nightly ordering.
+
+## Optional B3r_fast gate (2026-11-22, base 3c95836)
+
+The completed B3r session is committed; B3r stays final. SPEC/AI_LOG record the
+acceptance rule BEFORE any fast benchmark: all correctness gates, at least 10%
+lower official 100k geometric-mean time, no matched replay median more than 5%
+higher. Correctness alone cannot promote the optional variant.
+
+| Requirements | Optional variant evidence |
+|---|---|
+| R1, R3-R26, R28-R31, R36 | Every existing contract, own expected dataset, internal check, mutant control and A-vs-version stateful test runs for the registered fast class, unchanged. Added G2 covers every event of complete supplied/own files and all 32 attack families, counted/uncounted, plus B3r-vs-fast stateful. |
+| R6, R15-R17 | User-authorized separate fast validator: ordinary builtin fields take a direct path, all other cases fall back to unchanged validate. G1: 1,797,952 return/callback-trace comparisons plus Hypothesis arbitrary JSON-like values, including bool/subclasses/missing/pairs and expected_type variants. |
+| R27, R36-R37 | Stub red 192427Z -> G1/small-G2 green 192534Z. Callback retry red 193456Z -> green 193532Z. Saved-result boundary tests red 193053Z -> green 193351Z (10 pass). No old test/expected source changed. |
+| R33-R35 | Same B3r constructor/records/deques/heaps/rebuild rules. Inline process dispatch and local bindings only; complexity/cleanup/memory limitations unchanged. No measured speedup or adoption claim. |
+| R40-R57, R62-R63 | Plan-only previews 236 B3r_fast workers on official/post_attack. Stored B3r session is the reference. Same full timing protocol and separate diagnostics. Require57 timing pairs,15 score cells, matching inputs, complete repeats and source-bound correctness proof. |
+| R65 | README/BENCHMARK_PLAN give the rule, scope/reference, exact preview/start commands and incomplete-data rejection. B3r remains final until performance evidence qualifies fast. |
+
+[Full standard suite](../05_evidence/20261122T193624Z_3c95836-dirty_b3r-fast-all-tests.txt):
+**848 passed in 648.79s**. This includes both required stateful gates and the
+complete every-event comparisons; all original 17 mutants remain killed.
+[Committed attack suite](../05_evidence/20261122T193657Z_3c95836-dirty_b3r-fast-attack-suite.txt):
+**1697 passed in 79.31s**, including fast, --runxfail for archived fixed-bug markers.
+[Gate sensitivity](../05_evidence/20261122T194115Z_3c95836-dirty_b3r-fast-gate-mutants.txt)
+kills three temporary in-memory faults (unsafe bool validation, changed result
+key order, counter drift), separately from the original 17 mutants.
+[Plan-only](../05_evidence/20261122T193658Z_3c95836-dirty_b3r-fast-plan-only.txt):
+official 180 +post_attack 56, only fast, no engine execution. Source/standard/
+attack proof hashes are in `05_evidence/b3r_fast_correctness.json`.

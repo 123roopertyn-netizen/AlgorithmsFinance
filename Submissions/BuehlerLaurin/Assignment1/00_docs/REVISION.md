@@ -131,3 +131,24 @@ manifest and prefill/query pipeline support the nightly B3r / old-comparators /
 A sequence. A catalog timestamp integration bug was fixed after a minimal red
 regression. No performance optimization beyond the one requested B3r heap
 change, no old expected-file/test edits, no long measurements or git mutations.
+
+## Optional B3r_fast constant-factor trial (2026-11-22, base 3c95836)
+
+Laurin's exact acceptance rule is recorded before measurement: retain B3r unless
+all correctness gates pass, official 100k geometric-mean time is at least 10%
+lower, and no matched replay median anywhere is more than 5% slower. Otherwise
+report tried and rejected. Correctness alone does not promote the trial.
+
+Separate fast code recognizes ordinary exact builtin field types and falls
+back to the unchanged validator for every other case. Process dispatch is
+inlined; direct methods retain original APIs/reference validation. Matching
+binds stable methods/attributes to locals with unchanged operation sequence,
+records, queues, heaps, cleanup and result/counter semantics. A callback retry
+defect in the new fast validator was reproduced and fixed with a regression.
+
+New exhaustive/property/every-event/stateful gates, unchanged standard/attack
+suites and three in-memory gate-sensitivity probes provide correctness evidence.
+Saved-result comparison tests check the 10%/5% boundaries and reject incomplete
+or mismatched observations. A B-only official/post_attack wrapper previews 236
+workers, then later compares only with stored B3r results. No long performance
+measurement, winner change or modification to old engines/tests/expectations.

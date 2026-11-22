@@ -9,7 +9,8 @@ from lob.book_b import OrderBookB
 from lob.book_b2 import OrderBookB2
 from lob.book_b3 import OrderBookB3
 from lob.book_b3r import OrderBookB3r
+from lob.book_b3r_fast import OrderBookB3rFast
 
 METHODS = {("lob", "A"): OrderBookA, ("lob", "B"): OrderBookB,
            ("lob", "B2"): OrderBookB2, ("lob", "B3"): OrderBookB3,
-           ("lob", "B3r"): OrderBookB3r}
+           ("lob", "B3r"): OrderBookB3r, ("lob", "B3r_fast"): OrderBookB3rFast}

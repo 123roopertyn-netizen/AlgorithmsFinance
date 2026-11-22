@@ -142,6 +142,17 @@ For these A cells, throughput uses that sole observation. Selection fallback
 and the CSV/metadata commit policy are in BENCHMARK_PLAN.md. Future per-cell
 jobs/journals/logs stay local through .gitignore; the superseded smoke is archived
 intact in scratch. Historical final smoke results remain unchanged.
+
+Optional B3r_fast (2026-11-22): B3r remains final unless every correctness gate
+passes, the 15-cell official 100k geometric-mean replay time falls by at least 10%,
+and no matched scenario median rises by more than 5%. This is a separate
+constant-factor variant: exact-builtin common-case validation with reference
+fallback, inlined process dispatch and local bindings in unchanged matching.
+It preserves B3r's structures, thresholds, API, output order and counters.
+Direct methods retain the inherited reference validator. No speedup is claimed
+before the optional B-only session. The current preview/start commands are in
+BENCHMARK_PLAN.md, "Optional B3r_fast session"; the stored B3r session is the
+comparison baseline. No long run is started by this checkpoint.
 Independent runs measure nearest-rank latency p50/p95/p99 in ns, traced memory
 including book/current fills but excluding parsed input/history, and operation
 counts. Traced memory is not RSS. Missing/stopped values remain explicit.
@@ -169,7 +180,7 @@ growth experiment. Smoke does not choose the final B. Long runs remain pending.
 
 ## Evidence block
 Commit to audit: <hash> (filled in by Laurin)
-Tests (B3r checkpoint): `python -m pytest -q --tb=short --basetemp=scratch/pytest-b3r-final --junitxml=05_evidence/b3r-all-tests-final.xml` -> `644 passed in 200.94s` (per-file table in `00_docs/AI_LOG.md`)
+Tests (optional fast checkpoint): `python -m pytest -q -s --tb=short --basetemp=scratch/pytest-b3r-fast --junitxml=05_evidence/b3r-fast-all-tests.xml` -> `848 passed in 648.79s` (per-file table in `00_docs/AI_LOG.md`); committed attack suite -> `1697 passed in 79.31s` with --runxfail.
 Benchmark (Phase 4a smoke only): `python run.py bench.run_all --part smoke --session phase4a_smoke_final` -> `03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/`, 216/216 cells OK; full grid pending.
 Fresh-venv check: pending Phase 7 (existing pinned venv used through Phase 4a)
 

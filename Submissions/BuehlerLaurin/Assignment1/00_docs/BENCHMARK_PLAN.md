@@ -393,3 +393,101 @@ Checkpoint evidence: [644 standard tests](../05_evidence/20261122T115638Z_958c8b
 [final source/data/plan review](../05_evidence/20261122T120353Z_958c8b4-dirty_b3r-final-review.txt).
 All20 new inputs are generated and verified (3,541,884 events, 30,603,345 gzip
 bytes), ready locally for the human-run session. Preview created no books.
+
+## Optional B3r_fast session (rule fixed 2026-11-22 BEFORE measuring)
+
+The B3r session and scoped A baseline are committed at 3c95836. B3r remains
+the final Version B. The optional fast version may replace it ONLY when all
+G1/G2/G3 correctness gates pass, geometric-mean replay time at official 100k is
+at least 10% lower, and no matched scenario replay median is more than 5% higher.
+Otherwise report **tried and rejected**. Missing/stopped/partial data cannot
+qualify. This rule is also quoted verbatim in SPEC.md and AI_LOG.md.
+
+Use fast/B3r<=0.90 on the geometric mean over five official scenarios times
+seeds 42/43/44 at 100k (15 cells), and fast/B3r<=1.05 for EVERY primary replay
+median at all measured sizes in official+post_attack. The latter covers57
+matched timing cells, not just the 15-cell score. Memory-only cases do not have
+a replay time: report their full diagnostics without inventing a speed ratio.
+Require all 236 requested workers to complete successfully before eligibility.
+
+The exact reference is
+`03_results/runs/20261122T130145Z_00bb1ad_phase4_b3r_20261122/`, version B3r.
+It is stored earlier-session evidence on the same machine/venv/inputs; preserve
+both environments and raw repeats, and acknowledge cross-session timing noise.
+Do not remeasure B3r, A or B1/B2/B3 in this optional session. Existing data and
+original result folders remain immutable. No new speed claim is made here.
+
+New session `phase4_b3r_fast_20261122` measures only B3r_fast:
+
+| Part | Cases | Timing workers | Other instrumentation workers | Total |
+|---|---:|---:|---:|---:|
+| official | 45 (1k/10k/100k, seeds 42/43/44) | 45 | 135 | 180 |
+| post_attack | 20 (same added cases/driver grid) | 12 | 44 | 56 |
+| Total | 65 | 57 | 179 | 236 |
+
+All timing cells keep one warm-up + five measured trials, fresh construction,
+preparsed events, counters off, same enabled GC and same limits. Latency,
+tracemalloc curves/peaks and counters stay separate. Input hashes/settings and
+five-repeat completeness must match B3r. All losses, stops and missing data
+remain visible; no partial median or imputed duration can pass the gate.
+
+G1 exhaustively compares every field and every pair against the original
+validator on odd/missing values, all three types, expected_type variants,
+non-dicts and int/str/dict subclasses; it also checks callback invocation order
+and arbitrary JSON-like Hypothesis inputs. G2 compares B3r/fast after EVERY
+event of all five complete supplied 10k streams, the worked example, all 18 own
+datasets and all 32 attack-generator families (including small hash_full inputs
+for correctness only), counted and uncounted. It compares results/key order,
+snapshots, quotes, last_seq and counters; both B3r-vs-fast and A-vs-fast
+stateful machines are required. G3 is the complete standard and committed
+attack suite with every registered version and all original mutant controls.
+No existing test/expected file or engine/shared validator is edited.
+
+The optimized path recognizes ordinary exact builtin types; every other case
+uses the unchanged validator. Only process dispatch is inlined; direct methods
+retain their original API and validator. Matching binds stable attributes and
+methods to locals, with unchanged operation order and data structures.
+The optional variant has B3r's complexity, memory/cleanup rules and limitations.
+
+After tests, `bench.assess_fast record-gates` saves source identity and XML
+hashes in `05_evidence/b3r_fast_correctness.json`. The wrapper verifies that
+proof before a real run. It never accepts a stale proof for changed source.
+Saved-result comparison checks all 57 matched medians and all 236 worker statuses,
+then writes `fast_acceptance.json` in the trial run folder. Its decision is
+"eligible for adoption" or "tried and rejected"; the analysis command's PASS
+only says analysis executed, not that the fast candidate qualified.
+
+Exact commands for Laurin from Assignment1, after review and commit:
+
+```powershell
+& .\01_code\bench\try_b3r_fast.ps1 -PlanOnly
+& .\01_code\bench\try_b3r_fast.ps1 -AllowLong
+```
+
+Only the first command is executed at this checkpoint. The second is the
+explicit human start command; it runs official then post_attack, then compares
+with the stored B3r reference. To repeat analysis without measuring:
+
+```powershell
+python run.py bench.assess_fast compare 03_results/runs/20261122T130145Z_00bb1ad_phase4_b3r_20261122 <trial_run_dir> --gates 05_evidence/b3r_fast_correctness.json
+```
+
+No long benchmark in this build checkpoint; no eligibility/winner assertion
+from correctness-only or synthetic comparison tests. B3r stays final pending
+real evidence. Do not silently optimize another bottleneck to force acceptance.
+
+Proposed git commands, not executed:
+
+```powershell
+git add -- 01_code/lob/__init__.py 01_code/lob/book_b3r_fast.py 01_code/bench/core.py 01_code/bench/assess_fast.py 01_code/bench/try_b3r_fast.ps1 02_tests/test_fast_equivalence.py 02_tests/test_fast_assessment.py SPEC.md README.md 00_docs 05_evidence
+git commit -m "Assignment1: optional B3r_fast with equivalence gates and strict benchmark rule"
+```
+
+Checkpoint: G1/G2/G3 pass, [848 standard tests](../05_evidence/20261122T193624Z_3c95836-dirty_b3r-fast-all-tests.txt)
+and [1697 attack tests](../05_evidence/20261122T193657Z_3c95836-dirty_b3r-fast-attack-suite.txt).
+G2 checks 146,514 event comparisons, including every event of each complete
+supplied/own file and all 32 attack families in both counter modes. The
+[source-bound proof](../05_evidence/b3r_fast_correctness.json) and
+[final review](../05_evidence/20261122T194837Z_3c95836-dirty_b3r-fast-final-review.txt)
+verify source/coverage/reference/preview. Correctness proof is ready for the
+human-run session. No fast timings exist; B3r remains final, adoption pending.

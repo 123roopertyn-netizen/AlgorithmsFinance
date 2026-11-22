@@ -587,3 +587,121 @@ Read the complete wrapper diff and changed planning/spec/log prose for scope,
 unrelated behavior/names/comments and the known injection: no traces found and
 no NEW embedded instructions encountered. Whitespace and scope checks pass.
 Proposed git paths/message are in BENCHMARK_PLAN.md. STOP for review and Laurin.
+
+## Optional B3r_fast build (2026-11-22, rule fixed BEFORE measuring)
+
+Laurin reports the B3r session, including A, finished and was committed. Read-only
+history confirms base 3c95836. Claude (chat)'s profile on supplied 10k streams
+attributes about one-third of per-event time to validation and also identifies
+the process->_process forwarding layer. This is attributed supplied profiling,
+not a new measurement by Codex.
+
+Acceptance rule, recorded before any new measurement:
+"B3r stays the final Version B unless B3r-fast passes every correctness gate
+below AND is >= 10 % faster (geometric mean of the 15 official 100k median replay
+times) AND no measured scenario is > 5 % slower than B3r. Otherwise B3r-fast is
+reported as tried and rejected."
+
+Interpret the time improvement as fast/reference<=0.90 on the 15-cell geometric
+mean, and fast/reference<=1.05 for every matched primary replay median across
+official/post_attack. Record all diagnostics, no imputed time or premature
+promotion. G1 exhaustive/property validator, G2 full every-event equivalence
+and stateful checks, and G3 standard/attack/mutant suites are all mandatory.
+Keep the old engines/shared validator, tests and expectations unchanged. Build
+only the separate registered fast code; no data-structure or algorithm change.
+Stop before any long benchmark, with a B-only preview and exact human command.
+
+Applied aif-exercise, aif-tdd, aif-debug for the reproduced callback issue,
+aif-bench and aif-verify. No delegation. Existing engines/shared validator,
+tests and expected files are immutable; only new files plus registry/benchmark
+registration are added. B3r remains final throughout this checkpoint.
+
+New tests were authored against a NotImplemented validator/engine module.
+Initial red 192427Z fails the first G1 case on the stub. Fast validation only
+recognizes ordinary exact builtin fields, with liveness last; everything else
+delegates to unchanged validate. Direct engine methods retain the inherited
+API and validator; process inlines the old forwarding body. Matching only
+binds stable references to locals; structures, thresholds, operation order,
+fill dictionaries and counters are unchanged.
+
+Green 192534Z:1,797,952 exhaustive validator comparisons with identical callback
+traces, 1500 Hypothesis arbitrary JSON-like examples, and all 32 attack-generator
+families counted/uncounted after every event (66 tests). Corpus: nine fields,
+all field pairs, all prescribed odd/missing values, three event types, eight
+expected_type variants, four sequence states and two live-id states, including
+dict/str/int subclasses. Supplied-file selection includes six event streams
+and excludes metadata sidecars; no input file is altered.
+
+Corrected Codex defect: putting is_live inside the missing-field KeyError
+handler retried a callback KeyError. Regression red 193456Z and green 193532Z
+prove the callback now propagates once from outside that handler. Reference
+validation stays unchanged; no expectation is weakened. Gate-sensitivity
+evidence 194115Z kills three temporary in-memory mutants by AssertionError:
+unsafe bool acceptance, reversed result-key order with equal values, and
+counter-only drift. These probes are separate from the original 17 mutants.
+
+Saved-row acceptance tests: red 193053Z (10 stub failures), green 193351Z
+(10 passed), covering exact 10%/5% boundaries, losses outside the 15-cell score,
+missing/stopped/partial/duplicate rows and mismatched input hashes. The
+comparator requires all 57 timing pairs and 236 successful worker observations,
+plus matching source-bound correctness proof. Synthetic saved rows are test
+fixtures, never represented as measured performance.
+
+Plan-only 193658Z: phase4_b3r_fast_20261122 measures B3r_fast only, official 180
+workers + post_attack 56 = 236. No older engine is remeasured. Reference:
+03_results/runs/20261122T130145Z_00bb1ad_phase4_b3r_20261122/.
+try_b3r_fast.ps1 requires explicit -AllowLong and matching correctness evidence
+for a real run; it compares saved results afterward. Exact preview/start
+commands are in BENCHMARK_PLAN.md. No long run starts in this checkpoint.
+
+Attack suite 193657Z: **1697 passed in 79.31s**, all six registered engines,
+with --runxfail for the archived fixed ATK-01 markers. No attack source/test
+is edited. Full standard gates also replay all complete supplied and own files,
+with result/snapshot/quote comparisons after EVERY event, counted and
+uncounted, plus both new and existing stateful differentials. Snapshot-copy
+test duration is not an algorithm timing measurement or speedup evidence.
+
+Final fresh standard run 193624Z: **848 passed in 648.79s**, no failures/errors/
+skips/warnings. G2 verifies146,514 event-by-event comparisons across six full
+supplied streams (five10k +worked example),18 own files and 32 attack families,
+each counted and uncounted. All outputs and fill-key order, snapshots, quotes,
+last_seq and counted state agree. Both required stateful machines pass (the
+registry-driven A-vs-fast case and dedicated B3r-vs-fast case), configured 300
+examples/60 steps, as do the old variants' stateful cases.
+
+| Standard file / group | Passed |
+|---|---:|
+| test_contract.py | 384 (64 per registered version) |
+| test_validation.py | 184 |
+| test_mutants.py | 24 (17 kills, naming, six real controls) |
+| test_own_datasets.py | 4 |
+| test_replay.py | 21 |
+| test_b_internal.py | 27 |
+| test_stateful.py | 5 (A vs each B) |
+| test_b3r.py | 6 |
+| test_replay_regressions.py | 24 |
+| test_bench_pipeline.py | 30 |
+| test_post_attack_pipeline.py | 13 |
+| test_fast_equivalence.py | 115 functions/parameters +1 B3r/fast stateful |
+| test_fast_assessment.py | 10 |
+| Total | 848 |
+
+Source-bound proof `05_evidence/b3r_fast_correctness.json` records G1/G2/G3,
+both complete suite XML hashes and source fingerprint
+`f82455f1ced229fd6d5cffb29727b67b4cce1a53e6c6d7b649ce66d7f03dcbd2`.
+[Proof creation](../05_evidence/20261122T194837Z_3c95836-dirty_b3r-fast-correctness-proof.txt)
+and [final review](../05_evidence/20261122T194837Z_3c95836-dirty_b3r-fast-final-review.txt)
+confirm all 848/1697 cases green, all required per-event coverage, every original
+engine/validator/test/expected/data/result/attack path unchanged, and same
+constructor/structures/public signatures/cleanup methods by identity.
+AST comparison proves the inlined process body is identical after the
+validator call, and matching is identical after undoing only local bindings.
+The236-worker preview,57 full five-repeat B3r reference medians and 15-cell score
+are verified. No new benchmark session exists. No timing conclusion is made.
+
+Codex read the complete new fast/comparison/wrapper/test source and changed
+docs for unrelated behavior, names/comments/content and the known injection;
+no traces and no NEW embedded instructions found. Scope/whitespace checks pass;
+dependency pins are unchanged. No deletes/installs, remote actions or git
+mutations. B3r remains final. Exact benchmark start command and proposed git
+paths/message are in BENCHMARK_PLAN.md; STOP before any long run for review.

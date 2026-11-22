@@ -4,7 +4,7 @@ from lob import METHODS
 from lob.book_a import OrderBookA
 from lob.book_b import OperationCounters
 
-VERSIONS = ("A", "B1", "B2", "B3", "B3r")
+VERSIONS = ("A", "B1", "B2", "B3", "B3r", "B3r_fast")
 
 
 class BaselineCounters(OperationCounters):
