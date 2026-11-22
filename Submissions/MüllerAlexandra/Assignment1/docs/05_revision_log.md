@@ -20,6 +20,22 @@ expectations remain unchanged. At this checkpoint, the full suite has 54
 passes and 51 expected failures, all caused by the intentionally unimplemented
 Version B methods or the differential test that invokes Version B.
 
+## User-requested critical review before Version B
+
+Before benchmarking or revising the engine, the user requested a critical
+review of whether the tests would withstand grading scrutiny. The review found
+gaps in direct nonincreasing-sequence coverage, required-field validation,
+sell-side hand-calculated symmetry, partial ask priority, canonical ordering,
+and price-level cancellation/reopening behavior. Focused cases were added
+without changing any earlier expected result.
+
+The strengthened Version A selection now has 76 passing tests. These additions
+were made after Version A and are not represented as pre-Version-A evidence;
+they establish a stronger behavioral contract before Version B. The full
+pre-revision suite has 77 passes and 74 expected failures, with every failure
+caused by the intentionally unimplemented Version B or the differential test
+that invokes it.
+
 No Version B algorithmic revision has been made yet. The measured bottleneck,
 revision rationale, and tests added for discovered cases will be recorded
 without weakening earlier expected outcomes.

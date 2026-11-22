@@ -22,6 +22,13 @@ rejected with the reason and the verification performed.
   checked event by event against a separate test-only reference model and
   visible state invariants, rather than treating agreement between submitted
   implementations as independent correctness evidence.
+- Before benchmarking or Version B, the user proposed a critical review of
+  whether the tests were meaningful and covered grading-relevant edge cases.
+  AI audited the suite against the supplied contract and identified missing
+  direct cases. The user accepted focused additions for nonincreasing
+  sequences, required-field validation, sell-side symmetry, partial ask FIFO,
+  canonical ordering, and empty/reopened price-level behavior. No earlier
+  expected result was changed.
 
 ## Pending suggestions
 

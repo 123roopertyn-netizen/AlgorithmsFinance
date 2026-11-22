@@ -64,3 +64,42 @@ def test_cancelling_one_order_does_not_disturb_other_priority(book: OrderBook) -
         resting("third", "BUY", 100, 1, 3),
     ]
 
+
+def test_cancelling_head_of_queue_exposes_next_arrival(book: OrderBook) -> None:
+    book.process_event(limit_event(1, "first", "BUY", 101, 1))
+    book.process_event(limit_event(2, "second", "BUY", 101, 1))
+    book.process_event(cancel_event(3, "first"))
+
+    result = book.process_event(market_sell_event(4, "seller", 1))
+
+    assert result["fills"] == [
+        {
+            "maker_id": "second",
+            "taker_id": "seller",
+            "price_ticks": 101,
+            "qty_units": 1,
+        }
+    ]
+    assert book.inspect_book() == []
+
+
+def test_cancelled_empty_best_level_can_reopen_without_stale_priority(
+    book: OrderBook,
+) -> None:
+    book.process_event(limit_event(1, "old-best", "BUY", 101, 1))
+    book.process_event(limit_event(2, "lower", "BUY", 100, 1))
+    book.process_event(cancel_event(3, "old-best"))
+    book.process_event(limit_event(4, "new-best", "BUY", 101, 1))
+
+    result = book.process_event(market_sell_event(5, "seller", 1))
+
+    assert result["fills"] == [
+        {
+            "maker_id": "new-best",
+            "taker_id": "seller",
+            "price_ticks": 101,
+            "qty_units": 1,
+        }
+    ]
+    assert book.inspect_book() == [resting("lower", "BUY", 100, 1, 2)]
+

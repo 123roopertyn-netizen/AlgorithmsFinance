@@ -1,9 +1,9 @@
 # Assignment 1: limit order book
 
 This project implements and measures two Python versions of a sequential,
-single-venue BTC limit order book. The current checkpoint contains the
-test-first contract and deliberate implementation stubs; matching logic has
-not yet been implemented.
+single-venue BTC limit order book. The transparent list-based Version A is
+implemented and verified. Version B remains a deliberate implementation stub
+until Version A is measured and the revision is justified.
 
 ## Environment
 
@@ -62,8 +62,8 @@ files belong under `data/generated/` and are not committed.
 
 ## Development status
 
-1. Specification and independent tests: complete for the initial engine contract.
-2. Transparent baseline: implemented and passing its selected contract tests.
+1. Specification and independent tests: strengthened by pre-revision critical review.
+2. Transparent baseline: implemented and passing its applicable contract tests.
 3. Revised implementation: not implemented.
 4. Measurements and dashboard: not started.
 

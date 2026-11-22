@@ -60,7 +60,8 @@ def test_resting_book_is_uncrossed_positive_and_unique(book: OrderBook) -> None:
         limit_event(4, "a2", "SELL", 99, 1),
     ]
     for event in events:
-        book.process_event(event)
+        result = book.process_event(event)
+        assert result["status"] != "rejected"
         snapshot = book.inspect_book()
         ids = [order["order_id"] for order in snapshot]
         assert len(ids) == len(set(ids))
