@@ -4,7 +4,7 @@ Submission of Bastian Bundschuh for *Algorithms in Finance* (take-home exercise,
 26 November 2026, 18:00). Task and data: `docs/ASSIGNMENT_README.md`,
 `docs/AlgorithmsFinance_Exercise1.pdf`.
 
-**Status: Phase 0 (setup and specification).** Engines are stubs; sections marked TODO
+**Status: Phase 1 (tests written, red).** Engines are stubs; sections marked TODO
 are filled in later phases.
 
 A sequential, single-venue BTC limit order book in Python with price-time (FIFO) priority,
@@ -41,6 +41,21 @@ python3 -m venv .venv
 | Generate data | TODO (Phase 5: `bench/make_data.sh`) | `data/generated/` (not committed) |
 | Benchmarks | TODO (Phase 6) | `results/` |
 | Dashboard | TODO (Phase 7) | loads `results/` only |
+
+## Tests
+
+`.venv/bin/python -m pytest -q`: 328 tests; every test with a `book` runs for A and B.
+Every event in a test goes through `tests/helpers.py::step()`, which checks invariants
+I1-I7 and price-time order after that event (see `SPEC.md` section 4).
+
+| File | What it covers |
+|---|---|
+| `tests/test_validation.py` | 86 malformed events (non-dict, missing fields, `None`, `True`, floats, `nan`/`inf`, unhashable values, wrong case, duplicate live ids), first-failing-check order (D9), seq bookkeeping, id reuse after fill/cancel, extra fields ignored, no shared objects with the caller |
+| `tests/test_matching.py` | empty book, one order, sell smaller/equal/larger than depth, FIFO at one price, several prices, partial fill keeps priority, id spelling vs arrival, 1000-order queue, crossing limit buys/sells at resting prices, equality cross, emptied level recreated, huge integers |
+| `tests/test_cancel.py` | cancel before/after partial/full fill, repeat/unknown/near-miss ids, head/middle/tail of queue, only order at best price, cancel everything, add/cancel churn |
+| `tests/test_worked_and_files.py` | worked example (file and by hand), replay command, reader edge cases, the five supplied 10,000-event files with outcomes derived from the generator |
+
+Phase 1 red run (stubs): `docs/test_logs/phase1_red.txt`.
 
 ## Expected worked-example output
 
