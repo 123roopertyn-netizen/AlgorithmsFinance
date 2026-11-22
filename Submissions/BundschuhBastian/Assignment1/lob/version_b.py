@@ -96,11 +96,20 @@ class OrderBookB:
         is_buy = event["side"] == BUY
         order_id = event["order_id"]
         price = event["price_ticks"]
-        fills, remaining = self._take(self._asks if is_buy else self._bids, order_id,
-                                      event["qty_units"], price)
+        remaining = event["qty_units"]
+        opposite, own = (self._asks, self._bids) if is_buy else (self._bids, self._asks)
+        fills: list[dict] = []
+        keys = opposite.keys
+        # Only call the matching loop if the order can cross the best opposite price.
+        if keys and (price >= -keys[-1] if is_buy else price <= keys[-1]):
+            fills, remaining = self._take(opposite, order_id, remaining, price)
         if remaining > 0:
-            own = self._bids if is_buy else self._asks
-            own.add(order_id, price, remaining, event["seq"])
+            levels = own.levels                     # inlined _Side.add (hot path)
+            level = levels.get(price)
+            if level is None:
+                level = levels[price] = OrderedDict()
+                insort(own.keys, price if is_buy else -price)
+            level[order_id] = [remaining, event["seq"]]
             self._index[order_id] = (is_buy, price)
         return {"event_id": event["event_id"], "order_id": order_id,
                 "status": "resting" if remaining > 0 else "filled",
