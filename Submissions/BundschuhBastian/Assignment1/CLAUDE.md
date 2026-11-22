@@ -63,6 +63,30 @@ long benchmark runs in the morning) · Thu 26 phase 8.
   heap + lazy deletion (costs only amortized, memory can grow with submissions).
 - Notation in the report: M events, B active orders, P price levels, F fills, L emptied levels.
 
+## Performance goals
+The professor will rank Version B by speed on his own data.
+- Version A stays an untuned baseline. Do not optimize it.
+- Version B should be as fast as possible in pure CPython (no C extensions, no matching-engine
+  library), without breaking any test or SPEC.md decision.
+- Rules for every optimization:
+  1. Profile with `cProfile` first. Optimize what the profile shows, not what looks slow.
+  2. Take a before/after timing on `mixed` and `buildup` with 100,000 events (same seed, same
+     machine, median of repeats).
+  3. All tests must pass after the change (`.venv/bin/python -m pytest -q`).
+  4. Record each optimization in `REVISIONS.md` with the numbers (before, after, what changed).
+     Drop an optimization that does not help; record that too.
+- Candidate techniques (a menu, not a plan; measure each):
+  - orders as plain lists or `__slots__` classes instead of dicts or dataclasses;
+  - `deque` per price level for FIFO;
+  - O(1) cancel via an order index; lazy deletion + compaction is allowed, but document the
+    amortized cost and the worst-case memory (see the alternative in "Design notes");
+  - `bisect` on a sorted price list vs a heap for best price: measure both, keep the faster
+    one that stays correct;
+  - local-variable binding (`append = x.append`, attributes into locals) in the matching loop;
+  - cheap validation (shared `validate()` must keep the same reason codes and order).
+- Speed must not cost correctness: A-vs-B equivalence after every event (Phase 4) must still
+  hold, and results must not share objects with the book or event (D16 and Hard rules).
+
 ## Benchmark rules (Phase 6, from the assignment)
 - M ∈ {1,000; 10,000; 100,000}, seeds 42, 43, 44, all five scenarios; try 1,000,000.
   Declare a time/memory limit up front (e.g. 10 min/run), same for A and B; record stopped
