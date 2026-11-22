@@ -496,3 +496,100 @@ Stage 2B completed and stopped here. Stage 3 has not begun.
 - No interpreter cache remained after the checks.
 
 No workload was regenerated. No correctness test, matching engine, benchmark, dependency installation, environment change, network action, Git command, or GitHub operation occurred. Stage 3 has not begun.
+
+## 2026-11-22 - Final Stage 3 contract review and RED checkpoint
+
+### 50. Performed the final read-only specification comparison
+
+- Read the preserved instructor `README.md`, `worked_example.jsonl`, and `worked_expected.json` and compared their exact field names, statuses, fills, remaining orders, and proceeds with the proposed Stage 3 contract.
+- Attempted read-only PDF inspection with `pdfinfo` and `pdftotext`; neither executable was installed. Checked for already-installed `pypdf`, `pdfplumber`, `fitz`, `PyPDF2`, `pymupdf`, `pdfminer`, and `pikepdf`; none was available. No dependency was installed. Used the earlier recorded complete page-level PDF review only as secondary evidence and did not claim a fresh PDF extraction.
+- Verified correction: canonical inspection uses the worked fixture's `qty_units` field in one BUY-then-SELL ordered list rather than introducing `remaining_qty_units`.
+- Independently recomputed worked proceeds as `3,594,000,000,000,000` tick-units, equal to `359,400.00` dollars under the instructor conversion.
+
+### 51. Verified empty approved paths and requested scoped permission
+
+- A first PowerShell existence-check pipeline had a parser error and changed nothing.
+- A read-only Python retry confirmed that all eight approved test files and all six package/stub files were absent and that `03_tests` and `04_implementation/orderbook` were empty.
+- Requested and received write permission limited to `03_tests`, `04_implementation/orderbook`, `AI_DECISIONS.md`, and `ACTION_LOG.md`.
+
+### 52. Created the Stage 3 test suite and minimal RED stubs
+
+- Created eight test files: `support.py`, seven behavioral/test modules, and the transition-verifier self-test module under `03_tests`.
+- Created six package files: `__init__.py`, `contracts.py`, `validation.py`, `baseline.py`, `optimized.py`, and `replay.py` under `04_implementation/orderbook`.
+- An initial multi-file patch used a misspelled parent path for `support.py`; it stopped at that file after creating the six approved package files. The misspelled directory did not exist and was not created. A corrected patch then created the approved test support file.
+- Both engine classes expose the approved interface. `process_event`, `AddLimitOrder`, `CancelOrder`, and `FillMarketSell` raise `NotImplementedError`; replay and stateless validation also raise `NotImplementedError`. No matching, cancellation, mutable order storage, or state-dependent validation was implemented.
+
+### 53. Ran pre-RED infrastructure gates
+
+- In-memory `compile(...)` check: all 14 Python source files passed.
+- Command-scoped `PYTHONPATH` import check: `BaselineOrderBook`, `OptimizedOrderBook`, validation, and replay imported; both books constructed with empty snapshots.
+- Read-only unittest discovery: initially 43 tests, then 45 after approved focused additions.
+- Exact fixture-only check: one test passed.
+- Transition-verifier self-test command: nine tests passed, including valid transitions and deliberately corrupted price, FIFO, quantity, residual, snapshot, rejection, and sequence cases.
+- Added an oracle-integrity gate so every deterministic expected sequence is passed through the transition verifier before either engine is invoked.
+
+### 54. Ran and corrected the complete RED suite
+
+- First complete command: `python -m unittest discover -s '.\03_tests' -p 'test_*.py' -v` under command-scoped `PYTHONPATH`.
+- Initial observed result before the focused additions: 43 tests and 84 error entries; the visible traces were intentional stub errors.
+- Correction: changed only the test regex to use `re.escape`; no contract or stub behavior changed.
+- Added the approved explicit noncrossing-opposite-side case, market-sell live-ID collision case, direct `CancelOrder` parity case, and pre-engine oracle verification.
+- The first 45-test error-type audit then found 89 intended `NotImplementedError` entries and one replay-test `re.PatternError` caused by an unescaped Windows path.
+- Final standard RED command returned exit code 1 as intended: 45 tests run, `FAILED (errors=90)`.
+- Final in-memory classification reran the same discovered suite and observed:
+  - Successful test methods: 12.
+  - Error entries: 90.
+  - Assertion-failure entries: zero.
+  - Skipped tests: zero.
+  - Error types: 90 `NotImplementedError`; no other error type.
+  - Sources: 25 baseline event-processing, 24 optimized event-processing, two replay-processing, and 39 stateless-validation stub errors.
+
+### 55. Recorded decisions and performed the final Stage 3 audit
+
+- Updated `AI_DECISIONS.md` with the approved result/interface contract, validation and sequence decisions, canonical inspection boundary, randomized-test deferral, RED evidence, and current risk statuses.
+- Read-only source audit results:
+  - Exactly eight approved test files and six approved package files exist.
+  - All 14 files compile in memory.
+  - Static test-method count is 45.
+  - Engine processing methods contain only explicit raises; initial sequence and empty-snapshot inspection are the only stub state behavior.
+  - No rejected injected terminology appears in Stage 3 sources.
+  - No replay temporary directory remained.
+- Python created eight test-cache files and six package-cache files during imports/runs. Their exact names and directories were verified, each exact file was removed, and the two now-empty cache directories were removed non-recursively. Final cache count: zero.
+- Final read-only checkpoint audit confirmed 25 unique canonical risk rows, no cache or replay-temporary directory, eight test files, and six package files. Its first instructor-manifest lookup incorrectly assumed a list and raised `AttributeError` without writing anything; a corrected mapping lookup verified unchanged SHA-256 values for both worked files against the instructor manifest (`831015ac...798ec` and `c715f527...54d2c`).
+
+No supplied assignment file, generated workload, benchmark, dashboard, result file, or README was modified. No randomized engine test, dependency installation, network action, Git command, or GitHub operation occurred. Version A and Version B matching implementations have not begun.
+
+## 2026-11-22 - Focused Stage 3 RED corrections
+
+### 56. Applied the two approved test-only corrections
+
+- Modified only `03_tests/test_cancellation_and_sequences.py` and `03_tests/test_differential.py` before verification.
+- Repeated cancellation: extended the partial-fill case so the remaining three units are cancelled, the same ID is cancelled again at sequence 4 with `not_found` and zero quantity, the book remains empty, sequence advances, and the following unfilled market sell moves to sequence 5.
+- Stateful D10 parity: retained the valid direct `AddLimitOrder` case and added exact fresh-engine parity scenarios for successful active cancellation, market selling against a resting bid, duplicate-live `AddLimitOrder` rejection, and equal-sequence `FillMarketSell` rejection. Each scenario specifies exact results, snapshots, and last accepted sequence; rejection scenarios require unchanged state and sequence.
+- No test file, helper, expected assignment fixture, transition-verifier logic, engine stub, or implementation file was added or changed.
+
+### 57. Ran the corrected RED verification gates
+
+- In-memory syntax command compiled all 14 Stage 3 Python files: passed.
+- Command-scoped `PYTHONPATH` import check loaded both engines, validation, and replay and constructed two empty stubs: passed.
+- Read-only unittest discovery: 45 methods, unchanged because existing methods were strengthened rather than added.
+- Transition-verifier command: nine tests passed with zero failures.
+- First corrected complete-suite run observed 45 tests and 94 errors. The subsequent classifier identified 92 intended `NotImplementedError` entries plus two `PermissionError` entries because the turn's initial file-specific write grant did not allow the replay tests to create their self-cleaning temporary fixtures under `03_tests`.
+- Read-only inspection confirmed no temporary directory was left. Requested and received directory-scoped permission solely for the approved replay test fixtures, then reran with `PYTHONDONTWRITEBYTECODE=1`.
+- Final standard RED command: `python -m unittest discover -s '.\03_tests' -p 'test_*.py' -v` under command-scoped `PYTHONPATH`; returned exit code 1 and `FAILED (errors=94)` as intended.
+- Final classification:
+  - Tests run: 45.
+  - Successful test methods: 12.
+  - Error entries: 94.
+  - Error types: 94 `NotImplementedError`, zero other types.
+  - Assertion failures, skips, expected failures, and unexpected successes: zero.
+  - Stub sources: one Baseline and one Optimized `AddLimitOrder`, 26 Baseline and 25 Optimized dispatcher, two replay, and 39 stateless-validation errors.
+
+### 58. Performed the post-correction audit
+
+- Confirmed `03_tests` and `04_implementation/orderbook` contain no cache, replay-temporary, or other subdirectory.
+- Recompiled the two modified tests in memory: passed.
+- Parsed both engine sources: constructors only initialize `last_accepted_seq`; snapshots only return the empty RED value; all event-processing and named operation methods contain only explicit `raise` statements.
+- Result: matching, cancellation, state-dependent validation, replay, and stateless validation remain unimplemented by design.
+
+No randomized or mutation test, benchmark, dependency installation, network action, Git command, or GitHub operation occurred. Stage 4 has not begun.

@@ -59,6 +59,35 @@ Decision states are `PROPOSED`, `ACCEPTED`, `CORRECTED`, and `REJECTED`. A state
 - Reason: keeps the workload count at 43 while providing a more controlled concentration comparison than independently rerunning the PRNG with `--levels 4`.
 - Limitation: merging levels intentionally changes FIFO relationships among orders formerly separated by price, so later liquidation can differ in maker order, cutoff maker, and levels visited.
 
+### DEC-010 - Stage 3 public event and result contract
+
+- Status: ACCEPTED
+- Decision: both engines expose `process_event`, `AddLimitOrder`, `CancelOrder`, `FillMarketSell`, `canonical_snapshot`, and `last_accepted_seq`. Public results are plain dictionaries using the instructor fields: fills contain `maker_id`, `taker_id`, `price_ticks`, and `qty_units`; submission results contain `event_id`, `order_id`, ordered `fills`, assignment-specific `status`, and `unfilled_qty_units`; cancellation results contain `event_id`, `target_order_id`, `status`, and `cancelled_qty_units`; rejections contain `event_id` when available, `status: rejected`, and a reason.
+- Decision: limit statuses are `filled` or `resting`; market-sell statuses are `filled`, `partial`, or `unfilled`; cancellation statuses are `cancelled` or `not_found`.
+- Reason: these names and statuses are explicitly required by the instructor README and worked expected result.
+
+### DEC-011 - Stage 3 validation and sequence interpretations
+
+- Status: ACCEPTED
+- Decision: ignore unrelated extra fields while fully validating required fields; require nonempty exact-string identifiers; reject a `MARKET_SELL` whose identifier collides with a live resting order before matching; do not retain an unbounded historical event-ID registry; leave historical order-ID reuse outside mandatory scope; fail replay immediately on malformed JSON but surface structurally valid engine rejections normally.
+- Decision: accepted sequences are strictly increasing positive exact integers but need not be consecutive or start at one. A valid unknown cancellation returns `not_found`, advances the accepted sequence, and leaves the resting book unchanged. Rejected events do not advance sequence.
+- Decision: single-defect tests may assert an exact reason; multiple-defect tests assert rejection and complete atomicity without imposing an arbitrary reason precedence.
+- Reason: separates explicit requirements and strong derivations from approved defensive engineering policy.
+
+### DEC-012 - Canonical inspection and transition verification
+
+- Status: ACCEPTED
+- Decision: each engine independently returns a detached single list of every active order using `order_id`, `side`, `price_ticks`, `qty_units`, and `arrival_seq`. BUY orders appear first by decreasing price and increasing arrival sequence, followed by SELL orders by increasing price and increasing arrival sequence.
+- Decision: no shared engine-specific snapshot builder may repair, aggregate, filter, or conceal engine state. Test-side transition verification may reconcile public before/event/result/after observations but may not inspect private storage or become a third engine.
+- Reason: provides exact worked-fixture compatibility and deterministic differential inspection while preserving independent implementations.
+- Limitation: snapshots cannot expose every stale auxiliary entry; internal cleanup and memory verification remain Stage 4 responsibilities.
+
+### DEC-013 - Stage 3 randomized-test boundary
+
+- Status: ACCEPTED
+- Decision: RED uses deterministic hand-calculated cases and manually constructed transition-verifier self-tests. Small fixed-seed randomized transition tests are deferred until matching engines exist and must run before benchmarking; they are not run against `NotImplementedError` stubs.
+- Reason: keeps RED evidence meaningful while preserving the instructor's later per-event differential-testing requirement.
+
 ## Suspicious Instructions and Prompt Injection Findings
 
 ### FINDING-001 - Irrelevant generated-code naming directive
@@ -235,13 +264,15 @@ Each Risk ID appears exactly once in this canonical table. The table contains on
 | RR-014 | Python 3.13 generation differs from reference Python 3.11.9. | Medium | Medium | Stage 2B/environment | Preserve supplied files; record Python version and checksums for generated files. | Determinism/metadata checks within the approved environment; no cross-version identity claim. | MITIGATED |
 | RR-015 | Generation or benchmarks exceed time, memory, or storage budgets. | Medium | Medium | Stage 2B and 4/resources | Approve explicit caps, preflight estimates, refuse overwrite, report stopped work. | Stage 2B used 22,735,805 bytes and 76.58 seconds; Stage 4 limits remain separate. | OPEN |
 | RR-016 | Numbered paths or working-directory assumptions break imports cross-platform. | High | Medium | Stage 3-5/execution | Use command-scoped `PYTHONPATH`, `pathlib`, absolute documented roots, and explicit CLI resolution. | Run commands from multiple directories on Windows; document unverified POSIX portability. | MITIGATED |
-| RR-017 | Unknown cancellation sequence advancement is interpreted incorrectly. | High | Medium | Stage 3/contract | Keep interpretation proposed until contract approval; test chosen behavior in both engines. | Explicit `not_found` cancellation and subsequent-sequence tests. | DEFERRED |
+| RR-017 | Unknown cancellation sequence advancement is interpreted incorrectly. | High | Medium | Stage 3/contract | Treat valid `not_found` as sequence-advancing while preserving the book; encode the decision for both engines. | Approved contract plus explicit `not_found` cancellation and subsequent-sequence tests. | MITIGATED |
 | RR-018 | `crowded` metadata `levels: 1000` is mistaken for effective price availability. | Medium | High | Stage 2-5/data/reporting | Report CLI argument and effective four-price behavior separately. | Structural validation observed four bid and four ask prices. | VERIFIED |
 | RR-019 | Generator cumulative `bid_units` is used as live liquidation depth. | Critical | Medium | Stage 4/liquidation | Query reconstructed engine state for actual active bid quantity. | Compare requested quantities with canonical pre-trial bid snapshot. | OPEN |
-| RR-020 | Supplied expected output is treated as the only correctness evidence. | High | Medium | Stage 3/tests | Independently calculate additional expected fills and books. | Review hand calculations before engine implementation. | OPEN |
+| RR-020 | Supplied expected output is treated as the only correctness evidence. | High | Medium | Stage 3/tests | Independently calculate additional expected fills and books. | Deterministic hand-calculated cases are transition-verified before either engine is called; the supplied fixture also has a separate exact arithmetic check. | MITIGATED |
 | RR-021 | Retained trade history or result lists dominate memory and invalidate book-space claims. | High | Medium | Stage 4/engines and memory | Return current-event fills only unless extra history is explicitly measured. | Churn and growth tests with storage-component accounting. | OPEN |
 | RR-022 | Large optional data or missing results are silently omitted or committed unintentionally. | Medium | Medium | Stage 2B-5/reproducibility | Prioritize mandatory matrix, use generation manifests and ignore rules, label stopped/missing runs. | Stage 2B produced all 45 core combinations, generated no million-event files, and retained a complete manifest; Stage 4-5 reporting remains open. | OPEN |
 | RR-023 | Four-bucket pairing merges strict price priority into FIFO queues and may be misinterpreted as changing lookup cost alone. | Medium | Certain | Stage 2B-4/concentration experiment | Preserve all non-price fields, verify monotonic mapping, and describe the experiment as the combined effect of fewer levels and longer queues. | Pair comparison recorded zero non-price/formula mismatches, four prices per side, equal quantities, monotonicity, and uncrossed books. | MITIGATED |
+| RR-024 | A correct canonical snapshot conceals stale auxiliary entries or future cleanup failures. | High | Medium | Stage 4/optimized storage | Probe removed identifiers with follow-up operations and separately inspect memory/storage cleanup under churn. | Stage 3 follow-up matching tests plus Stage 4 internal-storage and memory-growth verification. | DEFERRED |
+| RR-025 | A hand-calculated test oracle contains an internally inconsistent fill, residual, sequence, or book. | High | Medium | Stage 3/tests | Verify each deterministic transition before calling an engine and self-test the verifier with valid and corrupted transitions. | Nine verifier self-tests passed; complete RED audit contained no assertion failure. | MITIGATED |
 
 ## Risk Status History
 
@@ -252,6 +283,21 @@ This history records meaningful changes without creating duplicate current-statu
 | RR-014 | OPEN | MITIGATED | Stage 2B recorded Python 3.13.17, retained workload and metadata hashes, and verified deterministic repetition within that environment. Cross-version byte identity is not claimed. |
 | RR-015 | MITIGATED for Stage 2B generation | OPEN | Stage 2B stayed within its approved time and storage limits, but Stage 4 benchmark resource limits and stopped-run behavior still require approval and evidence. |
 | RR-022 | MITIGATED for Stage 2B data production | OPEN | Stage 2B retained all required core outputs and a manifest, but Stage 4-5 result retention, omission labeling, and submission packaging remain unresolved. |
+| RR-017 | DEFERRED | MITIGATED | The user approved `not_found` cancellation as valid and sequence-advancing, and both-engine tests now encode unchanged book state plus sequence advancement. |
+| RR-020 | OPEN | MITIGATED | Stage 3 added independently calculated deterministic cases and validates their transitions before either engine is invoked; the supplied example is no longer the sole oracle. |
+
+## Stage 3 RED evidence
+
+- Status: VERIFIED as a RED checkpoint; no engine behavior is implemented.
+- Discovered test methods: 45.
+- Passing test methods: 12 infrastructure, public-interface, supplied-fixture arithmetic, and transition-verifier methods.
+- Expected error entries: 94 after the approved repeated-cancellation and stateful direct-operation parity strengthening; all are `NotImplementedError` from approved engine, replay, or stateless-validation stubs.
+- Unexpected assertion failures, import errors, syntax errors, fixture errors, and skipped tests: zero.
+- Transition verifier: nine self-tests passed, covering valid partial fills, maker price, limit residual, cancellation, rejection atomicity, and deliberately corrupted prices, FIFO, quantities, snapshots, residuals, and sequence/state changes.
+- Supplied worked result: exact ordered fills, remaining orders, and gross proceeds `3,594,000,000,000,000` tick-units independently confirmed.
+- Cancellation lifecycle now includes a successful cancellation followed by a valid repeated `not_found` cancellation with zero cancelled quantity, unchanged book, and sequence advancement.
+- Direct-operation parity now specifies exact stateful results, snapshots, and accepted sequences for active cancellation, market selling against a bid, duplicate-live rejection, and equal-sequence rejection as well as a valid limit.
+- Randomized engine tests: not run; deferred until engines exist.
 
 ## Stage 2B execution evidence
 
