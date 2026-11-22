@@ -80,7 +80,7 @@ class OrderBookB:
 
     # --- entry point -------------------------------------------------------------
     def process(self, event: dict) -> dict:
-        if not is_valid_fast(event, self.last_seq, self._index.__contains__):
+        if not is_valid_fast(event, self.last_seq, self._index):
             reason = validate(event, self.last_seq, self._index.__contains__)
             if reason is not None:
                 return rejected_result(event, reason)  # last_seq stays unchanged

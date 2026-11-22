@@ -10,7 +10,7 @@ import gzip
 import json
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable, Container, Iterator
 
 # --- units (SPEC.md section 2) -------------------------------------------------------
 TICK_USD = Decimal("0.01")          # one price tick in USD per BTC
@@ -134,7 +134,7 @@ def validate(event: object, last_seq: int, is_live: Callable[[str], bool]) -> st
     return None
 
 
-def is_valid_fast(event: object, last_seq: int, live: Callable[[str], bool]) -> bool:
+def is_valid_fast(event: object, last_seq: int, live_ids: Container[str]) -> bool:
     """Cheap accept test for well-formed events (used by Version B on the hot path).
 
     True means: `validate()` would return None. False means "not sure": the caller then runs
@@ -158,7 +158,7 @@ def is_valid_fast(event: object, last_seq: int, live: Callable[[str], bool]) -> 
             qty = event["qty_units"]
             return (type(order_id) is str and order_id != "" and type(side) is str
                     and (side == "BUY" or side == "SELL") and type(price) is int
-                    and price > 0 and type(qty) is int and qty > 0 and not live(order_id))
+                    and price > 0 and type(qty) is int and qty > 0 and order_id not in live_ids)
         if etype == "CANCEL":
             target = event["target_order_id"]
             return type(target) is str and target != ""
@@ -166,7 +166,7 @@ def is_valid_fast(event: object, last_seq: int, live: Callable[[str], bool]) -> 
             order_id = event["order_id"]
             qty = event["qty_units"]
             return (type(order_id) is str and order_id != "" and type(qty) is int
-                    and qty > 0 and not live(order_id))
+                    and qty > 0 and order_id not in live_ids)
     except KeyError:
         return False
     return False

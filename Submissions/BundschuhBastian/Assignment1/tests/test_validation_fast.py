@@ -19,9 +19,20 @@ class StrSub(str):
     pass
 
 
+class LiveSet:
+    """Container view of a liveness function (fuzz ids: "o", "x", "t" ...)."""
+
+    def __init__(self, live):
+        self.live = live
+
+    def __contains__(self, order_id):
+        return self.live(order_id)
+
+
 def check(event, live):
+    """`live` is a function id -> bool for validate(); the fast test gets the same ids as a set."""
     ref = validate(event, 4, live) is None
-    fast = is_valid_fast(event, 4, live)
+    fast = is_valid_fast(event, 4, LiveSet(live))
     assert not (fast and not ref), f"fast accepted, reference rejected: {event!r}"
     return ref, fast
 

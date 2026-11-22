@@ -29,3 +29,5 @@ Baseline profile (committed B): `validate()` is ~50% of the time on both streams
 |---|---|---|---|---|
 | 1 | `is_valid_fast()`: one-pass accept test for good events; only if it says "not sure" run the reference `validate()` (so reason codes cannot differ). New fuzz test `tests/test_validation_fast.py`. | 0.1993 s -> 0.1742 s (-12.6%) | 0.2198 s -> 0.2003 s (-8.9%) | 332 pass |
 | 2 | `AddLimitOrder`: call the matching loop `_take` only if the order crosses the best opposite price (one comparison); inline `_Side.add` (no method call per insert). | 0.1747 s -> 0.1677 s (-4.0%) | 0.2009 s -> 0.1827 s (-9.0%) | 332 pass |
+| 3 (rejected) | `_take`: iterate the level with `for ... in level.items()` and delete used-up makers afterwards, instead of `next(iter(level.items()))` per fill. | 0.1670 s -> 0.1678 s (+0.5%) | 0.1833 s -> 0.1812 s (-1.2%) | 332 pass; reverted (within noise: few fills per event in these streams) |
+| 4 | `is_valid_fast` takes the order index itself (`order_id not in live_ids`) instead of a callable: one function call less per event. Fuzz test adapted (same checks). | 0.1671 s -> 0.1618 s (-3.2%) | 0.1836 s -> 0.1767 s (-3.7%) | 332 pass |
