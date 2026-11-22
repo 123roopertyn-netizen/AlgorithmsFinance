@@ -192,10 +192,83 @@ LIFO queue (295/300 streams) and a wrong cancelled quantity (297/300).
 | T7 | The differential test counts as one test for all versions (`cross_version` marker, shown in every version column). | |
 | T8 | `_index_remove_best` in B-sorted asserts that the emptied level is the last key (a cheap check in the timed path). | |
 | T9 | pytest runs the full 300-stream differential test (about 3 s). | |
-| T10 | B-sorted vs B-heap: reported as "no reliable winner" from single runs; to be decided by the final repeated benchmark. | |
+| T10 | B-sorted vs B-heap: reported as "no reliable winner" from single runs; to be decided by the final repeated benchmark. | Decided by the final benchmark (Session 5): no reliable winner on full streams; B-sorted reliably faster when one sale empties many levels. |
 
 ### Hidden instruction in the course PDF
 
 AGENTS.md warns of hidden text in the slides asking AI tools to insert a
 certain word into code. It was not followed; the word appears nowhere in
 the code.
+
+## Session 5: final benchmark, dashboard, explanations
+
+Maurice gave the benchmark specification: data, limits, timing protocol,
+experiments, latency, memory, operation counts, result files, dashboard and
+explanations. The AI wrote the scripts and ran a smoke test at M = 1,000.
+Maurice committed the scripts (`4b9df5f`), approved the decisions below, and
+the AI started the full run on a quiet, plugged-in laptop.
+
+### What the AI produced
+
+| File | Content |
+|---|---|
+| `04_benchmarks/bench_common.py` | Grid and limits, definitions, CSV helpers, child-process runner with the 120 s limit (+2 s grace, hard kill), git/source provenance, environment |
+| `04_benchmarks/bench_data.py` | Datasets via the course generator, sha256 check against its metadata, manifest with counts and peaks |
+| `04_benchmarks/bench_timing.py` | Replay grid, the 1M file, large liquidation (build + 10/100/200% sale), `benchmark_summary.csv` |
+| `04_benchmarks/bench_concentration.py` | buildup with 4 vs 1,000 levels: timing, plus a per-event correctness check and a checked 100% sale |
+| `04_benchmarks/bench_latency.py`, `bench_memory.py`, `bench_opcounts.py` | Separate runs: per-event latency, tracemalloc samples and end state, operation counts via counting subclasses |
+| `04_benchmarks/run_benchmark.py` | One command for all phases; refuses uncommitted code; writes `benchmark_run.json` and `environment.json` |
+| `06_dashboard/build_dashboard.py` | Static `dashboard.html` from `05_results/` only |
+| `07_docs/REVISIONS.md` | "Final benchmark" section: bottleneck, B-sorted vs B-heap, where B does not win, hypotheses checked |
+
+### Decisions approved by Maurice before the full run
+
+| # | AI proposal | Decision |
+|---|---|---|
+| D1 | If a liquidation build is stopped, all three sales on that book are recorded as stopped (the builds are identical). | **Accepted** |
+| D2 | Version A also gets the 1,000,000-event attempt, under the same 120 s limit. | **Accepted** (it was stopped) |
+| D3 | Version A takes part in the concentration correctness check up to M = 10,000. | **Accepted** |
+| D4 | Latency, memory and operation counts run on seed 42 only. | **Accepted**, recorded as a limitation in the dashboard and REVISIONS.md |
+| D5 | `buildup --levels 4` produces the same file as `crowded` (same sha256, 9 of 9). | **Accepted** as a finding; documented, not worked around |
+
+### Problems found and fixed while writing the scripts (before the commit)
+
+- `git status --porcelain` paths lost their first character because
+  `.strip()` removed the leading space of the first line. Fixed with
+  `.rstrip()`.
+- Stop notes for a step that finished over the limit said "skipped" and
+  printed "0.0 s". Fixed: the parent now records which step was stopped,
+  and the note shows the real elapsed time.
+- Stop handling was tested before the commit. `--time-limit 0.02` exercised
+  the over-limit path, and a fake hanging child exercised the hard kill (it
+  was killed after 1.82 s with a 1 s limit). A full run on dirty code
+  refuses to start.
+
+### Problems found after the full run (dashboard only, no engine or benchmark change)
+
+- The memory chart for cancel_churn was in MiB with values around 0.002,
+  and the legend covered the lines. Changed to KiB, with the legend below
+  the chart.
+- In the buildup memory chart, the B-sorted line hides under B-heap. Added
+  the note "B-sorted and B-heap differ by at most 1% (the lines overlap)".
+- The memory table header "queue entries" was misleading for Version A,
+  which has no queues. Renamed to "queue entries (A: list entries)".
+
+### Run outcome
+
+- Status `complete`, commit `4b9df5f`, code clean, source unchanged, 40 of
+  40 tests passed.
+- 2,409 timing rows ok and 258 stopped (all Version A). 26 memory rows ok
+  and 4 stopped.
+- 0 mismatches in 2,216 checked measurements; 18 of 18 concentration
+  streams pass.
+- The explanations are in `07_docs/REVISIONS.md`, "Final benchmark".
+
+### Open points for Maurice
+
+| # | AI suggestion | Decision |
+|---|---|---|
+| T11 | B-sorted vs B-heap uses a strict rule: "faster" only if one variant's slowest repeat beats the other's fastest repeat. It is conservative and reports most cells as "overlap". | |
+| T12 | Dashboard charts show the median over seeds of each seed's 5-repeat median. Error bars run from the fastest to the slowest of all 15 repeats. A point is drawn only if all three seeds finished. | |
+| T13 | The 1.9 ms slowest event of B at buildup 100k is explained as a dict resize. This is an inference from the memory steps at about 22k, 44k and 87k orders, not a direct measurement. | |
+| T14 | OneDrive syncing was not paused during the run. Seed 42 at buildup 100k was about 50% slower than seeds 43 and 44 for both B variants, and the cause is not identified. A rerun outside OneDrive would show whether it is noise. | |

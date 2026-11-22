@@ -377,3 +377,276 @@ and 8–36% for B-heap. The two variants differ from each other by 2–17% at
 between B-sorted and B-heap on any scenario.** The final benchmark (warm-up,
 5 repeats, medians, raw repeats kept) has to decide, and may still find
 them equal.
+
+### Final benchmark (22 Nov 2026, commit 4b9df5f)
+
+This replaces the single runs above as the evidence for Revision 1.
+
+**What was run**
+
+- Command: `python 04_benchmarks/run_benchmark.py`, from `Assignment1/`.
+- Measured commit: `4b9df5f`, clean. The source fingerprint was the same at
+  the start and the end of the run.
+- Tests: 40 of 40 passed before the run.
+- Time: 20:30 to 21:45 UTC (74 minutes).
+- Machine: Intel Core Ultra 5 228V, Python 3.13.15, Windows 11, on AC power.
+- Output: everything is in `05_results/benchmark_*.csv` and the dashboard
+  `06_dashboard/dashboard.html`.
+- Rows:
+  - 2,409 timing rows ok and 258 stopped. Every stopped row is Version A:
+    either M = 100,000, the 1,000,000-event file, or a repeat or sale skipped
+    after a stop.
+  - 26 memory rows ok and 4 stopped (Version A at M = 100,000).
+- Correctness:
+  - Every timed replay, build and sale was checked against the dataset
+    manifest: 2,216 of 2,216 measurements agree.
+  - The concentration check passed 18 of 18 streams.
+
+**Limitations**
+
+- Timing uses three seeds (42, 43, 44). Latency, memory and operation counts
+  use seed 42 only.
+- One machine.
+- The repository sits in a OneDrive folder, and syncing was not paused.
+- The data is synthetic (the course generator).
+- Timings below about 1 ms have the widest repeat spreads, up to 108% for one
+  0.3 ms sale. Full-stream replays have a median spread of 8% and a maximum of
+  43%.
+- One unexplained outlier: at buildup M = 100,000, seed 42 was about 50%
+  slower than seeds 43 and 44 for both B variants (191 / 187 ms vs
+  126–130 ms). It was the first 100k cell of the run.
+
+**Main result** (engine replay of preloaded events, in seconds. Each value is
+the median over seeds 42–44 of the 5-repeat medians; parsing is excluded.)
+
+| scenario | M | A | B-sorted | B-heap | A / B-sorted |
+|---|---|---|---|---|---|
+| buildup | 10,000 | 4.82 | 0.0140 | 0.0144 | 344× |
+| crowded | 10,000 | 4.95 | 0.0114 | 0.0120 | 434× |
+| mixed | 10,000 | 0.705 | 0.0141 | 0.0143 | 50× |
+| sweep | 10,000 | 5.44 | 0.0138 | 0.0148 | 394× |
+| cancel_churn | 10,000 | 0.0074 | 0.0100 | 0.0108 | **0.73×** (A faster) |
+| buildup | 100,000 | stopped | 0.126 | 0.130 | – |
+| mixed | 100,000 | stopped | 0.132 | 0.143 | – |
+| sweep | 100,000 | stopped | 0.144 | 0.146 | – |
+| cancel_churn | 100,000 | 0.069 | 0.104 | 0.106 | **0.67×** (A faster) |
+| mixed, 1M events (seed 43) | 1,000,000 | stopped | 1.376 | 1.398 | – |
+
+#### (a) The measured bottleneck: Version A scans the whole order list
+
+**The code.** Version A keeps every resting order in one Python list,
+`self.orders`. Two functions walk that list from start to end:
+
+- `_is_live` (`03_code/lob_a.py:184`) is called by validation
+  (`lob_a.py:130`) to check that a new order id is not already active. A new
+  id never matches, so the loop always runs to the end of the list.
+- `_best_index` (`lob_a.py:191`) finds the best opposite order. `_match`
+  (`lob_a.py:220`) calls it once before the first fill and again after every
+  fill, because A has no structure that remembers the next-best order.
+
+So one event costs about B · (F + 2) list steps, where B is the number of
+resting orders and F the number of fills.
+
+**The operation counts** (`05_results/opcounts.csv`, seed 42). These come
+from a counting subclass; the engine is unchanged.
+
+- buildup, M = 1,000: 999 list elements visited per event.
+- buildup, M = 10,000: 9,999 list elements visited per event, half in each
+  scan.
+- sweep, M = 10,000: 10,795 per event on average, and 102,777 in a single
+  event (an order that trades through many makers rescans the list after
+  every fill).
+- cancel_churn: 0.5 per event, because that book never holds more than one
+  order.
+
+**The complexity, measured.** Ten times more events means ten times more
+events, each scanning a list ten times longer, so the work grows about
+100 times.
+
+- Measured on buildup: 48.9 ms at M = 1,000 and 4,822 ms at M = 10,000, which
+  is 99 times. That is a log-log slope of 2.0. Mixed grows 111 times and
+  sweep 101 times.
+- Dividing time by elements visited gives about 48 ns per element (4.82 s
+  over 10,000 × 9,999 elements): one Python loop step with a dict lookup and
+  a comparison.
+- At M = 100,000 the same rule means about 100 times the work at 10,000. All
+  three seeds were stopped at 120 s, as was the 1M file. No value is
+  recorded or estimated for them.
+
+**The latency shows it event by event.** In buildup at M = 10,000, Version
+A's median event takes:
+
+- 44 µs in the first 1,000 events, when the book is small;
+- 894 µs in the last 1,000 events, with about 9,000–10,000 resting orders,
+  which is 20 times slower.
+
+B takes 1.4 µs and then 1.1 µs, so it does not slow down as the book grows.
+
+**Why Version B removes the bottleneck.**
+
+- The duplicate check is a dict lookup.
+- The best price is the last element of a sorted list (B-sorted) or the top
+  of a heap (B-heap).
+- The next maker at a price is the front of that price's FIFO deque.
+
+The operation counts stay flat as M grows: at most 1.3 best-price lookups
+and 0.41 queue pops per event, at both M = 1,000 and M = 10,000.
+Throughput stays between 0.56 and 1.00 million events per second from
+M = 1,000 to the 1,000,000-event file (B-sorted 0.73 M/s there).
+
+**The next cost after the revision is reading the file, not the engine.**
+
+- Parsing (gzip plus JSON) costs 1.6 µs per event at M = 100,000.
+- The B engine costs 1.3–1.5 µs per event at the same size.
+- On the 1M file, parsing took 1.55–1.58 s and the replay 1.38–1.40 s.
+
+So in an end-to-end run, reading the input is now about half the time.
+
+#### (b) B-sorted vs B-heap: which one wins, judged by the spread
+
+**The rule.** Take one cell (a workload, M and seed). Each variant has 5
+timed repeats, which give a range from fastest to slowest. A variant counts
+as faster only when its slowest repeat beats the other variant's fastest
+repeat. If the ranges overlap, there is no reliable difference.
+
+**Result.** There were 136 comparisons:
+
+- the ranges overlap in 100;
+- B-sorted is faster in 31;
+- B-heap is faster in 5.
+
+The dashboard table "B-sorted vs B-heap" lists every workload.
+
+- **Full streams (45 cells: 5 scenarios × 3 sizes × 3 seeds): no reliable
+  difference.**
+  - The ranges overlap in 36 cells. B-sorted is faster in 8 and B-heap in 1.
+  - Median ratios (heap / sorted) are 0.96–1.08.
+  - Mixed is the only scenario that leans one way: B-sorted is faster in 4
+    of 9 cells, and on the 1M file (1.366–1.378 s vs 1.395–1.401 s, which is
+    1.6%).
+  - Mixed empties the most price levels: 3,045 levels emptied by matching in
+    10,000 events (opcounts).
+- **Large sales over many price levels: B-sorted wins reliably.**
+  - A 100% sale on the 10k sweep book (4,062 fills over 981 levels) takes
+    1.68 ms on B-sorted and 2.02 ms on B-heap. B-sorted is faster in 3 of 3
+    seeds (ratio 1.21).
+  - A 10% sale at M = 1,000 is also faster in 3 of 3 seeds (ratio 1.23).
+  - Concentration sales on the 1,000-level book: ratio 1.28 at M = 1,000
+    and 1.15 at M = 10,000.
+  - Concentration sales over only 4 levels: ratio 0.99–1.07, and every
+    range overlaps.
+
+**Why.**
+
+- When matching empties the best level:
+  - B-sorted removes it with `keys.pop()` (`lob_b_sorted.py:40`), which is
+    O(1).
+  - B-heap leaves the key in the heap. The next `_best_price` finds the key
+    is stale and removes it with `heappop` (`lob_b_heap.py:40`). That costs
+    O(log H), about 10 sift steps for 1,000 levels.
+- The operation counts show exactly one stale heap pop per emptied level
+  (sweep 10k: 981 and 981).
+- The measured gap follows the number of emptied levels, not the number of
+  fills:
+  - (2.02 − 1.68) ms / 981 levels ≈ 0.35 µs per level;
+  - concentration at 10k: (2.58 − 2.20) ms / about 995 levels ≈ 0.38 µs per
+    level;
+  - with 4 levels there is no gap.
+- At M = 100,000 the sale has about 40,000 fills but still only 1,000 levels.
+  The per-fill work then dominates, the ratio drops to 1.04–1.07 and the
+  ranges mostly overlap.
+
+**Where B-heap would win in theory, and why it does not show here.**
+
+- B-heap adds a new level in O(log P) with `heappush`. B-sorted uses
+  `insort`, which shifts up to P keys.
+- In these files P ≤ 1,000 per side, so the shift moves at most 1,000
+  references inside one C memmove. That is cheap.
+- B-heap's 5 wins all come from pure insertion work: the buildup replay or a
+  book build, at M = 1,000 or 10,000. There, most events create a new level
+  (805 levels in 1,000 buildup events).
+- Even there, its advantage is 4–5% at M = 1,000 and gone at 100,000.
+
+**Verdict.**
+
+- On full streams, no reliable winner.
+- B-sorted is reliably faster when one event empties many price levels.
+- B-sorted is never reliably slower except in 5 small insertion-only cells.
+- It is also the simpler index.
+
+#### (c) Where Version B does not win, and why
+
+1. **cancel_churn: Version A is faster at every size.**
+   - Times: 0.76 vs 1.06 ms at M = 1,000; 7.4 vs 10.0 ms at 10,000; 69 vs
+     104 ms at 100,000 (A vs B-sorted). B-heap is similar to B-sorted.
+   - Median latency is 0.8 µs vs 1.1 µs per event.
+   - **Why:** this book never holds more than one order. The opcounts show A's
+     cancel scan visits at most 1 element, and the duplicate and best-order
+     scans visit none. So A's O(B) scans cost O(1).
+   - B does a fixed amount of extra work instead. Each submission creates an
+     Order, a Level with its deque, a dict entry and an index key (`insort`
+     or `heappush`). Each cancel removes all of them again.
+   - At M = 10,000 that is 5,000 levels created and 5,000 removed by cancels;
+     B-heap also rebuilt its heap 294 times.
+   - Better complexity gains nothing when B stays at 1; the constant factor
+     decides. This also confirms that the single-run observation (A faster
+     up to 30k) holds up to 100k.
+2. **Memory, when orders are spread thinly over many price levels.** Bytes
+   per live order at the end of the replay, M = 10,000 (tracemalloc, input
+   excluded):
+   - buildup: B 273 vs A 193;
+   - sweep: B 357–365 vs A 205;
+   - mixed: B 578–591 vs A 194;
+   - crowded: B **102** vs A 193 (B is smaller here).
+
+   **Why:**
+   - A B order is a `__slots__` object, smaller than A's dict per order.
+   - Each occupied price level costs B a Level object, a deque and an index
+     key. crowded and buildup at 10k both hold 10,000 orders, but on 8 vs
+     1,977 levels. B uses 1.6 MiB more for buildup, which is about 850 bytes
+     per extra level.
+   - So B uses less memory than A when there are more than about 9 orders per
+     level, and more when there are fewer.
+   - Mixed is the worst case: 1,587 live orders on 747 levels, plus 213
+     cancelled entries still waiting in deques. Those are bounded by
+     compaction to at most twice the live count.
+   - A's memory runs at M = 100,000 were stopped. A's bytes per order were
+     193–205 in every measured case.
+3. **Single slow events.** At buildup M = 100,000, B's p99 is 1.8 µs but its
+   slowest single event is 1.9 ms.
+   - The memory curve jumps at about 22k, 44k and 87k orders. Those are the
+     points where a Python dict enlarges its table (2/3 of 32,768, 65,536 and
+     131,072 slots).
+   - So the slowest event is most likely the `orders` dict resizing: O(1)
+     amortized, but one event pays O(B). This is an inference from the
+     memory curve, not a separate measurement.
+   - It does not change the comparison: Version A's typical event at
+     M = 10,000 already takes 0.46–0.89 ms.
+4. **Small books gain less.** At M = 1,000, B is 4.8 times faster than A on
+   mixed, against 50 times at M = 10,000. The gain grows with the book,
+   because A's cost does.
+
+**Hypotheses checked against the final benchmark**
+
+1. **Confirmed.** Both B variants are linear in M. For example, B-sorted
+   mixed takes 1.32 ms, 14.1 ms and 132 ms at M = 1,000, 10,000 and 100,000.
+   Throughput is flat up to 1M events. A grows about 100 times per 10 times
+   M.
+2. **Confirmed.** crowded: B-heap / B-sorted ratios of 1.01–1.02; ranges
+   overlap in 8 of 9 cells.
+3. **Confirmed.** buildup: ratios of 0.96–1.01; ranges overlap in 8 of 9
+   cells, and B-heap is faster in 1 cell at M = 1,000.
+4. **Partly confirmed.**
+   - On the full sweep stream, no reliable difference (overlap in 8 of 9):
+     at M = 10,000 only about one event in ten empties a level.
+   - The predicted effect (B-sorted faster because `pop()` is O(1)) does
+     appear where many levels are emptied at once: the large sales,
+     ratio 1.13–1.35 at M ≤ 10,000.
+5. **Confirmed, and stronger than expected.**
+   - Retained memory stays flat over 100,000 cancel_churn events (about
+     2 KiB traced at every sample, peak 3.9 KiB; B-heap keeps 2–3 stale keys
+     at the end).
+   - Version A is faster at every size, not only up to 30k.
+6. **Partly confirmed.** B uses more memory per order when orders are spread
+   over many levels (1.4–3.0 times A at M = 10,000), but about half of A's
+   memory on crowded, where many orders share each level.
