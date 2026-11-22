@@ -34,6 +34,8 @@ def load(name, **kw):
 
 
 timing = load("timing_raw.csv")
+if (RES / "timing_million_raw.csv").exists():
+    timing = pd.concat([timing, load("timing_million_raw.csv")], ignore_index=True)
 liq = load("liquidation_raw.csv")
 conc = load("concentration_correctness.csv")
 lat = load("latency_summary.csv")
@@ -106,7 +108,7 @@ with tabs[1]:
 # ------------------------------------------------------------------ liquidation
 with tabs[2]:
     st.subheader("One fresh bid book (buildup, seed 42); sale of 10 %, 100 %, 200 % of its bid quantity")
-    ok = liq[liq.status == "ok"]
+    ok = liq[liq.status != "stopped"]          # status holds the sale status: filled/partial
     g = ok.groupby(["events", "fraction", "version"], as_index=False).agg(
         construction_s=("construction_s", "median"), sale_s=("sale_s", "median"),
         fills=("fill_count", "first"), makers=("makers_touched", "first"),

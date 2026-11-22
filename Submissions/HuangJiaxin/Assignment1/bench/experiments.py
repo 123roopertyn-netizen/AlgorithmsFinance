@@ -163,7 +163,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--million", action="store_true")
+    ap.add_argument("--million-only", action="store_true",
+                    help="only the 1,000,000-event streams; writes results/timing_million_raw.csv")
     args = ap.parse_args()
+    if args.million_only:
+        rows = exp_replay([1_000_000], [42], scenarios=["buildup", "mixed", "cancel_churn"],
+                          experiment="replay_million")
+        write_csv("timing_million_raw.csv", REPLAY_HEADER, rows)
+        write_json("timing_million_environment.json", environment(
+            "bench/experiments.py --million-only", sizes=[1_000_000], seeds=[42],
+            scenarios=["buildup", "mixed", "cancel_churn"], levels=1000))
+        print("saved results/timing_million_raw.csv, timing_million_environment.json")
+        return
     sizes = [1_000, 10_000] if args.quick else [1_000, 10_000, 100_000]
     seeds = [42] if args.quick else SEEDS
 
