@@ -17,6 +17,9 @@ from pathlib import Path
 
 import pytest
 
+# Expected values typed from the Excel tab "Base" (formerly Sheet1).
+pytestmark = pytest.mark.source("my Excel tab Base")
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "00_instructions" / "data"
 
@@ -165,6 +168,7 @@ def test_book_level_conservation(replayed):
 
 # --- check 2: the supplied worked_expected.json -----------------------------
 
+@pytest.mark.source("my Excel tab Base vs professor JSON")
 def test_hand_values_agree_with_supplied_json():
     """Excel and JSON must agree; this needs no implementation."""
     supplied = load_supplied_expected()
@@ -175,6 +179,7 @@ def test_hand_values_agree_with_supplied_json():
     assert supplied["gross_proceeds_usd"] == f"{EXPECTED_PROCEEDS_USD}.00"
 
 
+@pytest.mark.source("professor JSON")
 def test_matches_supplied_json(replayed):
     _, results, book = replayed
     supplied = load_supplied_expected()

@@ -11,6 +11,8 @@ $1 = 100 price_ticks, proceeds in dollars = sum(p * q) / 10**10.
 
 from fractions import Fraction
 
+import pytest
+
 BTC = 100_000_000
 USD = 100
 TICK_UNITS_PER_USD = 10**10
@@ -42,10 +44,11 @@ def status_rows(results):
 
 
 def fill_rows(results):
-    """(event_id, maker, taker, price USD, qty BTC) in execution order."""
+    """(event_id, maker, taker, price USD, qty BTC) in execution order.
+    Cancel and rejected results carry no fills."""
     return [(r["event_id"], f["maker_id"], f["taker_id"],
              Fraction(f["price_ticks"], USD), Fraction(f["qty_units"], BTC))
-            for r in results for f in r["fills"]]
+            for r in results for f in r.get("fills", [])]
 
 
 def book_rows(book):
@@ -76,6 +79,7 @@ def bid_side_traded(events, results):
 
 # --- Excel tab Test1 ---------------------------------------------------------
 
+@pytest.mark.source("my Excel tab Test1")
 def test_Test1(lob):
     """Excel tab Test1: b1 BUY 60,200 crosses a1 SELL 60,100 on arrival,
     then market sell s1 8 BTC is filled."""
@@ -140,6 +144,7 @@ def test_Test1(lob):
 
 # --- Excel tab Test2 ---------------------------------------------------------
 
+@pytest.mark.source("my Excel tab Test2")
 def test_Test2(lob):
     """Excel tab Test2: market sell s1 15 BTC is larger than the 10 BTC bid
     book: partial, 5 BTC discarded."""
@@ -199,3 +204,123 @@ def test_Test2(lob):
     assert results[5]["unfilled_qty_units"] == 5 * BTC
     check_submission_conservation(events, results)
     assert all(o["order_id"] != "s1" for o in book.inspect_book())
+
+
+# --- Excel tab Test3 ---------------------------------------------------------
+
+@pytest.mark.source("Excel tab Test3 (calculated by Claude, checked by Maurice)")
+def test_Test3(lob):
+    """Excel tab Test3: market sell into an empty book."""
+    # Input: tab Test3, row 5.
+    events = [market_sell(1, "s1", 6)]
+    results, book = replay(lob, events)
+
+    # Tab Test3, rows 10-11 "Event results".
+    assert status_rows(results) == [
+        ("event1", "s1", "unfilled", 6),  # no bids: nothing trades, 6 BTC discarded
+    ]
+    # Rows 14-15 "Fills": none.  Rows 18-19 "Book": empty.
+    assert fill_rows(results) == []
+    assert book_rows(book) == []
+
+    # Rows 22-25 "Checks".
+    assert len(results[0]["fills"]) == 0                         # B22
+    assert sum(f["qty_units"] for f in results[0]["fills"]) == 0  # B23
+    assert results[0]["unfilled_qty_units"] == 6 * BTC           # B24
+    assert gross(results[0]["fills"]) == 0                       # B25
+    check_submission_conservation(events, results)
+
+
+# --- Excel tab Test4 ---------------------------------------------------------
+
+@pytest.mark.source("Excel tab Test4 (calculated by Claude, checked by Maurice)")
+def test_Test4(lob):
+    """Excel tab Test4: cancel after a partial fill, repeated and unknown cancel."""
+    # Input: tab Test4, rows 5-9.
+    events = [
+        limit(1, "b1", "BUY", 60_000, 3),
+        market_sell(2, "s1", 1),
+        {"seq": 3, "event_id": "event3", "type": "CANCEL", "target_order_id": "b1"},
+        {"seq": 4, "event_id": "event4", "type": "CANCEL", "target_order_id": "b1"},
+        {"seq": 5, "event_id": "event5", "type": "CANCEL", "target_order_id": "x99"},
+    ]
+    results, book = replay(lob, events)
+
+    # Tab Test4, rows 14-19 "Event results".
+    assert status_rows(results[:2]) == [
+        ("event1", "b1", "resting", 3),  # no asks, all 3 BTC rest
+        ("event2", "s1", "filled", 0),   # 1 BTC to b1 at 60,000; b1 keeps 2
+    ]
+    assert results[2:] == [
+        {"event_id": "event3", "target_order_id": "b1", "status": "cancelled",
+         "cancelled_qty_units": 2 * BTC},   # only the remaining 2 BTC
+        {"event_id": "event4", "target_order_id": "b1", "status": "not_found",
+         "cancelled_qty_units": 0},         # b1 already cancelled
+        {"event_id": "event5", "target_order_id": "x99", "status": "not_found",
+         "cancelled_qty_units": 0},         # unknown id, valid event
+    ]
+
+    # Rows 22-23 "Fills".
+    assert fill_rows(results) == [
+        ("event2", "b1", "s1", 60_000, 1),
+    ]
+    # Rows 26-27 "Book": empty.
+    assert book_rows(book) == []
+
+    # Rows 30-33 "Checks". (B32 proceeds is blank in the Excel: not checked.)
+    all_fills = [f for r in results for f in r.get("fills", [])]
+    assert len(all_fills) == 1                                    # B30
+    assert sum(f["qty_units"] for f in all_fills) == 1 * BTC      # B31
+    # Row 33: b1 3 submitted = 1 filled + 2 cancelled.
+    b1_filled = sum(f["qty_units"] for f in all_fills if f["maker_id"] == "b1")
+    assert events[0]["qty_units"] == b1_filled + results[2]["cancelled_qty_units"]
+    check_submission_conservation(events[:2], results[:2])
+
+
+# --- Excel tab Test5 ---------------------------------------------------------
+
+@pytest.mark.source("Excel tab Test5 (calculated by Claude, checked by Maurice)")
+def test_Test5(lob):
+    """Excel tab Test5: invalid inputs are rejected without changing the book
+    or the last accepted seq. Uses OrderBook.last_seq (part of the interface)."""
+    # Input: tab Test5, rows 5-8 (note seq 1, 2, 5, 4).
+    events = [
+        {**limit(1, "b1", "BUY", 60_000, 1), "qty_units": 0},
+        {**limit(2, "b2", "BUY", 60_000, 1), "price_ticks": -10_000},
+        {**limit(5, "b3", "BUY", 60_000, 1), "event_id": "event3"},
+        {**limit(4, "b4", "BUY", 59_900, 1), "event_id": "event4"},
+    ]
+    book = lob.OrderBook()
+    results, last_seqs, books = [], [], []
+    for e in events:
+        results.append(book.process_event(e))
+        last_seqs.append(book.last_seq)
+        books.append(book_rows(book))
+
+    # Tab Test5, rows 13-17 "Event results". The spec does not define reason
+    # wording (Maurice's decision): check status "rejected", a non-empty
+    # reason, and that the reason names the right cause.
+    def assert_rejected(result, event_id, cause):
+        assert result["event_id"] == event_id
+        assert result["status"] == "rejected"
+        assert isinstance(result["reason"], str) and result["reason"].strip()
+        assert cause in result["reason"], result["reason"]
+
+    assert_rejected(results[0], "event1", "qty")      # qty_units = 0
+    assert_rejected(results[1], "event2", "price")    # negative price_ticks
+    assert status_rows(results[2:3]) == [("event3", "b3", "resting", 1)]
+    assert_rejected(results[3], "event4", "seq")      # seq 4 after accepted 5
+
+    # Column E notes: last accepted seq 0, 0, 5, 5; rejects leave the book as it was.
+    assert last_seqs == [0, 0, 5, 5]
+    assert books[0] == [] and books[1] == []
+    assert books[3] == books[2]
+
+    # Rows 20-21 "Fills": none.  Rows 24-25 "Book after all events".
+    assert fill_rows([r for r in results if "fills" in r]) == []
+    assert book_rows(book) == [("b3", "BUY", 60_000, 1, 5)]
+
+    # Rows 28-30 "Checks".
+    assert sum(len(r.get("fills", [])) for r in results) == 0          # B28
+    assert sum(r["status"] != "rejected" for r in results) == 1        # B29
+    assert sum(r["status"] == "rejected" for r in results) == 3        # B30

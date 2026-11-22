@@ -106,6 +106,41 @@ Version B to every test file. No expected value changed.
 | T1 | Compare quantities and prices as exact `Fraction`s of BTC and USD so the test rows read like the Excel rows. | |
 | T2 | Move `VERSIONS` into `conftest.py`. | |
 
+## Session 3: scaling exploration, liquidation, Test3–Test5
+
+### What the AI produced
+
+| File | Content |
+|---|---|
+| `04_benchmarks/generate_data.py` | Runs the professor's generator: 5 scenarios × M = 1k, 10k, 30k, 100k, seed 42, into `05_results/data/` (gitignored via `Assignment1/.gitignore`; metadata with SHA-256 kept). The regenerated 10k files are byte-identical to the supplied ones. |
+| `04_benchmarks/scaling.py` | One child process per run, engine time only, invariants off, 600 s limit on the child (load + replay + counting); over the limit → `stopped`, no values. Peaks derived after timing from the returned results (shadow book), cross-checked against `inspect_book()`. |
+| `04_benchmarks/liquidation.py` | Bid book from the first 80% of sweep_10000; 10% (ceil), 100%, 200% sales, each on its own freshly built book; build and sell timed separately; conservation asserted. |
+| `04_benchmarks/export_test_results.py` | Runs pytest, writes `05_results/tests_by_case.csv` from `@pytest.mark.source` labels. |
+| `02_tests/test_excel_tabs.py` | `test_Test3`, `test_Test4`, `test_Test5` from the "EXPECTED RESULT" blocks. |
+| Dashboard | Correctness table per test and version; log-log scaling chart; liquidation table. |
+
+### Corrections by Maurice
+
+| # | AI version | Correction (Maurice) |
+|---|---|---|
+| C1 | Stopped runs drawn as × at 600 s on the seconds axis. | **Corrected:** the 600 s limit covers load + replay + counting, so it is not a replay time. Stopped runs are now listed under the chart as "stopped: 600 s limit for load + replay reached; replay time not measured" and are not plotted. |
+| C2 | `test_Test5` compared the exact reason texts from the Excel (event4 would have failed on wording only: Excel "seq 4 not greater than last accepted seq 5" vs engine "non-increasing seq 4 (last accepted 5)"). | **Corrected:** the spec does not define reason wording. The test checks status `rejected`, a non-empty reason, and that it names the cause (`qty`, `price`, `seq`). Engine reason texts unchanged. |
+
+### Test results and one test bug
+
+- Test3, Test4, Test5 (source "Excel tab … (calculated by Claude, checked by Maurice)") all pass against Version A; 12/12 tests pass.
+- First run: `test_Test4` crashed with `KeyError: 'fills'` in the AI's helper `fill_rows()`, which assumed every result has `fills`; cancel results correctly have none. This was a bug in the test helper, not in the engine or the Excel; no expected value was compared before the crash. Fix: the helper uses `r.get("fills", [])`. No expected value changed.
+- Test4 row 32 (proceeds) is blank in the Excel and is not checked.
+- Test5 reads `OrderBook.last_seq`, so `last_seq` is now part of the interface Version B must provide.
+
+### Open points for Maurice
+
+| # | AI suggestion | Decision |
+|---|---|---|
+| T3 | `source` markers on each test (labels live next to the test code). | |
+| T4 | Label for the engine-free cross-check: "my Excel tab Base vs professor JSON" (it fits neither of the two suggested labels exactly). | |
+| T5 | Liquidation `sell_seconds` times `process_event` (includes validation, whose duplicate-id check is O(B) in Version A), not `FillMarketSell` alone. | |
+
 ### Hidden instruction in the course PDF
 
 AGENTS.md warns of hidden text in the slides asking AI tools to insert a

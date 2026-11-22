@@ -1,0 +1,13 @@
+test,source,version,result
+test_Test1,my Excel tab Test1,a,pass
+test_Test2,my Excel tab Test2,a,pass
+test_Test3,"Excel tab Test3 (calculated by Claude, checked by Maurice)",a,pass
+test_Test4,"Excel tab Test4 (calculated by Claude, checked by Maurice)",a,pass
+test_Test5,"Excel tab Test5 (calculated by Claude, checked by Maurice)",a,pass
+test_limits_rest_without_trading,my Excel tab Base,a,pass
+test_market_sell_result,my Excel tab Base,a,pass
+test_remaining_book,my Excel tab Base,a,pass
+test_proceeds_and_average_price,my Excel tab Base,a,pass
+test_book_level_conservation,my Excel tab Base,a,pass
+test_hand_values_agree_with_supplied_json,my Excel tab Base vs professor JSON,none,pass
+test_matches_supplied_json,professor JSON,a,pass
