@@ -9,16 +9,13 @@ dollars; here they are written in integer units:
 A second, separate check compares against the supplied
 00_instructions/data/worked_expected.json.
 
-Every version listed in VERSIONS must pass the same tests.
+Every version listed in conftest.VERSIONS must pass the same tests.
 """
 
-import importlib
 import json
 from pathlib import Path
 
 import pytest
-
-VERSIONS = ["lob_a"]  # add "lob_b" here once Version B exists
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "00_instructions" / "data"
@@ -97,11 +94,10 @@ def load_supplied_expected():
         return json.load(fh)
 
 
-@pytest.fixture(params=VERSIONS)
-def replayed(request):
+@pytest.fixture
+def replayed(lob):
     """Replay the worked example on a fresh book; return (events, results, book)."""
-    module = importlib.import_module(request.param)
-    book = module.OrderBook()
+    book = lob.OrderBook()
     events = load_events()
     results = [book.process_event(event) for event in events]
     return events, results, book

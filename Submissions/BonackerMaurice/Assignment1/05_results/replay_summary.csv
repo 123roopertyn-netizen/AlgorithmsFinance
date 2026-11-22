@@ -1,0 +1,6 @@
+version,scenario,events,fills,rejected,not_found_cancels,peak_active_orders,peak_price_levels,final_book_size,invariants_ok,wall_seconds
+a,buildup,10000,0,0,0,10000,1977,10000,True,6.375891
+a,crowded,10000,0,0,0,10000,8,10000,True,6.159561
+a,mixed,10000,3926,0,1821,1588,752,1587,True,0.744657
+a,sweep,10000,5035,0,0,8000,1959,3938,True,6.319448
+a,cancel_churn,10000,0,0,0,1,1,0,True,0.013994

@@ -18,7 +18,8 @@ Two passes per file, each on a fresh empty book, with events preloaded
      the benchmark (no warm-up, no repeats).
 
 --results writes one JSON result per event (from the timed pass; one file only).
---csv writes one summary row per file.
+--csv writes one summary row per file; rows of other versions already in
+that CSV are kept, rows of this version are replaced.
 """
 
 import argparse
@@ -97,6 +98,21 @@ def timed_replay(events, version):
     return results, seconds, book
 
 
+def write_summary_csv(path, version, rows):
+    """Write rows, keeping any existing rows of OTHER versions in the file.
+
+    So `--version b --csv same.csv` adds Version B next to Version A.
+    """
+    kept = []
+    if Path(path).exists():
+        with open(path, newline="", encoding="utf-8") as fh:
+            kept = [r for r in csv.DictReader(fh) if r["version"] != version]
+    with open(path, "w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=CSV_FIELDS)
+        writer.writeheader()
+        writer.writerows(kept + rows)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("files", nargs="+")
@@ -147,10 +163,7 @@ def main(argv=None):
                     fh.write(json.dumps(r) + "\n")
 
     if args.csv:
-        with open(args.csv, "w", newline="", encoding="utf-8") as fh:
-            writer = csv.DictWriter(fh, fieldnames=CSV_FIELDS)
-            writer.writeheader()
-            writer.writerows(rows)
+        write_summary_csv(args.csv, args.version, rows)
     return 0 if all_ok else 1
 
 
