@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import unittest
 
-from support import assert_book_invariants, require_implementations
+from tests.support import assert_book_invariants, require_implementations
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

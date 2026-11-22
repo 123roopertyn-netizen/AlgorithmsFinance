@@ -20,112 +20,112 @@ Version A stores active makers in one list and scans for duplicates, cancellatio
 
 | Experiment | Scenario | M | Levels | Version | Phase | Sale % | Seeds | Repeat coverage | Median seconds | Median events/s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| liquidation | bid_book | 1000 | 1000 | baseline | application_total | 10 | 3 | 15/15 | 0.030691 | 32,616 |
+| liquidation | bid_book | 1000 | 1000 | baseline | application_total | 10 | 3 | 15/15 | 0.031042 | 32,247 |
 | liquidation | bid_book | 1000 | 1000 | baseline | application_total | 100 | 3 | 15/15 | 0.070792 | 14,140 |
-| liquidation | bid_book | 1000 | 1000 | baseline | application_total | 200 | 3 | 15/15 | 0.071078 | 14,083 |
+| liquidation | bid_book | 1000 | 1000 | baseline | application_total | 200 | 3 | 15/15 | 0.070991 | 14,100 |
 | liquidation | bid_book | 1000 | 1000 | revised | application_total | 10 | 3 | 15/15 | 0.003262 | 306,851 |
-| liquidation | bid_book | 1000 | 1000 | revised | application_total | 100 | 3 | 15/15 | 0.003807 | 262,937 |
+| liquidation | bid_book | 1000 | 1000 | revised | application_total | 100 | 3 | 15/15 | 0.003820 | 262,073 |
 | liquidation | bid_book | 1000 | 1000 | revised | application_total | 200 | 3 | 15/15 | 0.003786 | 264,427 |
-| liquidation | bid_book | 10000 | 1000 | baseline | application_total | 10 | 3 | 15/15 | 3.064555 | 3,263 |
-| liquidation | bid_book | 10000 | 1000 | baseline | application_total | 100 | 3 | 7/15 (8 stopped) | 6.894240 | 1,451 |
-| liquidation | bid_book | 10000 | 1000 | baseline | application_total | 200 | 3 | 5/15 (10 stopped) | 6.848496 | 1,461 |
-| liquidation | bid_book | 10000 | 1000 | revised | application_total | 10 | 3 | 15/15 | 0.034454 | 290,273 |
-| liquidation | bid_book | 10000 | 1000 | revised | application_total | 100 | 3 | 15/15 | 0.041967 | 238,307 |
-| liquidation | bid_book | 10000 | 1000 | revised | application_total | 200 | 3 | 15/15 | 0.041076 | 243,477 |
+| liquidation | bid_book | 10000 | 1000 | baseline | application_total | 10 | 3 | 15/15 | 3.059251 | 3,269 |
+| liquidation | bid_book | 10000 | 1000 | baseline | application_total | 100 | 3 | 7/15 (8 stopped) | 6.679302 | 1,497 |
+| liquidation | bid_book | 10000 | 1000 | baseline | application_total | 200 | 3 | 5/15 (10 stopped) | 6.840663 | 1,462 |
+| liquidation | bid_book | 10000 | 1000 | revised | application_total | 10 | 3 | 15/15 | 0.035069 | 285,182 |
+| liquidation | bid_book | 10000 | 1000 | revised | application_total | 100 | 3 | 15/15 | 0.042018 | 238,015 |
+| liquidation | bid_book | 10000 | 1000 | revised | application_total | 200 | 3 | 15/15 | 0.041236 | 242,532 |
 | liquidation | bid_book | 100000 | 1000 | baseline | application_total | 10 | 3 | 0/15 (15 stopped) | - | - |
 | liquidation | bid_book | 100000 | 1000 | baseline | application_total | 100 | 3 | 0/15 (15 stopped) | - | - |
 | liquidation | bid_book | 100000 | 1000 | baseline | application_total | 200 | 3 | 0/15 (15 stopped) | - | - |
 | liquidation | bid_book | 100000 | 1000 | revised | application_total | 10 | 3 | 15/15 | 0.370572 | 269,855 |
 | liquidation | bid_book | 100000 | 1000 | revised | application_total | 100 | 3 | 15/15 | 0.447895 | 223,269 |
-| liquidation | bid_book | 100000 | 1000 | revised | application_total | 200 | 3 | 15/15 | 0.448075 | 223,179 |
-| queue_concentration | buildup | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.029479 | 33,923 |
-| queue_concentration | buildup | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.027848 | 35,910 |
+| liquidation | bid_book | 100000 | 1000 | revised | application_total | 200 | 3 | 15/15 | 0.445628 | 224,405 |
+| queue_concentration | buildup | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.029456 | 33,949 |
+| queue_concentration | buildup | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.027739 | 36,050 |
 | queue_concentration | buildup | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.003526 | 283,614 |
-| queue_concentration | buildup | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.001817 | 550,358 |
-| queue_concentration | buildup | 1000 | 4 | baseline | application_total | - | 3 | 15/15 | 0.029144 | 34,313 |
+| queue_concentration | buildup | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.001822 | 548,973 |
+| queue_concentration | buildup | 1000 | 4 | baseline | application_total | - | 3 | 15/15 | 0.029197 | 34,250 |
 | queue_concentration | buildup | 1000 | 4 | baseline | engine_replay | - | 3 | 15/15 | 0.027528 | 36,327 |
 | queue_concentration | buildup | 1000 | 4 | revised | application_total | - | 3 | 15/15 | 0.003400 | 294,082 |
-| queue_concentration | buildup | 1000 | 4 | revised | engine_replay | - | 3 | 15/15 | 0.001649 | 606,597 |
+| queue_concentration | buildup | 1000 | 4 | revised | engine_replay | - | 3 | 15/15 | 0.001673 | 597,803 |
 | queue_concentration | buildup | 10000 | 1000 | baseline | application_total | - | 3 | 15/15 | 2.702150 | 3,701 |
 | queue_concentration | buildup | 10000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 2.685749 | 3,723 |
-| queue_concentration | buildup | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.035632 | 280,650 |
-| queue_concentration | buildup | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.019473 | 513,526 |
-| queue_concentration | buildup | 10000 | 4 | baseline | application_total | - | 3 | 15/15 | 2.704931 | 3,697 |
-| queue_concentration | buildup | 10000 | 4 | baseline | engine_replay | - | 3 | 15/15 | 2.686986 | 3,722 |
-| queue_concentration | buildup | 10000 | 4 | revised | application_total | - | 3 | 15/15 | 0.033507 | 298,442 |
-| queue_concentration | buildup | 10000 | 4 | revised | engine_replay | - | 3 | 15/15 | 0.017772 | 562,689 |
+| queue_concentration | buildup | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.035184 | 284,221 |
+| queue_concentration | buildup | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.019230 | 520,014 |
+| queue_concentration | buildup | 10000 | 4 | baseline | application_total | - | 3 | 15/15 | 2.724957 | 3,670 |
+| queue_concentration | buildup | 10000 | 4 | baseline | engine_replay | - | 3 | 15/15 | 2.707955 | 3,693 |
+| queue_concentration | buildup | 10000 | 4 | revised | application_total | - | 3 | 15/15 | 0.034634 | 288,737 |
+| queue_concentration | buildup | 10000 | 4 | revised | engine_replay | - | 3 | 15/15 | 0.017966 | 556,599 |
 | queue_concentration | buildup | 100000 | 1000 | baseline | application_total | - | 3 | 0/15 (15 stopped) | - | - |
 | queue_concentration | buildup | 100000 | 1000 | baseline | engine_replay | - | 3 | 0/15 (15 stopped) | - | - |
-| queue_concentration | buildup | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.385406 | 259,467 |
-| queue_concentration | buildup | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.208961 | 478,558 |
+| queue_concentration | buildup | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.400562 | 249,649 |
+| queue_concentration | buildup | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.218120 | 458,462 |
 | queue_concentration | buildup | 100000 | 4 | baseline | application_total | - | 3 | 0/15 (15 stopped) | - | - |
 | queue_concentration | buildup | 100000 | 4 | baseline | engine_replay | - | 3 | 0/15 (15 stopped) | - | - |
 | queue_concentration | buildup | 100000 | 4 | revised | application_total | - | 3 | 15/15 | 0.392889 | 254,525 |
-| queue_concentration | buildup | 100000 | 4 | revised | engine_replay | - | 3 | 15/15 | 0.211879 | 471,969 |
+| queue_concentration | buildup | 100000 | 4 | revised | engine_replay | - | 3 | 15/15 | 0.205690 | 486,169 |
 | stream | buildup | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.031257 | 31,993 |
-| stream | buildup | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.029485 | 33,915 |
-| stream | buildup | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.003760 | 265,993 |
-| stream | buildup | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.002084 | 479,933 |
-| stream | buildup | 10000 | 1000 | baseline | application_total | - | 3 | 14/15 (1 stopped) | 3.203840 | 3,121 |
-| stream | buildup | 10000 | 1000 | baseline | engine_replay | - | 3 | 14/15 (1 stopped) | 3.187860 | 3,137 |
-| stream | buildup | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.035832 | 279,078 |
-| stream | buildup | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.019257 | 519,301 |
+| stream | buildup | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.029469 | 33,934 |
+| stream | buildup | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.003801 | 263,083 |
+| stream | buildup | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.002083 | 480,086 |
+| stream | buildup | 10000 | 1000 | baseline | application_total | - | 3 | 14/15 (1 stopped) | 3.167720 | 3,157 |
+| stream | buildup | 10000 | 1000 | baseline | engine_replay | - | 3 | 14/15 (1 stopped) | 3.150670 | 3,174 |
+| stream | buildup | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.035625 | 280,699 |
+| stream | buildup | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.019361 | 516,500 |
 | stream | buildup | 100000 | 1000 | baseline | application_total | - | 3 | 0/15 (15 stopped) | - | - |
 | stream | buildup | 100000 | 1000 | baseline | engine_replay | - | 3 | 0/15 (15 stopped) | - | - |
-| stream | buildup | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.413757 | 241,688 |
-| stream | buildup | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.206853 | 483,436 |
-| stream | cancel_churn | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.002676 | 373,622 |
-| stream | cancel_churn | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.001196 | 836,033 |
-| stream | cancel_churn | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.002758 | 362,571 |
+| stream | buildup | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.411240 | 243,167 |
+| stream | buildup | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.206982 | 483,135 |
+| stream | cancel_churn | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.002648 | 377,608 |
+| stream | cancel_churn | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.001195 | 837,025 |
+| stream | cancel_churn | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.002757 | 362,757 |
 | stream | cancel_churn | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.001281 | 780,590 |
-| stream | cancel_churn | 10000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.026823 | 372,814 |
+| stream | cancel_churn | 10000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.027542 | 363,075 |
 | stream | cancel_churn | 10000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.012843 | 778,604 |
 | stream | cancel_churn | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.028847 | 346,652 |
-| stream | cancel_churn | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.013818 | 723,676 |
+| stream | cancel_churn | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.014095 | 709,484 |
 | stream | cancel_churn | 100000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.298643 | 334,847 |
-| stream | cancel_churn | 100000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.134448 | 743,779 |
-| stream | cancel_churn | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.299542 | 333,843 |
+| stream | cancel_churn | 100000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.134971 | 740,899 |
+| stream | cancel_churn | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.302436 | 330,649 |
 | stream | cancel_churn | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.139601 | 716,327 |
-| stream | crowded | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.030870 | 32,393 |
-| stream | crowded | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.029146 | 34,310 |
-| stream | crowded | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.004644 | 215,341 |
-| stream | crowded | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.001971 | 507,324 |
-| stream | crowded | 10000 | 1000 | baseline | application_total | - | 3 | 15/15 | 2.676308 | 3,736 |
-| stream | crowded | 10000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 2.660973 | 3,758 |
+| stream | crowded | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.030706 | 32,567 |
+| stream | crowded | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.029017 | 34,463 |
+| stream | crowded | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.004208 | 237,664 |
+| stream | crowded | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.001947 | 513,654 |
+| stream | crowded | 10000 | 1000 | baseline | application_total | - | 3 | 15/15 | 2.675351 | 3,738 |
+| stream | crowded | 10000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 2.657065 | 3,764 |
 | stream | crowded | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.032983 | 303,189 |
-| stream | crowded | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.017820 | 561,151 |
+| stream | crowded | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.017608 | 567,922 |
 | stream | crowded | 100000 | 1000 | baseline | application_total | - | 3 | 0/15 (15 stopped) | - | - |
 | stream | crowded | 100000 | 1000 | baseline | engine_replay | - | 3 | 0/15 (15 stopped) | - | - |
 | stream | crowded | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.405911 | 246,359 |
-| stream | crowded | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.206705 | 483,782 |
-| stream | mixed | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.006485 | 154,207 |
-| stream | mixed | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.004888 | 204,565 |
-| stream | mixed | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.003251 | 307,613 |
-| stream | mixed | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.001604 | 623,571 |
+| stream | crowded | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.205598 | 486,386 |
+| stream | mixed | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.006538 | 152,949 |
+| stream | mixed | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.004908 | 203,752 |
+| stream | mixed | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.003264 | 306,341 |
+| stream | mixed | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.001632 | 612,776 |
 | stream | mixed | 10000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.425974 | 23,476 |
 | stream | mixed | 10000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.410768 | 24,345 |
-| stream | mixed | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.031908 | 313,405 |
-| stream | mixed | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.017008 | 587,949 |
+| stream | mixed | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.031938 | 313,104 |
+| stream | mixed | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.017004 | 588,088 |
 | stream | mixed | 100000 | 1000 | baseline | application_total | - | 3 | 0/15 (15 stopped) | - | - |
 | stream | mixed | 100000 | 1000 | baseline | engine_replay | - | 3 | 0/15 (15 stopped) | - | - |
-| stream | mixed | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.371775 | 268,980 |
-| stream | mixed | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.170355 | 587,010 |
+| stream | mixed | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.384811 | 259,868 |
+| stream | mixed | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.171350 | 583,601 |
 | stream | mixed | 1000000 | 1000 | baseline | application_total | - | 1 | 0/5 (5 stopped) | - | - |
 | stream | mixed | 1000000 | 1000 | baseline | engine_replay | - | 1 | 0/5 (5 stopped) | - | - |
 | stream | mixed | 1000000 | 1000 | revised | application_total | - | 1 | 5/5 | 5.283202 | 189,279 |
 | stream | mixed | 1000000 | 1000 | revised | engine_replay | - | 1 | 5/5 | 2.072545 | 482,499 |
-| stream | sweep | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.038710 | 25,833 |
-| stream | sweep | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.037213 | 26,872 |
+| stream | sweep | 1000 | 1000 | baseline | application_total | - | 3 | 15/15 | 0.040491 | 24,697 |
+| stream | sweep | 1000 | 1000 | baseline | engine_replay | - | 3 | 15/15 | 0.039007 | 25,636 |
 | stream | sweep | 1000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.003632 | 275,349 |
 | stream | sweep | 1000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.001973 | 506,864 |
-| stream | sweep | 10000 | 1000 | baseline | application_total | - | 3 | 13/15 (2 stopped) | 3.665088 | 2,728 |
-| stream | sweep | 10000 | 1000 | baseline | engine_replay | - | 3 | 13/15 (2 stopped) | 3.650457 | 2,739 |
+| stream | sweep | 10000 | 1000 | baseline | application_total | - | 3 | 13/15 (2 stopped) | 3.601151 | 2,777 |
+| stream | sweep | 10000 | 1000 | baseline | engine_replay | - | 3 | 13/15 (2 stopped) | 3.586457 | 2,788 |
 | stream | sweep | 10000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.035751 | 279,713 |
-| stream | sweep | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.019058 | 524,727 |
+| stream | sweep | 10000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.019280 | 518,659 |
 | stream | sweep | 100000 | 1000 | baseline | application_total | - | 3 | 0/15 (15 stopped) | - | - |
 | stream | sweep | 100000 | 1000 | baseline | engine_replay | - | 3 | 0/15 (15 stopped) | - | - |
-| stream | sweep | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.471719 | 211,991 |
-| stream | sweep | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.221611 | 451,241 |
+| stream | sweep | 100000 | 1000 | revised | application_total | - | 3 | 15/15 | 0.456312 | 219,149 |
+| stream | sweep | 100000 | 1000 | revised | engine_replay | - | 3 | 15/15 | 0.227935 | 438,722 |
 
 Input reading/parsing is measured separately. `engine_replay` includes fresh empty-book construction and event processing; `application_total` adds the paired parse repeat. All displayed values are medians of saved raw repeats, not reciprocal-latency estimates.
 
@@ -226,17 +226,17 @@ Inputs are prepared before each fresh `tracemalloc` run and excluded. The live b
 | 1000 | revised | 100 | 3 | 15/15 | 0.000651 |
 | 1000 | revised | 200 | 3 | 15/15 | 0.000646 |
 | 10000 | baseline | 10 | 3 | 15/15 | 1.002312 |
-| 10000 | baseline | 100 | 3 | 7/15 (8 stopped) | 4.947157 |
-| 10000 | baseline | 200 | 3 | 5/15 (10 stopped) | 4.912204 |
+| 10000 | baseline | 100 | 3 | 7/15 (8 stopped) | 4.809442 |
+| 10000 | baseline | 200 | 3 | 5/15 (10 stopped) | 4.940918 |
 | 10000 | revised | 10 | 3 | 15/15 | 0.000716 |
 | 10000 | revised | 100 | 3 | 15/15 | 0.007485 |
 | 10000 | revised | 200 | 3 | 15/15 | 0.006615 |
 | 100000 | baseline | 10 | 3 | 0/15 (15 stopped) | - |
 | 100000 | baseline | 100 | 3 | 0/15 (15 stopped) | - |
 | 100000 | baseline | 200 | 3 | 0/15 (15 stopped) | - |
-| 100000 | revised | 10 | 3 | 15/15 | 0.008904 |
-| 100000 | revised | 100 | 3 | 15/15 | 0.084841 |
-| 100000 | revised | 200 | 3 | 15/15 | 0.085428 |
+| 100000 | revised | 10 | 3 | 15/15 | 0.009103 |
+| 100000 | revised | 100 | 3 | 15/15 | 0.085452 |
+| 100000 | revised | 200 | 3 | 15/15 | 0.085694 |
 
 Each percentage is evaluated against a freshly rebuilt identical bid book. Saved correctness rows contain requested quantity, makers touched, price levels visited, fills, and unfilled residual.
 

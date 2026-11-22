@@ -36,8 +36,10 @@ state comparison after every event; that test can take several minutes. The
 fresh-audit additions cover direct-method type safety, integer boundaries,
 ask-side FIFO, residual priority, repeat pairing, bounded diagnostics,
 object-lifecycle cleanup, strict report validation, missing-repeat disclosure,
-and a saved-sample latency ECDF. The verified result is `Ran 61 tests` followed
-by `OK` (208.606 seconds on the recorded development machine).
+saved-sample latency ECDF, pooled raw-repeat reporting, cross-record summary
+reconciliation, canonical-evidence completeness, and root-level discovery. The
+verified result is `Ran 71 tests` followed by `OK` (190.470 seconds on the
+recorded development machine).
 
 Replay the worked example with either version:
 

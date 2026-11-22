@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 import unittest
 
-from support import require_implementations
+from tests.support import require_implementations
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

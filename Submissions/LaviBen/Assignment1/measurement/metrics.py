@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import contextmanager
 import gc
@@ -18,6 +18,7 @@ import sys
 from time import perf_counter, perf_counter_ns, get_clock_info
 import tracemalloc
 from typing import Any, Iterator
+import statistics
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -394,7 +395,62 @@ def validate_report(report: Mapping[str, object]) -> None:
     records = report["records"]
     if not isinstance(records, list):
         raise ValueError("records must be a list")
+    datasets = report["datasets"]
+    if not isinstance(datasets, list):
+        raise ValueError("datasets must be a list")
+
+    if report["run_label"] == "canonical" and revision >= 3:
+        environment = report["environment"]
+        if not isinstance(environment, Mapping):
+            raise ValueError("canonical environment must be an object")
+        if not datasets or not records:
+            raise ValueError("canonical evidence requires datasets and records")
+        if environment.get("git_dirty") is not False:
+            raise ValueError("canonical evidence requires an explicitly clean tree")
+        if not isinstance(environment.get("git_commit"), str) or not environment.get(
+            "git_commit"
+        ):
+            raise ValueError("canonical evidence requires a recorded git commit")
+        dataset_ids = []
+        for dataset in datasets:
+            if not isinstance(dataset, Mapping):
+                raise ValueError("every canonical dataset must be an object")
+            dataset_id = dataset.get("dataset_id")
+            if not isinstance(dataset_id, str) or not dataset_id:
+                raise ValueError("every canonical dataset requires a dataset_id")
+            dataset_ids.append(dataset_id)
+        if len(dataset_ids) != len(set(dataset_ids)):
+            raise ValueError("canonical dataset identifiers must be unique")
+        if revision >= 4:
+            commit = environment["git_commit"]
+            if len(commit) != 40 or any(
+                character not in "0123456789abcdef" for character in commit
+            ):
+                raise ValueError(
+                    "canonical git commit must be a full lowercase hexadecimal hash"
+                )
+            resolved = subprocess.run(
+                ["git", "cat-file", "-e", f"{commit}^{{commit}}"],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                check=False,
+            )
+            if resolved.returncode != 0:
+                raise ValueError(
+                    "canonical git commit must identify a commit in this repository"
+                )
+            declared_dataset_ids = set(dataset_ids)
+            for record in records:
+                if not isinstance(record, Mapping):
+                    raise ValueError("every record must be an object")
+                if record.get("dataset_id") not in declared_dataset_ids:
+                    raise ValueError(
+                        "every canonical record must reference a declared dataset"
+                    )
+
     raw_repeat_keys: set[tuple[object, ...]] = set()
+    raw_timing_groups: dict[tuple[object, ...], list[Mapping[str, object]]] = defaultdict(list)
+    timing_summaries: dict[tuple[object, ...], Mapping[str, object]] = {}
     for record in records:
         if not isinstance(record, Mapping):
             raise ValueError("every record must be an object")
@@ -435,11 +491,22 @@ def validate_report(report: Mapping[str, object]) -> None:
                 if repeat_key in raw_repeat_keys:
                     raise ValueError(f"duplicate raw timing repeat: {repeat_key}")
                 raw_repeat_keys.add(repeat_key)
+                raw_timing_groups[repeat_key[:-1]].append(record)
         if record["stopped"]:
             _require(record, ("stop_reason",))
             if not isinstance(record["stop_reason"], str) or not record["stop_reason"]:
                 raise ValueError("stopped record requires a nonempty stop_reason")
         if record["measurement_kind"] == "timing_summary" and revision >= 3:
+            _require(record, ("dataset_id",))
+            summary_key = (
+                record["dataset_id"],
+                record["phase"],
+                record["version"],
+                record.get("liquidation_percent"),
+            )
+            if summary_key in timing_summaries:
+                raise ValueError(f"duplicate timing summary: {summary_key}")
+            timing_summaries[summary_key] = record
             _require(
                 record,
                 (
@@ -513,6 +580,46 @@ def validate_report(report: Mapping[str, object]) -> None:
                 for field in ("p50_ns", "p95_ns", "p99_ns"):
                     if record[field] != expected_latency[field]:
                         raise ValueError(f"latency {field} contradicts saved samples")
+
+    if revision >= 3:
+        for summary_key, summary in timing_summaries.items():
+            raw_rows = raw_timing_groups.get(summary_key, [])
+            completed_rows = [row for row in raw_rows if not row["stopped"]]
+            stopped_rows = [row for row in raw_rows if row["stopped"]]
+            if len(completed_rows) != summary["completed_repeat_count"] or len(
+                stopped_rows
+            ) != summary["stopped_repeat_count"]:
+                raise ValueError(
+                    f"timing summary counts contradict raw timing rows: {summary_key}"
+                )
+            expected_raw_count = (
+                summary["expected_repeat_count"] - summary["missing_repeat_count"]
+            )
+            if len(raw_rows) != expected_raw_count:
+                raise ValueError(
+                    f"timing summary coverage contradicts raw timing rows: {summary_key}"
+                )
+            if completed_rows:
+                expected_median = statistics.median(
+                    float(row["elapsed_seconds"]) for row in completed_rows
+                )
+                if summary["elapsed_seconds_median"] != expected_median:
+                    raise ValueError(
+                        f"timing summary median contradicts raw timing rows: {summary_key}"
+                    )
+                if "throughput_events_per_second_median" in summary:
+                    throughputs = [
+                        float(row["throughput_events_per_second"])
+                        for row in completed_rows
+                        if "throughput_events_per_second" in row
+                    ]
+                    if not throughputs or summary[
+                        "throughput_events_per_second_median"
+                    ] != statistics.median(throughputs):
+                        raise ValueError(
+                            "timing summary throughput median contradicts raw timing rows: "
+                            f"{summary_key}"
+                        )
 
 
 def write_report(path: Path, report: Mapping[str, object]) -> None:

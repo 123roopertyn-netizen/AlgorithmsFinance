@@ -130,7 +130,7 @@ first exception-path clock read, after the timeout context has restored its
 signal handler. If the context stops before the operation's start clock, the
 attempted phase records zero elapsed time. These stopped-run semantics and the
 completed-operation boundary are written into the saved settings. Corrected
-runs also record `measurement_integrity_revision: 3`; clean reports with an
+runs also record `measurement_integrity_revision: 4`; clean reports with an
 older revision are labeled superseded rather than canonical.
 
 Every timing summary records expected, completed, stopped, and missing repeat
@@ -146,6 +146,8 @@ samples and selecting rank `ceil(p/100*n)`, with minimum rank one. These are
 in-process algorithm times, not network or queueing latency.
 The dashboard renders an empirical cumulative distribution directly from the
 saved `samples_ns`; it never reruns or reconstructs latency measurements.
+Cross-seed report tables pool the saved event samples before applying the same
+nearest-rank rule; they do not take medians of seed-level percentiles.
 
 ## Operation counts and correctness
 
@@ -153,7 +155,9 @@ Separate runs over the configured diagnostic prefix save event/status counts,
 fills, filled quantity, market residual, active-order peak, occupied-price-level
 peak and final book size. They record requested and processed event counts, use
 the declared operational limit, and preserve stopped/partial evidence instead
-of delaying a large benchmark without a bound.
+of delaying a large benchmark without a bound. The cross-version per-event
+result and canonical-book comparison uses that same wall-clock limit and emits
+an explicit stopped correctness row if it cannot complete.
 
 Liquidation records also save requested quantity, makers touched, price levels
 visited and unfilled residual. Ordered results and canonical books are compared

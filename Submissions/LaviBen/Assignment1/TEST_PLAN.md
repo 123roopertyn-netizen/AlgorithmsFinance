@@ -9,6 +9,7 @@ This plan and the executable tests were completed before creating an
 |---|---|
 | Empty book and required API | `test_empty_book_and_required_public_api` |
 | One resting order and defensive inspection copy | `test_one_order_rests_and_inspection_is_canonical_copy` |
+| Additional client metadata is ignored without input mutation | `test_additional_input_fields_are_ignored_without_mutation` |
 | FIFO independent of identifier spelling | Makers `z_first`, then `a_second`; expected fills remain arrival-ordered |
 | Best-price priority | Older bid at 100 must lose to later bids at 102 and 101 |
 | Market statuses | Separately calculated empty, exact-depth and oversized cases |
@@ -81,5 +82,5 @@ commands, nonzero exit statuses, failure counts and reasons are preserved in
 they inspect deterministic clock/context/cleanup order and saved-record
 semantics, so they are stable across machines.
 
-The integrated post-audit run completed all 61 tests successfully. Passing
+The integrated professor-review run completed all 71 tests successfully. Passing
 remains evidence rather than a proof of correctness.

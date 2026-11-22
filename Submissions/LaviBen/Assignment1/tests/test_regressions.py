@@ -5,7 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 import unittest
 
-from support import cancel, fill, limit, market_sell, require_implementations
+from tests.support import cancel, fill, limit, market_sell, require_implementations
 
 
 class RegressionTests(unittest.TestCase):

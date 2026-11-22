@@ -10,7 +10,7 @@ from pathlib import Path
 import statistics
 from typing import Iterable, Mapping
 
-from measurement.metrics import load_report, validate_report
+from measurement.metrics import latency_summary, load_report, validate_report
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -82,6 +82,119 @@ def _aggregate(
     return output
 
 
+def _aggregate_timing(
+    records: Iterable[Mapping[str, object]],
+    phases: set[str],
+) -> list[dict[str, object]]:
+    """Pool completed raw repeats while taking coverage from saved summaries."""
+
+    raw_groups: dict[tuple[object, ...], list[Mapping[str, object]]] = defaultdict(list)
+    summary_groups: dict[tuple[object, ...], list[Mapping[str, object]]] = defaultdict(list)
+    for record in records:
+        if record.get("phase") not in phases:
+            continue
+        key = (
+            record.get("experiment"),
+            record.get("scenario"),
+            record.get("event_count"),
+            record.get("levels"),
+            record.get("version"),
+            record.get("phase"),
+            record.get("liquidation_percent"),
+        )
+        if record.get("measurement_kind") == "timing":
+            raw_groups[key].append(record)
+        elif record.get("measurement_kind") == "timing_summary":
+            summary_groups[key].append(record)
+
+    output: list[dict[str, object]] = []
+    for key, summaries in sorted(
+        summary_groups.items(), key=lambda item: tuple(str(value) for value in item[0])
+    ):
+        completed = [
+            record
+            for record in raw_groups.get(key, [])
+            if not record.get("stopped") and record.get("elapsed_seconds") is not None
+        ]
+        elapsed = [float(record["elapsed_seconds"]) for record in completed]
+        throughputs = [
+            float(record["throughput_events_per_second"])
+            for record in completed
+            if record.get("throughput_events_per_second") is not None
+        ]
+        output.append(
+            {
+                "experiment": key[0],
+                "scenario": key[1],
+                "event_count": key[2],
+                "levels": key[3],
+                "version": key[4],
+                "phase": key[5],
+                "liquidation_percent": key[6],
+                "seed_count": len(summaries),
+                "completed_repeat_count": sum(
+                    int(value.get("completed_repeat_count", 0)) for value in summaries
+                ),
+                "stopped_repeat_count": sum(
+                    int(value.get("stopped_repeat_count", 0)) for value in summaries
+                ),
+                "expected_repeat_count": sum(
+                    int(value.get("expected_repeat_count", 0)) for value in summaries
+                ),
+                "missing_repeat_count": sum(
+                    int(value.get("missing_repeat_count", 0)) for value in summaries
+                ),
+                "elapsed_seconds_median": statistics.median(elapsed) if elapsed else None,
+                "throughput_events_per_second_median": (
+                    statistics.median(throughputs) if throughputs else None
+                ),
+            }
+        )
+    return output
+
+
+def _aggregate_latency(
+    records: Iterable[Mapping[str, object]],
+) -> list[dict[str, object]]:
+    """Pool saved event samples before computing nearest-rank percentiles."""
+
+    grouped: dict[tuple[object, ...], list[Mapping[str, object]]] = defaultdict(list)
+    for record in records:
+        key = (
+            record.get("experiment"),
+            record.get("scenario"),
+            record.get("event_count"),
+            record.get("levels"),
+            record.get("version"),
+            record.get("phase"),
+            record.get("liquidation_percent"),
+        )
+        grouped[key].append(record)
+
+    output: list[dict[str, object]] = []
+    for key, values in sorted(
+        grouped.items(), key=lambda item: tuple(str(value) for value in item[0])
+    ):
+        samples = [
+            int(sample)
+            for value in values
+            for sample in value.get("samples_ns", [])
+        ]
+        row: dict[str, object] = {
+            "experiment": key[0],
+            "scenario": key[1],
+            "event_count": key[2],
+            "levels": key[3],
+            "version": key[4],
+            "phase": key[5],
+            "liquidation_percent": key[6],
+            "seed_count": len(values),
+        }
+        row.update(latency_summary(samples))
+        output.append(row)
+    return output
+
+
 def _repeat_coverage(row: Mapping[str, object]) -> str:
     """Render completed/expected coverage without hiding stopped or missing work."""
 
@@ -112,12 +225,12 @@ def render_report(report: dict[str, object]) -> str:
     run_label = str(report["run_label"])
     integrity_revision = int(settings.get("measurement_integrity_revision", 0))
     clean_canonical = run_label == "canonical" and not environment.get("git_dirty")
-    if clean_canonical and integrity_revision >= 3:
+    if clean_canonical and integrity_revision >= 4:
         status = "Canonical clean-tree evidence."
     elif clean_canonical:
         status = (
             "SUPERSEDED: legacy measurement evidence. This report predates "
-            "measurement-integrity revision 3."
+            "measurement-integrity revision 4."
         )
     else:
         status = "PROVISIONAL: this report was produced from a noncanonical or dirty-tree run."
@@ -151,22 +264,16 @@ def render_report(report: dict[str, object]) -> str:
         if record.get("measurement_kind") == "timing_summary"
     )
 
-    timing = _aggregate(
-        (
-            record
-            for record in records
-            if record["measurement_kind"] == "timing_summary"
-            and record["phase"] in {"engine_replay", "application_total"}
-        ),
-        ("elapsed_seconds_median", "throughput_events_per_second_median"),
+    timing = _aggregate_timing(
+        records,
+        {"engine_replay", "application_total"},
     )
-    latency = _aggregate(
+    latency = _aggregate_latency(
         (
             record
             for record in records
             if record["measurement_kind"] == "latency" and not record["stopped"]
-        ),
-        ("p50_ns", "p95_ns", "p99_ns"),
+        )
     )
     memory = _aggregate(
         (
@@ -178,14 +285,9 @@ def render_report(report: dict[str, object]) -> str:
         ),
         ("current_traced_bytes", "peak_traced_bytes"),
     )
-    liquidation = _aggregate(
-        (
-            record
-            for record in records
-            if record["measurement_kind"] == "timing_summary"
-            and record["phase"] == "individual_sale"
-        ),
-        ("elapsed_seconds_median",),
+    liquidation = _aggregate_timing(
+        records,
+        {"individual_sale"},
     )
     operations = [
         record for record in records if record["measurement_kind"] == "operation_counts"

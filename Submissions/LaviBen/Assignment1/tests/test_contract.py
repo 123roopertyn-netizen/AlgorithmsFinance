@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from support import (
+from tests.support import (
     assert_book_invariants,
     cancel,
     fill,
@@ -17,6 +17,26 @@ from support import (
 
 
 class OrderBookContractTests(unittest.TestCase):
+    def test_additional_input_fields_are_ignored_without_mutation(self) -> None:
+        event = {
+            **limit(1, "b1", "BUY", 100, 7),
+            "source": "optional-client-metadata",
+        }
+        expected_result = {
+            "event_id": "event1",
+            "order_id": "b1",
+            "status": "resting",
+            "unfilled_qty_units": 7,
+            "fills": [],
+        }
+        for name, book_class in self.implementations():
+            with self.subTest(version=name):
+                book = book_class()
+                self.assertEqual(
+                    process_without_input_mutation(self, book, event),
+                    expected_result,
+                )
+
     def implementations(self):
         return require_implementations(self).items()
 

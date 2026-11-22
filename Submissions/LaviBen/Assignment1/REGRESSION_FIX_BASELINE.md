@@ -66,6 +66,46 @@ removing two redundant invariant inspections; no expected result was weakened.
 These failures establish that the new regression suite detects the reviewed
 measurement and saved-evidence defects before their fixes.
 
+## Revision-4 professor-review regressions
+
+On 22 November 2026, five independent expectations were frozen and run before
+the corresponding implementation changes:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v \
+  tests.test_reporting.ReportingTests.test_latency_table_pools_saved_samples_across_seeds \
+  tests.test_measurement.MeasurementContractTests.test_measurement_integrity_revision_is_four \
+  tests.test_measurement.MeasurementContractTests.test_compare_versions_preserves_bounded_stopped_evidence \
+  tests.test_measurement.MeasurementContractTests.test_revision_four_canonical_evidence_is_tied_to_datasets_and_commit \
+  tests.test_contract.OrderBookContractTests.test_additional_input_fields_are_ignored_without_mutation
+```
+
+Observed result:
+
+- Exit status: `1`
+- Tests run: `5`
+- Failures: `3`
+- Errors: `1`
+- The short report took the median of per-seed latency percentiles (`2/3/3`)
+  instead of nearest-rank percentiles over all saved samples (`2/100/100`).
+- The runner still emitted measurement-integrity revision 3.
+- `compare_versions` did not accept or enforce a wall-time limit.
+- Revision-4 canonical validation accepted a record for an undeclared dataset;
+  the same regression also requires the recorded commit to resolve to a real
+  commit in this repository.
+- The extra-input-field contract expectation already passed for both engines;
+  its documentation, rather than engine behavior, required clarification.
+
+The initial invocation also exposed and corrected a test-only fixture typo
+(`self.implementations.items()` instead of `self.implementations()`). The
+result above is the clean pre-implementation baseline after that correction.
+
+The direct evidence-label helper was then tested separately with a revision-4
+canonical claim containing a nonexistent all-zero commit. The single test
+exited `1`: it returned `Canonical clean-tree evidence.` rather than
+`Invalid measurement evidence.`. This freezes the requirement that even direct
+status callers validate provenance before granting the canonical label.
+
 ## Strict timeout-instrumentation boundary
 
 A subsequent read-only review identified that completed clocks stopped after
@@ -286,3 +326,47 @@ failed because two completed repeats plus three stopped repeats and a second
 fully stopped five-repeat row rendered as `2/5 (3 stopped)` instead of
 `2/10 (8 stopped)`. After including fully stopped summaries in aggregation,
 all six reporting tests exited `0`.
+
+## Inspector follow-up: pooled medians, evidence reconciliation, and discovery
+
+Independent regression expectations were added before changing
+`build_report.py`, `measurement/metrics.py`, or the existing test imports:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=.:tests python3 -m unittest -v \
+  tests.test_reporting.ReportingTests.test_runtime_table_pools_completed_raw_repeats_across_seeds \
+  tests.test_measurement.MeasurementContractTests.test_revision_three_summaries_reconcile_with_raw_timing_rows \
+  tests.test_measurement.MeasurementContractTests.test_empty_report_cannot_claim_canonical_evidence \
+  tests.test_discovery.DiscoveryTests.test_root_discovery_imports_every_test_module
+```
+
+Observed result before implementation:
+
+- Exit status: `1`
+- Tests run: `4`
+- Failures: `3`
+- The runtime table reported `4.000000`, the median of three seed medians,
+  instead of `5.000000`, the median of the nine saved raw repeats.
+- Revision-3 validation accepted a timing-summary median that contradicted its
+  raw timing row.
+- An empty report could claim canonical clean-tree evidence.
+
+Root-level discovery was also reproduced independently before changing imports:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -v \
+  -k test_root_discovery_probe_target
+```
+
+It exited `1` with eight import errors because test modules imported `support`
+and `test_dashboard` as top-level modules. After package-qualifying those
+imports, pooling completed raw timing rows, reconciling revision-3 summaries,
+and requiring nonempty canonical evidence with clean commit metadata, the
+focused reporting/measurement/dashboard/discovery suite ran 40 tests and
+exited `0`.
+
+The stronger reconciliation check also exposed a zero-completion edge case.
+A focused timing-summary regression was added before changing the runner; it
+exited `1` because one stopped plus one missing repeat was labeled `missing`
+instead of `partial`. After correcting that classification, the focused test
+and the 40-test reporting/measurement/dashboard/discovery suite exited `0`.

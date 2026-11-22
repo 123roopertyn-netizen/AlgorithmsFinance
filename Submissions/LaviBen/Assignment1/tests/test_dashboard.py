@@ -3,10 +3,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
-from dashboard import render_dashboard, write_dashboard
+from dashboard import evidence_status, render_dashboard, write_dashboard
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+CURRENT_COMMIT = subprocess.run(
+    ["git", "rev-parse", "HEAD"],
+    cwd=PROJECT_ROOT,
+    check=True,
+    capture_output=True,
+    text=True,
+).stdout.strip()
 
 
 REPORT = {
@@ -83,6 +94,27 @@ REPORT = {
 
 
 class DashboardTests(unittest.TestCase):
+    def test_evidence_status_rejects_invalid_revision_four_claim(self) -> None:
+        invalid = {
+            **REPORT,
+            "run_label": "canonical",
+            "environment": {
+                **REPORT["environment"],
+                "git_dirty": False,
+                "git_commit": "0" * 40,
+            },
+            "settings": {
+                **REPORT["settings"],
+                "measurement_integrity_revision": 4,
+            },
+        }
+
+        label, explanation, canonical = evidence_status(invalid)
+
+        self.assertEqual(label, "Invalid measurement evidence.")
+        self.assertIn("git commit", explanation)
+        self.assertFalse(canonical)
+
     def test_dashboard_contains_required_saved_result_views(self) -> None:
         html = render_dashboard(REPORT)
 
@@ -179,9 +211,13 @@ class DashboardTests(unittest.TestCase):
 
         corrected = {
             **legacy,
+            "environment": {
+                **legacy["environment"],
+                "git_commit": CURRENT_COMMIT,
+            },
             "settings": {
                 **legacy["settings"],
-                "measurement_integrity_revision": 3,
+                "measurement_integrity_revision": 4,
             },
         }
         corrected_html = render_dashboard(corrected)

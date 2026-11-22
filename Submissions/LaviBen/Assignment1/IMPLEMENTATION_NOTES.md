@@ -135,7 +135,10 @@ After every accepted event:
   expected/stopped/missing summaries, and explicit stopped or unattempted work.
   Dashboard and short-report tests verify the saved-sample ECDF, revision-3
   evidence gate, diagnostic coverage, required views, and byte-stable
-  generation. The complete post-audit suite passes all 61 tests; its strict
+  generation. Inspector follow-up tests require pooled raw-repeat medians,
+  timing-summary/raw-row reconciliation, nonempty canonical evidence, and
+  root-level test discovery. The complete post-audit suite passes all 71 tests;
+  its strict
   50,000-event public-state comparison makes the run intentionally slow.
 - `REGRESSION_FIX_BASELINE.md` records the failing commands, exit statuses and
   reasons observed before the post-audit measurement and presentation fixes.

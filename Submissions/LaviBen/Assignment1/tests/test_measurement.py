@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from pathlib import Path
+import subprocess
 import tempfile
 from time import sleep
 import unittest
@@ -18,6 +19,7 @@ from measurement.datasets import (
     write_dataset,
 )
 from measurement.metrics import (
+    MeasurementTimeout,
     latency_replay,
     nearest_rank,
     replay_diagnostics,
@@ -31,9 +33,12 @@ from orderbook.revised import RevisedOrderBook
 import tools.run_benchmarks as benchmark_runner
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
 class MeasurementContractTests(unittest.TestCase):
-    def test_measurement_integrity_revision_is_three(self) -> None:
-        self.assertEqual(benchmark_runner.MEASUREMENT_INTEGRITY_REVISION, 3)
+    def test_measurement_integrity_revision_is_four(self) -> None:
+        self.assertEqual(benchmark_runner.MEASUREMENT_INTEGRITY_REVISION, 4)
 
     def test_application_totals_reject_unpaired_parse_and_replay_repeats(self) -> None:
         base = {
@@ -437,6 +442,23 @@ class MeasurementContractTests(unittest.TestCase):
         self.assertEqual(result["events_compared"], 3)
         self.assertEqual([book.inspect_calls for book in instances], [3, 3])
 
+    def test_compare_versions_preserves_bounded_stopped_evidence(self) -> None:
+        @contextmanager
+        def immediate_timeout(seconds):
+            raise MeasurementTimeout(f"phase exceeded {seconds} seconds")
+            yield
+
+        with patch.object(benchmark_runner, "time_limit", immediate_timeout):
+            result = benchmark_runner.compare_versions(
+                ({"event_id": "event1", "seq": 1},),
+                time_limit_seconds=0.01,
+            )
+
+        self.assertEqual(result["events_requested"], 1)
+        self.assertEqual(result["events_compared"], 0)
+        self.assertEqual(result["stopped"], True)
+        self.assertIn("exceeded 0.01 seconds", result["stop_reason"])
+
     def test_liquidation_book_cleanup_occurs_outside_next_build_timer(self) -> None:
         clock_calls = 0
         cleanup_clock_counts: list[int] = []
@@ -663,6 +685,27 @@ class MeasurementContractTests(unittest.TestCase):
         self.assertEqual(summary["stopped_repeat_count"], 1)
         self.assertEqual(summary["completion_status"], "partial")
         self.assertEqual(summary["stopped"], False)
+
+        mixed_records: list[dict[str, object]] = []
+        benchmark_runner.append_timing_summary(
+            mixed_records,
+            [
+                {
+                    "elapsed_seconds": 5.0,
+                    "stopped": True,
+                    "stop_reason": "phase exceeded limit",
+                }
+            ],
+            {"dataset_id": "summary-mixed-audit"},
+            "engine_replay",
+            "baseline",
+            expected_repeat_count=2,
+        )
+        self.assertEqual(mixed_records[0]["completed_repeat_count"], 0)
+        self.assertEqual(mixed_records[0]["stopped_repeat_count"], 1)
+        self.assertEqual(mixed_records[0]["missing_repeat_count"], 1)
+        self.assertEqual(mixed_records[0]["completion_status"], "partial")
+        self.assertEqual(mixed_records[0]["stopped"], False)
 
     def test_application_total_handles_unattempted_null_source(self) -> None:
         base = {
@@ -995,6 +1038,114 @@ class MeasurementContractTests(unittest.TestCase):
         for label, report in invalid_reports.items():
             with self.subTest(label=label), self.assertRaises(ValueError):
                 validate_report(report)
+
+    def test_revision_three_summaries_reconcile_with_raw_timing_rows(self) -> None:
+        timing = {
+            "dataset_id": "d",
+            "measurement_kind": "timing",
+            "phase": "engine_replay",
+            "version": "revised",
+            "repeat": 0,
+            "elapsed_seconds": 0.1,
+            "attempted": True,
+            "stopped": False,
+        }
+        summary = {
+            "dataset_id": "d",
+            "measurement_kind": "timing_summary",
+            "phase": "engine_replay",
+            "version": "revised",
+            "repeat": None,
+            "expected_repeat_count": 1,
+            "completed_repeat_count": 1,
+            "stopped_repeat_count": 0,
+            "missing_repeat_count": 0,
+            "completion_status": "complete",
+            "elapsed_seconds_median": 0.1,
+            "stopped": False,
+        }
+        report = {
+            "schema_version": 1,
+            "run_label": "provisional_smoke",
+            "environment": {"python_version": "test"},
+            "settings": {"measurement_integrity_revision": 3},
+            "datasets": [],
+            "records": [timing, summary],
+        }
+        validate_report(report)
+
+        bad_median = {
+            **report,
+            "records": [timing, {**summary, "elapsed_seconds_median": 9.9}],
+        }
+        with self.assertRaisesRegex(ValueError, "median"):
+            validate_report(bad_median)
+
+        bad_count = {
+            **report,
+            "records": [
+                timing,
+                {
+                    **summary,
+                    "expected_repeat_count": 2,
+                    "completed_repeat_count": 2,
+                },
+            ],
+        }
+        with self.assertRaisesRegex(ValueError, "raw timing"):
+            validate_report(bad_count)
+
+    def test_empty_report_cannot_claim_canonical_evidence(self) -> None:
+        empty_canonical = {
+            "schema_version": 1,
+            "run_label": "canonical",
+            "environment": {"git_dirty": False},
+            "settings": {"measurement_integrity_revision": 3},
+            "datasets": [],
+            "records": [],
+        }
+
+        with self.assertRaisesRegex(ValueError, "canonical"):
+            validate_report(empty_canonical)
+
+    def test_revision_four_canonical_evidence_is_tied_to_datasets_and_commit(self) -> None:
+        current_commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=PROJECT_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        record = {
+            "dataset_id": "declared",
+            "measurement_kind": "correctness",
+            "phase": "diagnostic_prefix",
+            "version": "shared",
+            "stopped": False,
+        }
+        canonical = {
+            "schema_version": 1,
+            "run_label": "canonical",
+            "environment": {"git_dirty": False, "git_commit": current_commit},
+            "settings": {"measurement_integrity_revision": 4},
+            "datasets": [{"dataset_id": "declared"}],
+            "records": [record],
+        }
+        validate_report(canonical)
+
+        undeclared = {
+            **canonical,
+            "records": [{**record, "dataset_id": "not-declared"}],
+        }
+        with self.assertRaisesRegex(ValueError, "declared dataset"):
+            validate_report(undeclared)
+
+        nonexistent_commit = {
+            **canonical,
+            "environment": {"git_dirty": False, "git_commit": "0" * 40},
+        }
+        with self.assertRaisesRegex(ValueError, "git commit"):
+            validate_report(nonexistent_commit)
 
 
 if __name__ == "__main__":

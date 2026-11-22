@@ -44,7 +44,7 @@ mutates the input mapping.
 ## Accepted input events
 
 Every accepted event has a nonempty string `event_id`, an integer `seq`, and
-one of these exact shapes:
+at least the following required fields:
 
 ```text
 LIMIT:
@@ -56,6 +56,9 @@ MARKET_SELL:
 CANCEL:
   type, event_id, seq, target_order_id
 ```
+
+Additional fields are permitted and ignored. They do not affect validation,
+matching, state, or returned results, and the input mapping remains unchanged.
 
 `side` is exactly `BUY` or `SELL`. Submission and target identifiers are
 nonempty strings. A limit or market submission whose `order_id` equals an

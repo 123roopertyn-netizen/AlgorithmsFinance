@@ -85,6 +85,11 @@ document.getElementById('environment').textContent=JSON.stringify(REPORT.environ
 def evidence_status(report: dict[str, object]) -> tuple[str, str, bool]:
     """Return the saved report's label, explanation, and canonical status."""
 
+    try:
+        validate_report(report)
+    except ValueError as error:
+        return ("Invalid measurement evidence.", str(error), False)
+
     environment = report.get("environment", {})
     settings = report.get("settings", {})
     dirty = bool(environment.get("git_dirty"))  # type: ignore[union-attr]
@@ -92,7 +97,7 @@ def evidence_status(report: dict[str, object]) -> tuple[str, str, bool]:
         settings.get("measurement_integrity_revision", 0)
     )
     if report.get("run_label") == "canonical" and not dirty:
-        if revision >= 3:
+        if revision >= 4:
             return (
                 "Canonical clean-tree evidence.",
                 "Views are backed by the recorded corrected measurement commit.",
@@ -100,7 +105,7 @@ def evidence_status(report: dict[str, object]) -> tuple[str, str, bool]:
             )
         return (
             "Superseded legacy measurement evidence.",
-            "This clean-tree report predates measurement-integrity revision 3.",
+            "This clean-tree report predates measurement-integrity revision 4.",
             False,
         )
     return (

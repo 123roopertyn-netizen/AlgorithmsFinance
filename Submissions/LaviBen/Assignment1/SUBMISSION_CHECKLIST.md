@@ -37,7 +37,7 @@
 - [x] Render a true latency distribution from saved samples only.
 - [x] Freeze and enforce operation-specific direct-method behavior.
 - [x] Add the missing validation, FIFO-symmetry, and residual-priority tests.
-- [x] Run the complete corrected test suite (61 tests, 208.606 seconds).
+- [x] Run the complete corrected test suite (71 tests, 190.470 seconds).
 - [x] Run an eight-dataset revision-3 smoke benchmark and validate all 232 records.
 - [x] Update all documentation to match the corrected implementation.
 
@@ -56,7 +56,7 @@
   artifacts byte-for-byte.
 - [x] Refresh `results/CHECKSUMS.json` for the replacement raw report,
   dashboard, and root report.
-- [x] Run the complete test suite (61 tests, 208.606 seconds) and final Git
+- [x] Run the complete test suite (71 tests, 190.470 seconds) and final Git
   scope/secret checks on the submission candidate.
 - [x] Record the new audited measurement commit in the replacement raw evidence
   and report. Commit `ffb474170b4849af850e31588f9a1a70dcf08da3` belongs only

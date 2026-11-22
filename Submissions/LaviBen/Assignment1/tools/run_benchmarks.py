@@ -43,7 +43,7 @@ IMPLEMENTATIONS = {
     "baseline": BaselineOrderBook,
     "revised": RevisedOrderBook,
 }
-MEASUREMENT_INTEGRITY_REVISION = 3
+MEASUREMENT_INTEGRITY_REVISION = 4
 
 
 def parse_args() -> argparse.Namespace:
@@ -144,7 +144,13 @@ def append_timing_summary(
                 "completed_repeat_count": 0,
                 "stopped_repeat_count": stopped_count,
                 "missing_repeat_count": missing_count,
-                "completion_status": "stopped" if not missing_count else "missing",
+                "completion_status": (
+                    "partial"
+                    if stopped_count and missing_count
+                    else "stopped"
+                    if stopped_count
+                    else "missing"
+                ),
                 "stopped": not missing_count,
                 "time_unit": "seconds",
                 **(
@@ -158,25 +164,39 @@ def append_timing_summary(
 
 def compare_versions(
     events: Sequence[Mapping[str, object]],
+    time_limit_seconds: float | None = None,
 ) -> dict[str, object]:
     books = {name: cls() for name, cls in IMPLEMENTATIONS.items()}
-    for index, event in enumerate(events, 1):
-        before = deepcopy(event)
-        results = {name: book.ProcessEvent(event) for name, book in books.items()}
-        if event != before:
-            raise AssertionError(f"input mutation at diagnostic event {index}")
-        if results["baseline"] != results["revised"]:
-            raise AssertionError(f"result disagreement at diagnostic event {index}")
-        states = {name: book.InspectBook() for name, book in books.items()}
-        if states["baseline"] != states["revised"]:
-            raise AssertionError(
-                f"canonical-book disagreement at diagnostic event {index}"
-            )
+    compared = 0
+    try:
+        with time_limit(time_limit_seconds):
+            for index, event in enumerate(events, 1):
+                before = deepcopy(event)
+                results = {name: book.ProcessEvent(event) for name, book in books.items()}
+                if event != before:
+                    raise AssertionError(f"input mutation at diagnostic event {index}")
+                if results["baseline"] != results["revised"]:
+                    raise AssertionError(f"result disagreement at diagnostic event {index}")
+                states = {name: book.InspectBook() for name, book in books.items()}
+                if states["baseline"] != states["revised"]:
+                    raise AssertionError(
+                        f"canonical-book disagreement at diagnostic event {index}"
+                    )
+                compared = index
+    except MeasurementTimeout as error:
+        return {
+            "events_requested": len(events),
+            "events_compared": compared,
+            "stopped": True,
+            "stop_reason": str(error),
+        }
     return {
-        "events_compared": len(events),
+        "events_requested": len(events),
+        "events_compared": compared,
         "ordered_results_equal": True,
         "final_books_equal": True,
         "input_unchanged": True,
+        "stopped": False,
     }
 
 
@@ -360,7 +380,7 @@ def stream_measurements(
     base = common_fields(metadata)
     records: list[dict[str, object]] = []
     diagnostic_input = events[: min(len(events), diagnostic_events)]
-    correctness = compare_versions(diagnostic_input)
+    correctness = compare_versions(diagnostic_input, time_limit_seconds)
     records.append(
         {
             **base,
@@ -368,7 +388,6 @@ def stream_measurements(
             "phase": "diagnostic_prefix",
             "version": "shared",
             **correctness,
-            "stopped": False,
         }
     )
 
