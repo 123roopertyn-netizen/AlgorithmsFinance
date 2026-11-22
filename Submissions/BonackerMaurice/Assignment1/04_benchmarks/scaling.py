@@ -116,7 +116,7 @@ def git_commit():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", choices=["a", "b"], required=True)
+    parser.add_argument("--version", choices=["a", "b_sorted", "b_heap"], required=True)
     parser.add_argument("--child", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.child:

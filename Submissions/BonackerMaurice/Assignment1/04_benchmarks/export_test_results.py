@@ -7,7 +7,9 @@ Writes 05_results/tests_by_case.csv with columns
     test, source, version, result
 - test:    test function name (without the version parameter)
 - source:  the test's @pytest.mark.source label (where expected values come from)
-- version: a / b for tests that run an engine; "none" for tests that need no engine
+- version: a / b_sorted / b_heap for tests that run one engine; "all" for a
+           test marked cross_version (compares every version); "none" for
+           tests that need no engine
 - result:  pass / fail (a setup error counts as fail)
 Exit code: pytest's exit code.
 """
@@ -33,7 +35,12 @@ class Collector:
             source = marker.args[0] if marker else "unlabelled"
             params = getattr(item, "callspec", None)
             module = params.params.get("lob") if params else None
-            version = module.removeprefix("lob_") if module else "none"
+            if module:
+                version = module.removeprefix("lob_")
+            elif item.get_closest_marker("cross_version"):
+                version = "all"      # one test comparing every version
+            else:
+                version = "none"     # needs no engine
             self.info[item.nodeid] = (item.originalname, source, version)
 
     def pytest_runtest_logreport(self, report):

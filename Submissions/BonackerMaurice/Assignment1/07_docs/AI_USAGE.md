@@ -141,6 +141,59 @@ Version B to every test file. No expected value changed.
 | T4 | Label for the engine-free cross-check: "my Excel tab Base vs professor JSON" (it fits neither of the two suggested labels exactly). | |
 | T5 | Liquidation `sell_seconds` times `process_event` (includes validation, whose duplicate-id check is O(B) in Version A), not `FillMarketSell` alone. | |
 
+## Session 4: Version B (B-sorted and B-heap)
+
+Maurice's design: a dict for id lookup; a dict of price → FIFO deque per side;
+two best-price variants (sorted list with bisect, heap with lazy deletion).
+
+### AI draft and Maurice's corrections (design stage)
+
+| # | AI draft | Maurice's decision |
+|---|---|---|
+| C3 | Compaction rules for deques and heaps (proposed by the AI to bound stale entries). | **Accepted**, with explicit tests: heap under cancel_churn, deque under repeated cancels behind a live FIFO head. |
+| C4 | Shared core file `lob_b_common.py`. | **Accepted**; validation.py stays shared with A; variants differ only in the price index. |
+| C5 | B-sorted kept Maurice's first layout (best ask = first element), and the AI noted that removing it is an O(P) shift. | **Corrected**: both sides stored so the best price is at the END; exhausted best levels removed with `pop()`. |
+| C6 | Cost table mixed rebuild and pop costs, left out residual insertion, and implied compaction shrinks memory. | **Corrected**: linear heap rebuild vs O(log H) stale pops kept apart; residual-limit insertion included; compaction bounds retained entries, not dict allocations. |
+
+### What the AI produced
+
+| File | Content |
+|---|---|
+| `07_docs/REVISIONS.md` | Revision 1: evidence, pseudocode, cost tables with claim types, hypotheses, results |
+| `03_code/lob_b_common.py` | Shared core: Order, Level, matching, cancel, TIDY/compaction, inspect_book, invariants |
+| `03_code/lob_b_sorted.py`, `03_code/lob_b_heap.py` | The two price indexes only |
+| `02_tests/test_b_compaction.py` | Heap bound under cancel_churn; deque bound behind a live head (twice) |
+| `02_tests/differential.py`, `02_tests/test_differential.py` | Seeded random streams; A vs B-sorted vs B-heap after every event; `05_results/differential_tests.csv` |
+| scripts and dashboard | `--version a / b_sorted / b_heap`; `cross_version` marker; dashboard version labels, colours and small multiples |
+
+Tests-first evidence: `05_results/tests_fail_first_version_b.txt` (stubs:
+22 failed, 12 passed). Mutation checks (throwaway copies, outside the repo):
+the compaction tests fail without compaction; the differential test flags a
+LIFO queue (295/300 streams) and a wrong cancelled quantity (297/300).
+
+### Problems found during the session
+
+- The first saved fail-first output used `--tb=line`, which printed absolute
+  paths including the home folder. Re-saved with `--tb=short` (relative
+  paths only) before anything else used it.
+- The `--check` replay of B-heap took more than 10 minutes for the five 10k
+  files. The cause is the checks, not the engine: per event it runs
+  `inspect_book` (sorts the level keys), the full invariant walk and the
+  heap-order check, O(B + H) each. Timed passes are unaffected (they run
+  without checks).
+- No engine bug was found: all hand tests, the JSON test, the differential
+  test and the replays agreed on the first implementation.
+
+### Open points for Maurice
+
+| # | AI suggestion | Decision |
+|---|---|---|
+| T6 | Scaling chart changed to one panel per scenario (colour = version), because 3 versions × 5 scenarios = 15 lines in one chart is unreadable. Version is now always the colour. | |
+| T7 | The differential test counts as one test for all versions (`cross_version` marker, shown in every version column). | |
+| T8 | `_index_remove_best` in B-sorted asserts that the emptied level is the last key (a cheap check in the timed path). | |
+| T9 | pytest runs the full 300-stream differential test (about 3 s). | |
+| T10 | B-sorted vs B-heap: reported as "no reliable winner" from single runs; to be decided by the final repeated benchmark. | |
+
 ### Hidden instruction in the course PDF
 
 AGENTS.md warns of hidden text in the slides asking AI tools to insert a

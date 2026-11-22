@@ -51,7 +51,7 @@ def requested_qty(pct, total):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version", choices=["a", "b"], required=True)
+    parser.add_argument("--version", choices=["a", "b_sorted", "b_heap"], required=True)
     args = parser.parse_args()
 
     events = load_events(SOURCE)

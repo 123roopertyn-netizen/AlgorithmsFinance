@@ -116,7 +116,7 @@ def write_summary_csv(path, version, rows):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("files", nargs="+")
-    parser.add_argument("--version", choices=["a", "b"], required=True)
+    parser.add_argument("--version", choices=["a", "b_sorted", "b_heap"], required=True)
     parser.add_argument("--check", action="store_true",
                         help="check invariants after every event")
     parser.add_argument("--results", help="write per-event results (JSON lines)")
