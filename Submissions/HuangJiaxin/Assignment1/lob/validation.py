@@ -29,7 +29,7 @@ def check(event, last_seq, is_live):
     if last_seq is not None and seq <= last_seq:
         return f"seq {seq} is not greater than the last accepted seq {last_seq}"
     kind = event.get("type")
-    if kind not in TYPES:
+    if not isinstance(kind, str) or kind not in TYPES:     # a JSON list is unhashable
         return f"unknown event type {kind!r}"
     if kind == "CANCEL":
         if not isinstance(event.get("target_order_id"), str):
@@ -41,7 +41,7 @@ def check(event, last_seq, is_live):
     if not _positive_int(event.get("qty_units")):
         return "qty_units must be a positive integer"
     if kind == "LIMIT":
-        if event.get("side") not in SIDES:
+        if not isinstance(event.get("side"), str) or event["side"] not in SIDES:
             return f"unknown side {event.get('side')!r}"
         if not _positive_int(event.get("price_ticks")):
             return "price_ticks must be a positive integer"

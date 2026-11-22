@@ -22,7 +22,7 @@ Python 3.11 or newer. From this folder:
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q tests                                   # expected: 201 passed
+python -m pytest -q tests                                   # expected: 207 passed
 python replay.py data/supplied/worked_example.jsonl         # the course example
 bash run_all.sh                                             # everything (about 40 to 60 min)
 streamlit run dashboard.py                                  # http://localhost:8501

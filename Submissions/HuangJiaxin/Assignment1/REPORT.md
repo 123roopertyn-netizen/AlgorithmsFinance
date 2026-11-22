@@ -53,9 +53,9 @@ incoming quantity to zero, or stops.
 ### Evidence
 
 * Tests were written first and failed on empty stubs (`evidence/step3_...`).
-* 201 tests pass on both versions (`evidence/final_tests.txt`): the course example
+* 207 tests pass on both versions (`evidence/final_tests.txt`): the course example
   (359,400 USD), hand-calculated cases for every situation listed in the assignment,
-  25 kinds of invalid events, invariant and conservation checks after every event of 20
+  28 kinds of invalid events, invariant and conservation checks after every event of 20
   random streams, and agreement of A and B after every event on 30 random streams and the
   five supplied 10,000-event samples.
 * The benchmarks re-check correctness: A and B give identical liquidation results, and a
@@ -307,6 +307,15 @@ instead of quadratic scaling; flat latency; every run finished within the limit.
 **Where it does not win:** cancellation churn with a tiny book (A about 30 % faster), and
 memory when orders spread over many price levels (B 41 % larger in buildup). All earlier
 tests stayed unchanged and pass; 12 tests for B's lazy cleanup were added.
+
+**Bug found in a final review.** Replaying every event of A, B and B without compaction
+against a separate brute-force reference (written only from the assignment rules) on 430
+random streams with malformed fields found one bug: a `type` or `side` given as a JSON list
+or object crashed validation (`TypeError: unhashable type`) instead of rejecting the event,
+so one bad line stopped a whole replay. Fix: check that both are strings before the set
+lookup. Three invalid-event cases were added to `tests/test_validation.py` (they failed
+first, `evidence/review_fix_tests_before.txt`); no existing test changed. The fix only
+affects malformed events, so the measurements (code `6ad1919`, all valid streams) still apply.
 
 ## Predictions compared with the results
 

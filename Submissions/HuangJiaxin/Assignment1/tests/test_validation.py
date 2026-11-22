@@ -51,6 +51,10 @@ INVALID = {
     "seq equal to last accepted": _limit(seq=2),
     "seq smaller than last accepted": _limit(seq=1),
     "cancel without target": {"seq": 3, "event_id": "ev3", "type": "CANCEL"},
+    # found in an external review: JSON lists/objects are unhashable and used to crash
+    "type is a JSON list": _limit(type=["LIMIT"]),
+    "type is a JSON object": _limit(type={"name": "LIMIT"}),
+    "side is a JSON list": _limit(side=["BUY"]),
 }
 
 
