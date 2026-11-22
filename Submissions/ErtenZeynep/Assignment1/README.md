@@ -69,16 +69,17 @@ from orderbook.baseline import BaselineOrderBook
 
 The project will not use `from 04_implementation...`, a persistent global `PYTHONPATH`, or an editable installation unless a later approved requirement justifies the additional configuration and environment change.
 
-Internal paths must be derived from stable module or script locations with `Path(__file__).resolve()`, not from an assumed current working directory. A relative path explicitly supplied through a command-line argument is resolved against the caller's current working directory and its absolute resolved form must be reported. Reproducible commands use an absolute project-root variable.
+Internal paths must be derived from stable module or script locations with `Path(__file__).resolve()`, not from an assumed current working directory. A relative path explicitly supplied through a command-line argument is resolved against the caller's current working directory and its absolute resolved form must be reported. The portable commands below first change to the project root and then use project-relative paths.
 
 Windows PowerShell command pattern:
 
 ```powershell
-$ProjectRoot = 'C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1'
+$ProjectRoot = 'C:\path\to\Submissions\ErtenZeynep\Assignment1'
+Set-Location -LiteralPath $ProjectRoot
 $PreviousPythonPath = $env:PYTHONPATH
 try {
-    $env:PYTHONPATH = Join-Path $ProjectRoot '04_implementation'
-    python -m unittest discover -s (Join-Path $ProjectRoot '03_tests') -p 'test_*.py' -v
+    $env:PYTHONPATH = (Resolve-Path -LiteralPath '04_implementation').Path
+    python -m unittest discover -s '03_tests' -p 'test_*.py' -v
 } finally {
     $env:PYTHONPATH = $PreviousPythonPath
 }
@@ -87,9 +88,9 @@ try {
 macOS/Linux command pattern:
 
 ```bash
-PROJECT_ROOT="/absolute/path/to/Submissions/ErtenZeynep/Assignment1"
-PYTHONPATH="$PROJECT_ROOT/04_implementation${PYTHONPATH:+:$PYTHONPATH}" \
-python3 -m unittest discover -s "$PROJECT_ROOT/03_tests" -p "test_*.py" -v
+cd "/path/to/Submissions/ErtenZeynep/Assignment1"
+PYTHONPATH="$(pwd -P)/04_implementation${PYTHONPATH:+:$PYTHONPATH}" \
+python3 -m unittest discover -s "03_tests" -p "test_*.py" -v
 ```
 
 The documented replay entry point will be `python -m orderbook.replay`. Benchmark and dashboard commands will use absolute paths under `05_benchmarks` and `06_dashboard`. Exact commands will be added only when those approved files exist.
@@ -117,16 +118,63 @@ The documented replay entry point will be `python -m orderbook.replay`. Benchmar
 
 The supplied generator must remain unchanged. Additional generation behavior, if required, will live in a separate helper script after approval. Supplied datasets belong in `02_data/supplied/`; locally generated workloads belong in `02_data/generated/`.
 
-The original instructor package is preserved under `02_data/supplied/`, including its own `README.md`, generator, manifest, PDF, data files, metadata, worked example, and expected result. The instructor README is separate from this project README. Validate the preserved package from any working directory with:
+The original instructor package is preserved under `02_data/supplied/`, including its own `README.md`, generator, manifest, PDF, data files, metadata, worked example, and expected result. The instructor README is separate from this project README. Validate the preserved package after changing to the project root:
 
 ```powershell
-$ProjectRoot = 'C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1'
-python (Join-Path $ProjectRoot '02_data\validate_inputs.py') `
-    --supplied-dir (Join-Path $ProjectRoot '02_data\supplied') `
-    --output (Join-Path $ProjectRoot '02_data\supplied_verification.json')
+Set-Location -LiteralPath 'C:\path\to\Submissions\ErtenZeynep\Assignment1'
+python '02_data\validate_inputs.py' `
+    --supplied-dir '02_data\supplied' `
+    --output '02_data\supplied_verification.json'
+```
+
+```bash
+cd "/path/to/Submissions/ErtenZeynep/Assignment1"
+python3 02_data/validate_inputs.py \
+    --supplied-dir 02_data/supplied \
+    --output 02_data/supplied_verification.json
 ```
 
 The Stage 2A review verified five 10,000-event, seed-42 workload streams: `buildup`, `crowded`, `mixed`, `sweep`, and `cancel_churn`. These supplied combinations must not be regenerated merely to rename them. `02_data/supplied_verification.json` contains the machine-readable inventory, manifest comparison, event counts, schema results, price-level observations, and metadata checks.
+
+### Stage 2B generated workloads
+
+Stage 2B generated 40 missing core workloads with the unchanged instructor generator and three paired price-concentration workloads. Together with the five supplied streams, the project has all 45 core combinations across five scenarios, event counts 1,000/10,000/100,000, and seeds 42/43/44.
+
+The three paired files derive from the 100,000-event, levels-1,000 `buildup` streams. They preserve every non-price field and map passive depth monotonically into four buckets:
+
+```text
+BUY depth  = 6_000_000 - price_ticks
+SELL depth = price_ticks - 6_000_100
+bucket     = min(3, (depth * 4) // 1000)
+new BUY    = 6_000_000 - bucket
+new SELL   = 6_000_100 + bucket
+```
+
+Generate the approved matrix only in an empty `02_data/generated/` directory. These portable commands assume the shell is first changed to the project root:
+
+```powershell
+Set-Location -LiteralPath 'C:\path\to\Submissions\ErtenZeynep\Assignment1'
+python '02_data\generate_workloads.py' --execute
+```
+
+```bash
+cd "/path/to/Submissions/ErtenZeynep/Assignment1"
+python3 02_data/generate_workloads.py --execute
+```
+
+Revalidate finalized outputs without regenerating them:
+
+```powershell
+Set-Location -LiteralPath 'C:\path\to\Submissions\ErtenZeynep\Assignment1'
+python '02_data\generate_workloads.py' --verify-only
+```
+
+```bash
+cd "/path/to/Submissions/ErtenZeynep/Assignment1"
+python3 02_data/generate_workloads.py --verify-only
+```
+
+`02_data/generated_manifest.json` is the retained reproduction record. Its `actual_command`, `historical_final_path_command`, and `historical_execution_context` fields are immutable historical evidence and may contain the original machine's absolute paths. They are not portable instructions and must not be presented as commands that were run elsewhere. The `portable_reproduction` and per-workload `portable_reproduction_command` fields are the location-independent command contract; `{python}` means `python` on Windows or `python3` on macOS/Linux. The manifest also retains parameters, elapsed generation times, structural coverage metrics, metadata, hashes, paired-source provenance, deterministic spot-check evidence, resource limits, and final coverage checks. Large generated workloads remain excluded by `.gitignore`; the helper and manifest remain submission artifacts.
 
 Primary timing, memory, liquidation, stopped-run, and operation-count records should use machine-readable JSON Lines. Per-event latency should use gzip-compressed CSV written incrementally. Heavy counters and memory tracing must run separately from primary timing.
 

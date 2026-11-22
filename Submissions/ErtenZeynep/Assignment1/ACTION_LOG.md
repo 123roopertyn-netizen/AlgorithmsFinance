@@ -333,3 +333,166 @@ No synthetic dataset was generated. No matching engine, test, or benchmark code 
   - `02_data/supplied_verification.json`: 13,789 bytes, SHA-256 `94e889e19379e03d2248cfccc63427c9ab32116d97e1f719084e4b0348045c02`.
 
 Stage 2A completed here. Stage 2B generation remains unexecuted and requires separate approval of its exact matrix and resource limits.
+
+## 2026-11-22 - Permanent proactive risk methodology and Stage 2B planning
+
+### 34. Inspected current risk and operating-rule records
+
+- Purpose: preserve the user's reviewed findings without misclassifying technical risks as malicious instructions.
+- Read-only commands: `Select-String` on risk, specification, liquidation, timing, and section headings in `AI_DECISIONS.md` and `AGENTS.md`; `Get-Content -Tail` on `ACTION_LOG.md`.
+- Result: confirmed the existing prompt-injection section, proposed unknown-cancellation interpretation, Stage 4 risks, supplied-data findings, and current persistent instructions.
+
+### 35. Requested scoped write permission
+
+- Purpose: update only approved project control records.
+- Tool: filesystem permission request restricted to the project `Assignment1` directory.
+- Result: permission granted for this turn.
+
+### 36. Added continuous risk-analysis controls and register
+
+- Tool: `apply_patch`.
+- Files modified:
+  - `AGENTS.md`: added permanent proactive analysis, seven-part risk assessment, stage-end review, evidence-based statuses, and preserved authorization boundaries; clarified actual-active-bid liquidation sizing and engine-only versus total-application timing.
+  - `AI_DECISIONS.md`: accepted the continuous methodology and Stage 4 measurement boundaries; kept unknown-cancellation sequence advancement proposed; added a structured 22-entry Risk Register.
+  - `ACTION_LOG.md`: added this operational record.
+- Result: technical edge cases, experimental risks, security findings, and unresolved interpretations remain separately classified. No risk was marked mitigated or verified without an existing control or recorded evidence.
+
+No dataset was generated. No implementation, test, benchmark, dependency, environment, network, Git, or GitHub action occurred.
+
+### 37. Verified the permanent risk-record update
+
+- Command: checked that `02_data/generated` remained empty and used `Select-String` to verify the proactive-risk section, accepted decisions, proposed unknown-cancellation wording, actual-active-bid rule, timing boundary, Risk Register heading, and final RR-022 entry.
+- Result: all required records were present and generated item count remained zero.
+
+## 2026-11-22 - Stage 2B: workload generation and paired concentration transformation
+
+### 38. Performed Stage 2B preflight
+
+- Purpose: prevent overwrite, confirm source integrity, and verify capacity before generation.
+- Commands and results:
+  - Checked `02_data/generated`: zero items.
+  - Hashed the preserved generator: `ef7f31545addf576e6071cc20a5930f3e2ed93bfef96d4968150fad763d7fe7d`, 4,019 bytes.
+  - Confirmed `generated_manifest.json` and `generate_workloads.py` did not exist.
+  - A restricted PowerShell free-space helper failed without modifying anything; a read-only Python `shutil.disk_usage` check then reported 285,423,149,056 free bytes.
+- Files changed: none.
+
+### 39. Requested scoped Stage 2B write permission
+
+- Purpose: create only the approved orchestrator, manifest, workload/metadata outputs, and approved record updates.
+- Tool: filesystem permission request restricted to the project `Assignment1` directory.
+- Result: permission granted for this turn.
+
+### 40. Created and checked the Stage 2B orchestration helper
+
+- Tool: `apply_patch` created `02_data/generate_workloads.py`.
+- Implemented controls: fixed 40-file core matrix, three paired transformations, 43-name uniqueness check, exact event-total check, generator hash check, staging-only finalization, 120-second direct-generation timeout, 30-minute total limit, 512 MiB limit, sequential execution, incremental manifest, structural validation, metadata verification, coverage metrics, deterministic spot check, source-pair comparison, final 45-combination check, and `--verify-only` mode.
+- Commands:
+  - In-memory `compile(...)` syntax check: `SyntaxCheck=OK`.
+  - `python ...\02_data\generate_workloads.py --help`: succeeded and showed only `--execute` and `--verify-only` modes.
+
+### 41. Generated and validated the approved Stage 2B matrix
+
+- Exact top-level command: `python "C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1\02_data\generate_workloads.py" --execute`
+- Direct-generation command form recorded per workload in `02_data/generated_manifest.json`: current `sys.executable`, unchanged instructor generator, scenario, events, levels 1,000, seed, and exact staging/final output paths.
+- Results:
+  - 40 direct generator workloads completed and validated.
+  - Three paired price-only transformations completed and validated.
+  - All 43 workload and 43 metadata files finalized.
+  - Full actual/reproduction commands, stdout, elapsed times, coverage metrics, metadata, file sizes, and SHA-256 values were saved in `generated_manifest.json` rather than duplicated here.
+  - No failure occurred.
+
+### 42. Verified paired transformations and reproducibility
+
+- Formula: recover passive depth using the instructor references, calculate `bucket = min(3, (depth * 4) // 1000)`, then apply the instructor BUY/SELL price formulas with the bucket.
+- Results for seeds 42, 43, and 44:
+  - 100,000 events each.
+  - Non-price mismatches: zero.
+  - Formula mismatches: zero.
+  - Quantity totals equal: true.
+  - Monotonic: true.
+  - Uncrossed: true.
+  - Bid prices: 6,000,000; 5,999,999; 5,999,998; 5,999,997.
+  - Ask prices: 6,000,100; 6,000,101; 6,000,102; 6,000,103.
+- Deterministic spot check: the regenerated seed-42 paired gzip SHA-256 matched the finalized file; the exact temporary staging file was then removed.
+- Staging directory: empty and removed with non-recursive `rmdir` by the helper.
+
+### 43. Ran independent final revalidation
+
+- Exact command: `python "C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1\02_data\generate_workloads.py" --verify-only`.
+- Additional read-only checks: rehashed every original package file against its preserved copy; checked staging absence and searched for million-event filenames.
+- Results:
+  - Generated workloads: 43.
+  - Generated metadata files: 43.
+  - Core combinations including supplied streams: 45.
+  - Paired workloads: 3.
+  - Generated directory size: 22,735,805 bytes.
+  - Supplied source/destination mismatches: zero.
+  - Staging directory present: false.
+  - Million-event files: zero.
+
+### 44. Inspected the finalized generated manifest
+
+- Read-only command: parsed `02_data/generated_manifest.json` and summarized record counts, timings, failures, Python, deterministic evidence, paired invariants, file size, and hashes.
+- Results:
+  - Manifest status: `complete`.
+  - Direct records: 40; paired records: 3; failures: zero.
+  - Total elapsed: 76.58006449975073 seconds.
+  - Direct generator elapsed sum: 26.7980269026011 seconds.
+  - Maximum direct call: 1.56999230012298 seconds.
+  - Python: CPython 3.13.17.
+  - Manifest: 209,205 bytes before this documentation update; SHA-256 `8e3a632738c6b61a57d6389e2154949c427e81397f97245d8dd0c7c4c97fd801`.
+  - Orchestrator SHA-256: `5ebfd34a1b08873f6de7db666714024192e80584be722cdfbd0f6da1670417ee`.
+
+No correctness test, matching engine, benchmark, one-million-event workload, dependency installation, network action, Git command, or GitHub operation occurred.
+
+### 45. Performed final filesystem audit and interpreter-cache cleanup
+
+- Read-only audit results: 43 finalized workloads, 43 finalized metadata files, generated directory size 22,735,805 bytes, unchanged complete manifest SHA-256 `8e3a632738c6b61a57d6389e2154949c427e81397f97245d8dd0c7c4c97fd801`, and required README/decision/risk sections present.
+- Detected temporary artifact: Python created `02_data/__pycache__/validate_inputs.cpython-313.pyc` while importing the approved validator.
+- Safety verification: resolved the cache directory inside the project `02_data` path, enumerated its exact contents, and required the single expected 16,825-byte cache filename before cleanup.
+- Cleanup command: removed that exact `.pyc` file and then the now-empty exact `__pycache__` directory with literal paths; no recursive delete was used.
+- Result: cache directory no longer exists. No supplied file, generated workload, finalized metadata, manifest, or unrelated file was removed.
+
+Stage 2B completed and stopped here. Stage 3 has not begun.
+
+## 2026-11-22 - Stage 2B documentation and portable-reproduction correction
+
+### 46. Captured the pre-change integrity baseline
+
+- Purpose: prove that the manifest migration did not alter workload meaning, historical commands, or generated files.
+- Read-only commands and observed results:
+  - `Get-FileHash -LiteralPath '.\02_data\generated_manifest.json' -Algorithm SHA256`: `8e3a632738c6b61a57d6389e2154949c427e81397f97245d8dd0c7c4c97fd801`.
+  - Parsed the actual manifest schema and calculated a canonical inventory over workload parameters, source provenance, workload SHA-256 values, metadata SHA-256 values, and supplied coverage: 43 workloads; semantic SHA-256 `c3c374d10e98c2b1b8a6ee226636e98458676248f514f04f8833ed96f3324c41`.
+  - Hashed the ordered 40 `actual_command` arrays: `2e0b302b52ec3b43655378b0f415e7990efc69da9b4701699010b1aff857924e`.
+  - Hashed the name-plus-content-hash inventory of all generated workload and metadata files: 86 files, 22,735,805 bytes, inventory SHA-256 `e097b248e1918d43d47c8e721e9a9e5ceebd9edf739ba4a67fd01057b86d61b5`.
+- Harmless failures: one earlier PowerShell quoting attempt failed before execution, and one read-only Python query assumed a nonexistent `workloads` key and raised `KeyError`. Neither command wrote a file. An initial multi-operation `apply_patch` request was rejected by the patch tool before changing anything; the patch was reapplied in supported form.
+
+### 47. Updated the five approved files
+
+- `AI_DECISIONS.md`: retained one canonical current row for each of RR-001 through RR-023; kept RR-014 `MITIGATED`; changed RR-015 and RR-022 to `OPEN`; added a separate Risk Status History table.
+- `README.md`: replaced the original-user-directory-dependent reproduction examples with Windows PowerShell and macOS/Linux commands that first change to the project root and then use relative paths. It now distinguishes immutable historical evidence from portable reproduction commands.
+- `02_data/generate_workloads.py`: added schema-v2 output, portable command fields, explicit historical-context labels, canonical semantic hashing, and a one-time `--migrate-manifest-v2` mode guarded by the exact schema-v1 manifest hash.
+- `02_data/generated_manifest.json`: migrated from schema 1 to schema 2. Exact `actual_command` arrays and former absolute final-path commands remain historical evidence; portable project-relative command arrays were added.
+- `ACTION_LOG.md`: added this factual correction and verification record.
+
+### 48. Ran the approved lightweight checks and manifest migration
+
+- In-memory `compile(...)` syntax check: `PASS`.
+- `python .\02_data\generate_workloads.py --help`: succeeded and listed `--execute`, `--verify-only`, and the one-time `--migrate-manifest-v2` maintenance mode.
+- `python .\02_data\generate_workloads.py --migrate-manifest-v2`: succeeded only after matching the approved old hash.
+- Migration evidence:
+  - Previous manifest SHA-256: `8e3a632738c6b61a57d6389e2154949c427e81397f97245d8dd0c7c4c97fd801`.
+  - New manifest SHA-256: `5c408a6ac8aec13f0596f20ab974a526fe238a99f2f68ec32195a1a82ee16ca5`.
+  - Semantic inventory before and after: `c3c374d10e98c2b1b8a6ee226636e98458676248f514f04f8833ed96f3324c41`.
+  - Historical actual-command digest before and after: `2e0b302b52ec3b43655378b0f415e7990efc69da9b4701699010b1aff857924e`.
+
+### 49. Revalidated the migrated record and unchanged generated files
+
+- `python .\02_data\generate_workloads.py --verify-only`: succeeded without regeneration.
+- Observed results: 43 workloads, 43 metadata files, 45 core combinations including supplied files, three paired workloads, and 22,735,805 generated bytes.
+- Post-migration inventory: the same 86 files and `e097b248e1918d43d47c8e721e9a9e5ceebd9edf739ba4a67fd01057b86d61b5` digest; therefore no generated workload or metadata byte changed.
+- Portable-field scan: no original `C:\Users\zeyne` path in the README or portable manifest fields. Machine-specific paths remain only in explicitly labelled historical manifest evidence and this action history.
+- Risk-table scan: 23 canonical rows, 23 unique IDs, no duplicate current entry; RR-014 `MITIGATED`, RR-015 `OPEN`, RR-022 `OPEN`.
+- No interpreter cache remained after the checks.
+
+No workload was regenerated. No correctness test, matching engine, benchmark, dependency installation, environment change, network action, Git command, or GitHub operation occurred. Stage 3 has not begun.
