@@ -20,10 +20,11 @@ from bench.core import VERSIONS
 from bench.protocol import BASELINE_PROTOCOL, timing_plan
 from bench.harness import append_rows, new_run_dir, run_with_timeout
 
-PARTS = ("official", "million", "queue", "liquidation", "adversarial", "churn")
+PARTS = ("official", "million", "queue", "liquidation", "adversarial", "churn", "post_attack")
 MODES = ("timing", "latency", "memory", "counts")
 COMMON = ("case_id", "experiment", "workload", "size", "events", "replayed_events", "seed", "levels",
-          "own", "percent", "version", "mode", "input_sha256", "requested_sell_qty_units", "status", "timing_protocol")
+          "own", "percent", "version", "mode", "input_sha256", "requested_sell_qty_units", "status", "timing_protocol",
+          "registration", "prefill_events", "driver_n")
 EXTRA = {
     "timing": ("phase", "repeat", "seconds", "warmup", "repeats_requested", "reason", "limit_s", "limit_bytes"),
     "latency": ("event_type", "segment", "n", "p50_ns", "p95_ns", "p99_ns", "max_ns", "convention", "label"),
@@ -57,6 +58,8 @@ def cases_for(part, catalog):
     selected = []
     for original in catalog["entries"]:
         if part == "smoke":
+            if original["part"] == "post_attack":
+                continue  # keep the original registered smoke separate
             if original["size"] != 1000 or original["seed"] != 42:
                 continue
         elif original["part"] != part:
@@ -80,6 +83,10 @@ def cases_for(part, catalog):
             selected.append({**e, "id": "churn_"+e["id"], "part": "churn",
                              "label": "cancel_churn_memory"})
     return selected
+
+
+def mode_applies(case, mode):
+    return mode in case.get("modes", ("memory",) if case["part"] == "churn" else MODES)
 
 
 def rows_from(path):
@@ -190,7 +197,7 @@ def main():
     if not cases:
         ap.error("no data entries match part")
     if args.plan_only:
-        count = sum(1 for c in cases for v in versions for m in modes if c["part"] != "churn" or m == "memory")
+        count = sum(1 for c in cases for v in versions for m in modes if mode_applies(c, m))
         print(json.dumps({"part": args.part, "cases": len(cases), "versions": versions,
                           "modes": modes, "cells": count, "sizes": sorted({c["size"] for c in cases}),
                           "engine_executed": False}))
@@ -199,7 +206,7 @@ def main():
     jobs_dir = directory/"jobs"; jobs_dir.mkdir(exist_ok=True)
     done = {(r["case_id"], r["version"], r["mode"]): r for r in rows_from(directory/"cells.csv")}
     requested = [(c, v, m) for c in cases for v in versions for m in modes
-                 if c["part"] != "churn" or m == "memory"]
+                 if mode_applies(c, m)]
     # Explicit order: timing first, other independent workers only afterwards.
     requested.sort(key=lambda item: (item[0]["id"], item[1], MODES.index(item[2])))
     errors = 0
@@ -214,6 +221,8 @@ def main():
                 "size": case["size"], "events": case["events"], "seed": case["seed"],
                 "levels": case["levels"], "own": case["own"], "percent": case.get("percent", ""),
                 "input_sha256": case["sha256"], "version": version, "mode": mode,
+                "registration": case.get("registration", "pre-registered Phase 4"),
+                "prefill_events": case.get("prefill_events", 0), "driver_n": case.get("driver_n", ""),
                 "timing_protocol": timing_plan(version, case["size"])[2]}
         if args.skip_after_stop and mode != "timing" and timing.get("status") == "stopped":
             cell = {**base, "status": "not_run", "wall_s": 0.0, "stopped_phase": "",

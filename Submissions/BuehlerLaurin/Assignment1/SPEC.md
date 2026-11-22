@@ -625,3 +625,73 @@ and resumption; `.gitignore` excludes `03_results/runs/*/cells/` and
 ignoring does not untrack them. The superseded 003530Z smoke is moved intact to
 `scratch/20261122T003530Z_5d8d15a-dirty_smoke/`, not deleted. Full-run file/byte
 planning estimates and the precise commit policy are in BENCHMARK_PLAN.md.
+
+## Post-attack decisions D1-D4 (Laurin, 2026-11-22; before B3r measurements)
+
+The committed aif-attack report is `07_attack/ATTACK_REPORT.md` (attack commit
+958c8b4; reviewed in full). Laurin reports Claude (chat) independently verified
+the hash-collision and far_end_flicker findings. This is attributed review,
+not an independent run by Codex. Existing Phase 4 results remain immutable.
+
+**D1:** implement B3r = B3 plus one heap-rebuild change, as a separate registered
+version. Per side let L=len(levels), K=len(heap), S=K-L. After a level empties,
+rebuild iff S>L and S>32. Filter the existing heap list using membership in
+that side's levels; never iterate the levels dict. heapify the survivors and
+rebuild in_heap from that heap, per side only. The prior fallback text used
+">2 x live" as an example, whereas the attack brief said ">live". This was an
+inconsistency; D1 resolves it to strict >live AND >32, not >2 x live.
+
+The one-key-per-live-level invariant is preserved by filtering: exactly the
+live keys survive, and heapify restores heap order. Public matching/FIFO,
+validation/results and deque compaction are inherited unchanged from B3.
+After every event S<=max(L,32), hence K<=2L+32 per side. Only removals can
+increase S enough to violate the threshold; insertion/reactivation and root
+purging cannot worsen it. Hash-table allocated capacity remains separate.
+
+Code bound: filtering scans exactly K=L+S keys; S>L implies K<2S. A stale key
+discarded in a rebuild pays once for its inspection and at most one survivor.
+Each deletion creates at most one stale-key credit, spent once; reactivation
+or root purging can discard credits but cannot invent them. heapify is linear;
+new set construction and membership are expected linear under ordinary hashing.
+Thus heap rebuild adds expected amortized O(1) work per staled price key,
+alongside unchanged O(log K) heap push/pop and deque cleanup costs. It does not
+make each matching/cancel operation worst-case O(1). A single rebuild event
+has O(live+stale) logical key work and transient storage: this is a declared
+tail-latency cost. CPython retained hash capacity/deallocation/GC can add costs
+outside this logical-key bound; collisions also remove expected hash guarantees.
+Counters heap_rebuild_keys_scanned / heap_rebuild_stale_removed count this
+logical work; trap streams require scanned <= 2*cancels, not a wall-time claim.
+
+**D2:** B2's saturating rotating-burst memory is not a robustness-filter
+violation. It is bounded by past peak queue capacity per surviving level;
+report it as a weakness. The attack measured 8.59 MB at 200 live levels,
+burst1000; 100 levels plateaued at 4.31 MB even after 300 rounds. B1/B3's
+pinned 32 dead records per live level are bounded constant-factor weaknesses.
+
+**D3:** ATK-01's decimal integer conversion limit is a replay bug, not an input
+bound. The JSON reader disables CPython's process-wide digit guard when replay
+starts, so parsing and JSON output support arbitrary integer lengths. Files
+open as utf-8-sig (plain and gzip); BOM input is accepted. No price cap is added.
+Valid prices k*(2**61-1) collide in CPython hashes. At 16000 levels the attack
+measured A 5.75s, B1 4.30s, B2 4.31s, B3 9.10s; B3's normal-hash control was
+0.085s (107x slowdown), with measured quadratic exponent 2.00. B3r retains these
+hash structures: no collision resistance or worst-case O(1) lookup is claimed.
+hash_full is a documented limitation, not an added benchmark/filter scenario.
+
+**D4 / fairness:** label all six added cases **added after Phase 4 from
+aif-attack**: far_end_flicker, dead_slot_rebuild, two_side_thrash,
+spike_purge_at_threshold (report max latency), rotating_bursts and pinned_dead
+(memory curves). These scenarios do not change the exclusion of B1/B2/B3,
+which rests on the pre-registered Phase 4 run; they can only make it harder for
+the chosen variant. B3r must pass the filter on the registered grid AND the new
+cases, compared with the fastest measured B reference on the same new input.
+Report deep_book honestly as borderline: official ratio3.05 vs attack re-run
+2.80 (attack table rounds original to3.06). far_end_flicker is stronger evidence
+(B1/B2/B3 12.80/12.53/0.614s, about 20.8x), not a retroactive new exclusion rule.
+
+The new session measures B3r on all original parts plus post_attack, B1/B2/B3
+only on post_attack, then A on all parts under its declared baseline protocol.
+The original manifest and pre-registered run stay unchanged; a new combined
+manifest contains the additions. See BENCHMARK_PLAN.md for driver definitions,
+prefill/query boundaries and exact human-run commands. No long runs in this
+implementation checkpoint; no B3r performance/selection claim yet.

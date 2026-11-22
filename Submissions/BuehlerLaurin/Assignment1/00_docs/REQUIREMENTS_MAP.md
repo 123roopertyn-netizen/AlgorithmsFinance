@@ -268,3 +268,44 @@ tracked historical smoke internals are preserved, not untracked.
 [Archive evidence](../05_evidence/20261122T011203Z_6c2a8d1-dirty_phase4a-archive-smoke.txt)
 confirms the superseded smoke's 663 files / 6,847,781 bytes and every sha256
 preserved under scratch. No deletion, long run or git mutation was executed.
+
+## Post-attack B3r checkpoint (2026-11-22, base `958c8b4`)
+
+This extends the earlier four-version rows to A/B1/B2/B3/B3r without changing
+their contract assertions or independent expected files. Earlier phase counts
+remain historical. [Final standard suite](../05_evidence/20261122T115638Z_958c8b4-dirty_b3r-all-tests-final.txt):
+**644 passed in 200.94s**, no failures/errors/skips/warnings.
+
+| Requirements | Current status / evidence |
+|---|---|
+| R1, R3-R26, R28-R29 | All five registered implementations pass 64 identical contract checks each (320); all18 own expected files also run event-by-event through B3r plain/counted internals. Original expectations and engine A/B1/B2/B3 sources unchanged. |
+| R27, R36 | B3r/replay red90 failures -> targeted green368. New pipeline red12 -> green42; catalog idempotence red1 -> green13. Existing test sources/expected data unchanged. |
+| R30 | Four stateful A-vs-B differentials, now including B3r, configured 300 examples/ 60 steps, compare results/books/invariants/conservation after every event. |
+| R31, R33, R35 | SPEC D1 code argument: per-side heap bound 2*L+32, expected amortized rebuild O(1) per staled key, logical single-event O(L+S), with hash/retained-capacity/GC qualifications. No measured B3r speed/byte bound claimed. |
+| R32, R34, R36 | B3r inherits B3's matching/FIFO/validation and changes only per-side heap rebuild. No B1/B2/B3 edits or plain-dict FIFO. |
+| R37 | AI_LOG/SPEC record D1-D4, threshold example/brief inconsistency, attributed independent review and the catalog startup defect corrected with a regression. |
+| R38-R39, R67 | New own generator/data are labelled added after Phase 4; POST_ATTACK_MANIFEST.json records134 entries / 125 gzip files, commands and sha256. Original manifest remains unchanged; generated files ignored. |
+| R40-R45, R60 | Original Phase 4 run preserved. B3r original-grid and new-case long measurements remain pending. D2 saturation is a weakness; D4 additions cannot retroactively change B1/B2/B3 exclusions. Deep_book borderline3.05/2.80 recorded honestly. |
+| R43, R47-R50 | New prefilled cases construct/reset each trial, timing query suffix separately; A baseline deviation unchanged, all B candidates warm-up+5. Existing primary protocol tests preserved. |
+| R45-R46, R54 | Trap regressions use scan counters and forbid levels-dict iteration; both planted trap variants are killed by AssertionError. Real scan/cancel ratios 1.602 and 0.397, <=2. Drift bounds tested on both sides. Traced B3r growth studies await tonight. |
+| R52-R53 | Small worker tests cover all four modes, including prefill/query separation, max_ns for one-event spike and complete construction+query memory curves; no long latency/memory result claimed. |
+| R56-R57, R62-R63 | Tonight wrapper/plan preview: 15 batches,1296 workers; B3r all parts, old B variants only new cases, then A. Source/limits/data metadata and local-internals policy retained. Full saved B3r results still pending. |
+| R65 | README documents B3r/replay/BOM/unbounded integer behavior and CPython hash attack numbers, with no price cap. Clean-venv and final report remain future work. |
+
+Fresh original ATK-01 reproduction:
+[4 passed](../05_evidence/20261122T120050Z_958c8b4-dirty_atk01-original-reproducer-fixed.txt),
+using --runxfail to disable its archived strict-xfail marker without editing
+the attack test. The default suite remains pytest.ini's complete 02_tests path.
+
+Primary evidence links: [rebuild trap mutation probes](../05_evidence/20261122T115730Z_958c8b4-dirty_b3r-trap-mutation-probes.txt),
+[new input preparation](../05_evidence/20261122T115051Z_958c8b4-dirty_post-attack-data-preparation.txt),
+[nightly plan only](../05_evidence/20261122T115548Z_958c8b4-dirty_b3r-night-plan-only.txt).
+No long engine measurements or final B3r selection have been executed here.
+
+Additional verification: the unchanged committed attack suite was run with
+`python -B -m pytest -p no:cacheprovider 07_attack -q --runxfail` (full command
+in evidence): [1419 passed in 69.78 s](../05_evidence/20261122T120132Z_958c8b4-dirty_b3r-committed-attack-suite.txt).
+--runxfail disables the archived strict ATK-01 markers, not assertions.
+[Final scope/data/plan review](../05_evidence/20261122T120353Z_958c8b4-dirty_b3r-final-review.txt)
+checks every standard XML case, protected paths, byte-stable real manifest
+verification, all 20 input hashes and the 1296-worker nightly ordering.

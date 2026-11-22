@@ -7,6 +7,7 @@ No sorting: seq order is validated by the engine, and rejections stay in place.
 import argparse
 import gzip
 import json
+import sys
 from pathlib import Path
 
 from lob import METHODS
@@ -15,8 +16,13 @@ from lob import METHODS
 def read_events(path):
     """Stream parsed events without retaining the input file or result history."""
     path = Path(path)
+    # SPEC has no integer upper bound. The standard JSON decoder AND encoder
+    # use CPython's process-wide decimal conversion guard; permit arbitrary
+    # lengths in this replay process, including the returned residual quantity.
+    if hasattr(sys, "set_int_max_str_digits"):
+        sys.set_int_max_str_digits(0)
     opener = gzip.open if path.suffix == ".gz" else open
-    with opener(path, "rt", encoding="utf-8") as stream:
+    with opener(path, "rt", encoding="utf-8-sig") as stream:
         for line in stream:
             if line.strip():
                 yield json.loads(line)

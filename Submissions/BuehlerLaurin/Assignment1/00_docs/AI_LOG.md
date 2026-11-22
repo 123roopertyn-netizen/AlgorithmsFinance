@@ -395,3 +395,138 @@ or long measurements. No fresh-venv reproduction is claimed.
 
 Proposed git paths/message (not executed): BENCHMARK_PLAN.md final section.
 STOP for Claude (chat) review and Laurin.
+
+## Post-attack B3r build, decisions D1-D4 (Laurin, 2026-11-22)
+
+Current base `958c8b4` commits the aif-attack report; its target was `56caf6f`
+and the registered Phase 4 results were already committed. Codex read
+`07_attack/ATTACK_REPORT.md` in full, then the relevant generators/models and
+shared replay/engine/test/benchmark code. No attack artifact is edited.
+Laurin reports Claude (chat) independently re-verified the hash-collision and
+far_end_flicker findings; this is attributed review, not a new independent
+Codex reference run. Applied aif-exercise, the explicitly invoked aif-tdd and
+aif-debug, benchmark protocol guidance and aif-verify. No agents delegated.
+
+Accepted and recorded in SPEC before B3r measurements:
+
+- D1: separate B3r = B3 plus only per-side heap rebuild when stale>live AND
+  stale>32. Filter the existing heap list, never iterate levels; heapify and
+  rebuild in_heap on that side. The prior SPEC fallback's >2x-live example
+  disagreed with the attack brief's >live wording. This inconsistency is
+  explicitly resolved to >live AND >32, not silently treated as equivalent.
+  B1/B2/B3 are unchanged. Extra counters are default-off and measure logical
+  rebuild scans/removals. SPEC gives the credit argument and single-event
+  O(live+stale) logical tail cost, with hash-capacity/GC/collision qualifications.
+- D2: B2's rotating-burst capacity saturates with historical per-level peak;
+  report it as a weakness, not a robustness-filter violation.
+- D3: reproduce ATK-01 and BOM handling first, then fix shared replay to use
+  utf-8-sig and disable CPython's process-wide decimal digit conversion guard
+  when the reader starts (input AND output require unlimited conversion).
+  No price cap. Document hash-collision attack numbers in SPEC/README, without
+  pretending expected hash costs are worst-case guarantees. No hash_full case.
+- D4: six added cases carry the exact label "added after Phase 4 from
+  aif-attack". They do not change original B1/B2/B3 exclusions, which rest on
+  the registered Phase 4 results; they only add hurdles for B3r. Deep_book is
+  borderline (official 3.05, attack re-run 2.80); far_end_flicker is stronger
+  separate evidence (~20.8x), not retroactive pre-registration.
+
+Fresh red: `20261122T114415Z_958c8b4-dirty_b3r-and-replay-red.txt`, 90 failures:
+B3r NotImplemented stub, BOM decode and >4300-digit parse errors. Green:
+`20261122T114514Z_958c8b4-dirty_b3r-and-replay-green.txt`, 368 passed. Every
+existing contract/internal/own/stateful test discovers B3r through the registry;
+none of their sources/assertions or expected data are changed. New CLI tests
+force a 4300-digit guard at process startup and verify three complete outputs
+with 5000-digit quantities, for every implementation, plain and gzip.
+
+New no-timing trap probes: wrong dict iteration and wrong two-side threshold
+are each killed by AssertionError, using temporary in-memory subclasses, not
+engine edits. Saved `20261122T115730Z_958c8b4-dirty_b3r-trap-mutation-probes.txt`:
+real dead_slot_rebuild at n 512 scans 1229 keys / 767 cancels (1.602); real
+two_side_thrash at n 128 scans 102 / 257 (0.397). Both satisfy <=2 per cancel;
+drift tests verify <=2*live_levels+32 per side, both signs, strict thresholds
+and quote/counter neutrality. These are logical work counts, not speed claims.
+The original 17-mutant suite remains separate from these two mutation probes.
+
+New own generator ports the six approved attack patterns to datagen.attack_cases;
+tests compare generated events exactly with the committed attack generators
+and compare all five engines with A after every small-case event. Twenty full
+inputs were generated/hash-verified outside measurement (no engine execution)
+and added to POST_ATTACK_MANIFEST.json, preserving the old manifest/results.
+The combined catalog has 134 entries / 125 physical gzip files. New prefilled
+timing/latency/count runs separate construction and attack/query suffixes;
+memory traces construction+query with input slices outside tracing. The purge
+case reports max_ns for its single measured sell. Root CSVs retain registration,
+driver_n, prefill_events and exact replayed event counts.
+
+Pipeline red `20261122T114642Z_958c8b4-dirty_post-attack-pipeline-red.txt`
+(12 failing stubs/prefill checks), then green114906Z (42 passed including the
+original 30 pipeline cases). During pre-green review, the newly authored spike
+memory assertion was corrected from 7 to 8 live makers: a one-unit sell into a
+two-unit maker is partial. The unimplemented-generator red had never reached
+that assertion; no original expected result/test was changed.
+
+Corrected Codex integration defect: the new catalog verification initially
+rewrote its timestamp, which would dirty a freshly committed tree and block
+the nightly source gate. A one-line-file regression reproduced it (red
+115525Z); preserving the creation time for identical entries fixed it (green
+115547Z, 13 new pipeline tests). This does not alter engines, data or limits.
+Historical runtime estimation now excludes unmeasured B3r/post-attack cases,
+rather than inventing timings or crashing on missing observations.
+
+Tonight's new wrapper is bench/tonight_b3r.ps1, default session
+phase4_b3r_20261122. Plan-only evidence115548Z lists all 15 batches without
+constructing books: B3r on all seven parts (564 workers), B1/B2/B3 only on new
+cases (168), then A on all parts (564), total 1296. A retains its declared
+single-trial protocol at 100k/1M; B candidates retain warm-up+5. Existing limits,
+explicit stopped/missing data and artifact policy remain. The initial full
+suite before the catalog idempotence fix passed643 tests in 210.78 s; a final
+fresh full suite follows that fix. No long engine run was launched.
+
+Final evidence, after all Python/test source changes:
+
+- [Standard suite](../05_evidence/20261122T115638Z_958c8b4-dirty_b3r-all-tests-final.txt):
+  **644 passed in 200.94s**, no failures/errors/skips/warnings.
+- [Committed attack suite](../05_evidence/20261122T120132Z_958c8b4-dirty_b3r-committed-attack-suite.txt):
+  **1419 passed in 69.78s**, including B3r through the registry. The --runxfail
+  flag disables historical strict ATK-01 xfails because the bug is now fixed;
+  no attack test or marker is edited. These are correctness/counter tests,
+  not new timing campaigns or an independent audit by Codex.
+- [Original ATK-01 alone](../05_evidence/20261122T120050Z_958c8b4-dirty_atk01-original-reproducer-fixed.txt):
+  4 passed with --runxfail; the new CLI regressions also cover B3r and BOM.
+
+| Standard test file | Passed |
+|---|---:|
+| test_contract.py | 320 (64 per registered version) |
+| test_validation.py | 184 |
+| test_mutants.py | 23 (17 kills, naming, five real controls) |
+| test_own_datasets.py | 4 |
+| test_replay.py | 18 |
+| test_b_internal.py | 22 |
+| test_stateful.py | 4 (A vs B1/B2/B3/B3r) |
+| test_b3r.py | 6 |
+| test_replay_regressions.py | 20 |
+| test_bench_pipeline.py | 30 |
+| test_post_attack_pipeline.py | 13 |
+| Total | 644 |
+
+The four stateful machines retain 300 examples / 60 steps with after-event
+result/book/invariant/conservation checks. Every B3r own-case path also compares
+plain and counted instances with A and the independent expected files.
+Both additional attack-trap mutants are separate from the original 17 kills.
+
+[Final review](../05_evidence/20261122T120353Z_958c8b4-dirty_b3r-final-review.txt)
+confirms protected source/test/data/result paths unchanged, all 644 XML cases
+green, manifest verification byte-stable, original 114 entries identical, all 20
+new files hash-verified (3,541,884 events / 30,603,345 gzip bytes), and the exact
+nightly 1296-worker sequence. The source fingerprint is
+`1a0b3cff7b325e3a88216fc23f864d3878cc3b52517426316acdd249905e9135`.
+Historical estimates explicitly omit B3r/post_attack instead of fabricating
+measurements. Read-only git scope/whitespace checks pass; generated data remain
+ignored. Codex reviewed all new/changed source, tests, generator/manifest and
+documentation for unrelated behavior, names, comments/content. No traces of the
+logged injection and no NEW embedded instructions found. All writes stayed
+inside Assignment1; no deletions, dependency changes, git mutations or long
+engine runs. No final B3r performance/selection or fresh-venv claim is made.
+
+Proposed git paths/message and exact preview/start commands are at the end of
+BENCHMARK_PLAN.md. STOP for Claude (chat) review and Laurin.

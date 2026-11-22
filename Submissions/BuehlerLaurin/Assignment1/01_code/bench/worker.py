@@ -47,6 +47,8 @@ def run_job(job):
             "size": case["size"], "events": case["events"], "seed": case["seed"],
             "levels": case["levels"], "own": case["own"], "percent": case.get("percent", ""),
             "version": version, "mode": mode, "input_sha256": case["sha256"],
+            "registration": case.get("registration", "pre-registered Phase 4"),
+            "prefill_events": case.get("prefill_events", 0), "driver_n": case.get("driver_n", ""),
             "timing_protocol": label}
     def emit(kind, **fields):
         row = {**base, "status": "ok", **fields}
@@ -66,6 +68,7 @@ def run_job(job):
         assert len(events) == case["events"], case["id"]
         _, sample_n = measure("sample_check", lambda: core.check_case(case, events, version, mode == "counts"), limit_s)
         work = core.workload_events(case, events)
+        construction = core.construction_events(case, events)  # input slices outside tracing
         base["replayed_events"] = len(work)
         requested = work[0]["qty_units"] if case["part"] == "liquidation" else ""
         base["requested_sell_qty_units"] = requested
@@ -118,9 +121,8 @@ def run_job(job):
                 return result
             def setup():
                 book = core.make_book(version)
-                if case["part"] == "liquidation":
-                    for event in events:
-                        guarded(book, event)
+                for event in construction:
+                    guarded(book, event)
                 return book
             def sell_or_replay(book):
                 last = None
@@ -132,7 +134,7 @@ def run_job(job):
             emit("memory", measure="peak", processed=len(work), current_bytes=peak["current_bytes"],
                  peak_bytes=peak["peak_bytes"], live_orders="", price_levels="", heap_entries="", stale_heap_prices="",
                  includes="book construction + current result; input excluded; no history")
-            curve_events = events + work if case["part"] == "liquidation" else events
+            curve_events = construction + work
             phase = "memory_curve"
             _, curve = measure(phase, lambda: traced_curve(guarded, None, curve_events,
                 setup=lambda: core.make_book(version), every=max(1, len(curve_events)//50), observe=core.live_stats), limit_s)
@@ -143,7 +145,7 @@ def run_job(job):
         elif mode == "counts":
             _, book = measure("construction", lambda: core.prepare_book(case, events, version, True), limit_s)
             before = book.counters.as_dict()
-            if case["part"] == "liquidation":
+            if case["part"] == "liquidation" or case.get("prefill_events", 0):
                 for name, value in before.items():
                     emit("counts", phase="construction", counter=name, value=value, applicable=True)
             phase = "counts"
@@ -151,7 +153,7 @@ def run_job(job):
             after = book.counters.as_dict()
             for name, value in after.items():
                 delta = value if name.endswith("_peak") else value - before[name]
-                if case["part"] != "liquidation":
+                if case["part"] != "liquidation" and not case.get("prefill_events", 0):
                     delta = value
                 applicable = not (version == "A" and (name.startswith("stale_") or name in
                                   ("levels_visited", "compactions", "compaction_records_scanned", "price_list_shifts")))

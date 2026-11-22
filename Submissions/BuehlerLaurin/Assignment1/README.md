@@ -169,7 +169,7 @@ growth experiment. Smoke does not choose the final B. Long runs remain pending.
 
 ## Evidence block
 Commit to audit: <hash> (filled in by Laurin)
-Tests (Phase 4a amendment): `python -m pytest -q --tb=short --basetemp=scratch/pytest-phase4a-amendment --junitxml=05_evidence/phase4a-amendment-all-tests.xml` -> `531 passed in 181.67s` (per-file table in `00_docs/AI_LOG.md`)
+Tests (B3r checkpoint): `python -m pytest -q --tb=short --basetemp=scratch/pytest-b3r-final --junitxml=05_evidence/b3r-all-tests-final.xml` -> `644 passed in 200.94s` (per-file table in `00_docs/AI_LOG.md`)
 Benchmark (Phase 4a smoke only): `python run.py bench.run_all --part smoke --session phase4a_smoke_final` -> `03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/`, 216/216 cells OK; full grid pending.
 Fresh-venv check: pending Phase 7 (existing pinned venv used through Phase 4a)
 
@@ -180,3 +180,39 @@ byte-for-byte from the course package and checked against its MANIFEST.json
 The evidence timestamp is UTC; the local session date is 2026-11-22.
 The exercise-local `.gitattributes` marks this supplied file `-text` to preserve
 its exact bytes under Windows Git line-ending conversion.
+
+## Post-attack fallback B3r (2026-11-22)
+
+B3r is registered alongside A/B1/B2/B3 (`--version B3r`). It inherits B3 and
+adds one change: when a side has more stale heap keys than live levels AND more
+than 32 stale keys, filter that side's existing heap list, heapify, and rebuild
+in_heap. No levels-dict iteration or cross-side threshold is used. This adds
+expected amortized O(1) cleanup per staled key, with a single-event
+O(live+stale) logical-key spike. The per-side heap bound is 2*live_levels+32;
+allocated hash capacity and GC remain separate costs. Default-off counters
+record heap_rebuilds, heap_rebuild_keys_scanned and heap_rebuild_stale_removed.
+
+Replay now accepts UTF-8 BOMs (plain/gzip) and arbitrary-length integers. Entering
+the shared reader disables CPython's process-wide decimal conversion digit
+guard, covering both JSON input and returned integer output; SPEC has no bound.
+
+No price cap is added. Valid prices k*(2**61-1) collide in CPython integer hashes,
+so dict/set costs lose their expected constant-time guarantee. At16000 levels
+the committed attack measured A 5.75 s, B1 4.30s, B2 4.31s, B3 9.10s versus B3's
+0.085s normal-hash control (107x slowdown, quadratic exponent 2.00). B3r retains
+these hash structures. These are attributed attack results, independently
+re-verified by Claude (chat) according to Laurin, not fresh Codex timings.
+hash_full is not included in the added benchmark catalog.
+
+B2's rotating-burst memory saturates with per-level historical peak capacity:
+it is a reported weakness, not a filter violation. Deep_book is borderline
+(official 3.05, attack re-run 2.80); far_end_flicker gives stronger evidence
+(about 20.8x B1/B3). Post-attack cases cannot retroactively change the original
+exclusions; B3r must pass them as additional requirements.
+
+The current human-run schedule, source/data provenance and limits are in
+[BENCHMARK_PLAN.md](00_docs/BENCHMARK_PLAN.md), section "Tonight's B3r session".
+It runs B3r on all parts, B1/B2/B3 only on added cases, then A under its declared
+baseline protocol. A new combined manifest is
+[POST_ATTACK_MANIFEST.json](00_docs/POST_ATTACK_MANIFEST.json); generated files
+remain ignored. Current checkpoint starts no long engine run.

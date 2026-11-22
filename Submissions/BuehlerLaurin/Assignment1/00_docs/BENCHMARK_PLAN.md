@@ -4,6 +4,10 @@ Base: `5d8d15a` (Phase 3b, committed by Laurin). This checkpoint covers the
 benchmark plan, generated inputs and an end-to-end smoke run only. No engine
 benchmark at 10k, 100k or 1M was executed. No final B has been selected.
 
+Historical Phase 4a plan below; the current post-attack plan and proposed commit
+are in "Tonight's B3r session" at the end. The original Phase 4 run has since
+been committed; its selection evidence is preserved, not recomputed here.
+
 ## Amendment decided 2026-11-22 BEFORE long measurements
 
 Phase 4a was reviewed by Claude (chat) and committed by Laurin (`6df503c`);
@@ -254,3 +258,123 @@ git commit -m "Assignment1 Phase 4a: declare large-A trials, selection fallback 
 
 Generated data, scratch and future per-cell internals are excluded. No long run
 or git mutation was executed. The archive move was explicitly authorized.
+
+## Tonight's B3r session (Laurin decisions, 2026-11-22)
+
+Attack report read in full: `07_attack/ATTACK_REPORT.md`, committed at 958c8b4.
+Claude (chat) independently re-verified hash collisions and far_end_flicker,
+according to Laurin. SPEC.md records D1-D4, the >2x-live example / >live brief
+inconsistency and its resolution: per-side stale>live AND stale>32.
+B3r is B3 plus only this heap rebuild, filtering the heap list and rebuilding
+in_heap per side. The logical work has expected amortized O(1) cleanup per
+staled key but O(live+stale) single-event spikes; report max latency too.
+
+The original pre-registered Phase 4 results remain at
+`03_results/runs/20261122T012525Z_5eaeb03_phase4/`. Do not rerun the old candidate
+grid or use the additions to retroactively exclude B1/B2/B3. Their exclusions
+rest on the registered run. Deep_book must be described as borderline:
+official 3.05 vs attack re-run 2.80 (the attack table rounds original to3.06).
+Far_end_flicker is stronger separate evidence: at 100k, B1/B2/B3
+12.80/12.53/0.614s (~20.8x B1/B3), not a replacement pre-registration rule.
+B2's saturating burst capacity is a weakness, not a filter violation (D2).
+Hash collision costs are documented limitations; no price cap or hash_full
+case is added. No new exclusions or B3r performance conclusions are claimed.
+
+Label every new case **added after Phase 4 from aif-attack** in manifest and
+raw rows. B3r must satisfy the original registered filter AND these additions;
+the latter can only make it harder for the chosen variant. Compare new-case
+speed against the fastest B reference measured on the same new input. Preserve
+every violation and loss; selection/robustness decisions wait for results.
+
+### Added data and controlled drivers
+
+Twenty deterministic own cases, no independent seed replications (seed42 is
+only a schema label). Commands and archive/content sha256 are recorded in the
+new combined `00_docs/POST_ATTACK_MANIFEST.json` (114 original +20 added entries,
+125 distinct gzip files). The original manifest and original streams remain
+unchanged. All new inputs are generated/hashed outside timing.
+
+| Case | Driver/grid | Construction | Measured work / modes |
+|---|---|---|---|
+| far_end_flicker | n=1k/10k/100k live levels | n bids | n add/cancel pairs at one worst price; all modes |
+| dead_slot_rebuild | n=1k/10k/100k historical levels | n adds, n-1 cancels | floor(n/2) distinct-price add/cancel pairs; all modes |
+| two_side_thrash | n=1k/10k/100k live asks | n asks, one pinned bid, n+1 bid add/cancel pairs | n ask add/cancel pairs; all modes |
+| spike_purge_at_threshold | n=1k/10k/100k live and n stale levels | 2n adds, n cancels | ONE unit sell; all modes, including max_ns |
+| rotating_bursts | P=25/50/100/200, K=1000 | empty | 2P rotating bursts, each K adds+K cancels; memory curves |
+| pinned_dead | P=500/1000/2000/4000 | empty | one live per level, then 32 add/cancel waves; memory curves |
+
+Throughput cases use size=n as the controlled live/historical-level driver,
+not total JSON lines. events, prefill_events, query_events and driver_n record
+the exact counts. Their A schedule uses n as book scale: full 1k/10k, single
+trial 100k. Memory cases use size=total events and driver_n=P; no primary timing
+is requested for these two. Do not compare event counts without these labels.
+
+Each repeat rebuilds the complete prefill and times it separately. Timing and
+latency operate only on the attack/query suffix. The one-event spike reports
+max_ns (also p50/p95/p99, n=1), not just p99 over the construction. Tracing
+includes construction+query, excludes parsed input/preallocated sample buffers,
+and saves a curve over all input events. Counts separate construction and query.
+No result history is retained. Counter flags remain off in primary timing.
+
+Every worker checks a bounded A oracle sample before measuring. For prefilled
+cases it replays first32+last32 construction events and first32+last32 query
+events, comparing each result/book, at most128 events total. This tests the
+public path, not equivalence on the full large prefill; the unchanged contracts,
+all own expectations and A/B3r stateful tests supply independent correctness
+coverage. Small new-case tests compare every event with A and cross-check
+generator outputs against committed attack streams.
+
+### Exact commands and schedule (Laurin only; not executed here)
+
+From Assignment1 after Claude review and Laurin's commit, preview without books:
+
+```powershell
+& .\01_code\bench\tonight_b3r.ps1 -PlanOnly
+```
+
+Start the complete new session only when ready:
+
+```powershell
+& .\01_code\bench\tonight_b3r.ps1 -AllowLong
+```
+
+The wrapper defaults to NEW session `phase4_b3r_20261122`, generates/verifies
+new data before timing, and uses combined manifest
+`06_data/generated/post_attack/manifest.json`. It runs sequentially:
+
+1. B3r: official, million, queue, liquidation, adversarial, churn, post_attack.
+2. B1/B2/B3: post_attack only.
+3. A: all seven parts, with the declared baseline protocol (1k/10k warm-up+5;
+   100k/1M one measured trial without warm-up; label **A: single trial**).
+
+B candidates keep warm-up+5 everywhere they have timing cells. Expected full
+coverage: B3r 564 workers, old comparators 168, A 564; total 1296 (304 timing,
+304 latency, 304 counts, 384 memory). Stops and skip-after-stop can reduce actual
+instrumentation; no missing time/median is filled in. Limits remain 600 s per
+replay/phase and 4 GiB traced peak. New sessions require committed source; source
+and limits are pinned on resume. Keep root raw CSVs/summaries/env/spec/tests and
+planning provenance committed; cells/jobs remain local by the existing rules.
+
+The previous runtime estimate is historical and does not estimate B3r or these
+cases. No duration is asserted from B3's numbers: rebuild overhead and extra
+construction/instrumentation need measurement. A remains the likely dominant
+cost; completed cases resume without changing the declared trial counts.
+The estimator now explicitly omits unmeasured versions/parts rather than
+inventing B3r measurements. No long engine run was executed at this checkpoint.
+
+Proposed git commands, not executed:
+
+```powershell
+git add -- 01_code/lob/__init__.py 01_code/lob/book_b3r.py 01_code/lob/replay.py 01_code/bench 01_code/datagen/attack_cases.py 02_tests/test_b3r.py 02_tests/test_replay_regressions.py 02_tests/test_post_attack_pipeline.py SPEC.md README.md 00_docs 05_evidence
+git commit -m "Assignment1 B3r: per-side heap rebuild, replay regressions and post-attack plan"
+```
+
+No B1/B2/B3 engine, existing test/expected file or attack artifact is changed.
+Generated data remain ignored. No git mutation, deletion or dependency install.
+
+Checkpoint evidence: [644 standard tests](../05_evidence/20261122T115638Z_958c8b4-dirty_b3r-all-tests-final.txt),
+[1419 committed attack tests](../05_evidence/20261122T120132Z_958c8b4-dirty_b3r-committed-attack-suite.txt)
+(--runxfail for the historical fixed-bug markers), and
+[final source/data/plan review](../05_evidence/20261122T120353Z_958c8b4-dirty_b3r-final-review.txt).
+All20 new inputs are generated and verified (3,541,884 events, 30,603,345 gzip
+bytes), ready locally for the human-run session. Preview created no books.

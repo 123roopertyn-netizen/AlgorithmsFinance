@@ -41,8 +41,9 @@ def phase_times(directory, case_id, version, mode):
 def storage_estimate(directory):
     """Coarse full-coverage file/byte planning from saved smoke artifacts only."""
     catalog = load()
+    observed_versions = {r["version"] for r in rows_from(directory/"cells.csv")}
     jobs = sum(1 for part in PARTS for case in cases_for(part, catalog)
-               for _ in VERSIONS for mode in MODES if part != "churn" or mode == "memory")
+               for _ in observed_versions for mode in MODES if part != "churn" or mode == "memory")
     smoke_jobs = len(rows_from(directory/"cells.csv"))
     root_files = [p for p in directory.iterdir() if p.is_file()]
     local_files = [p for name in ("cells", "jobs") for p in (directory/name).rglob("*") if p.is_file()]
@@ -61,24 +62,27 @@ def storage_estimate(directory):
             "smoke_local_bytes": local_bytes,
             "projected_committed_bytes": byte_range(root_bytes),
             "projected_local_bytes": byte_range(local_bytes),
-            "assumptions": "all 2032 planned workers complete; job+journal+log per worker; optional stops.csv; 1.2..2.5x byte allowance beyond worker ratio; planning only, no hard size bound; fewer A repeat rows and skips can reduce size"}
+            "assumptions": "observed versions and original catalog only; job+journal+log per worker; optional stops.csv; 1.2..2.5x byte allowance beyond worker ratio; planning only, no hard size bound; fewer A repeat rows and skips can reduce size"}
 
 
 def build_estimate(directory):
     cells = rows_from(directory/"cells.csv")
     summaries = rows_from(directory/"summary.csv")
     catalog = load()
+    # A historical smoke cannot estimate a newly added implementation or case.
+    measured_versions = tuple(v for v in VERSIONS if v in {r["version"] for r in cells})
+    available_parts = tuple(p for p in PARTS if cases_for(p, catalog))
     smoke = cases_for("smoke", catalog)
     templates = {(c["part"], c["label"]): c for c in smoke}
     cell_map = {(r["case_id"], r["version"], r["mode"]): r for r in cells}
     medians = {(r["case_id"], r["version"], r["phase"]): float(r["median_s"])
                for r in summaries if r["status"] == "ok"}
     details = []
-    for part in PARTS:
+    for part in available_parts:
         for case in cases_for(part, catalog):
             template_part = "official" if part == "million" else case["part"]
             sample = templates[(template_part, case["label"])]
-            for version in VERSIONS:
+            for version in measured_versions:
                 variants = []
                 for multiplier in (0.5, 1.0, 2.0, 3.0):
                     for high in (False, True):
@@ -120,7 +124,7 @@ def build_estimate(directory):
                                 "size": case["size"], "seed": case["seed"],
                                 "planning_low_s": min(variants), "planning_high_s": max(variants)})
     parts = []
-    for part in PARTS:
+    for part in available_parts:
         selected = [r for r in details if r["part"] == part]
         row = {"part": part}
         for group, versions in (("A", ("A",)), ("B", ("B1", "B2", "B3"))):
@@ -138,6 +142,8 @@ def build_estimate(directory):
                              "unconstrained_replay_s": estimate, "first_attempt_cap_s": 600,
                              "predicted_stop": estimate > 600})
     return {"basis": str(directory), "label": "planning estimates only; NOT measured large runs",
+            "unmeasured_versions_not_estimated": sorted(set(VERSIONS)-set(measured_versions)),
+            "unmeasured_parts_not_estimated": sorted(set(PARTS)-set(available_parts)),
             "assumptions": ["M=1000 seed42 only; fixed workload B/P/F relationships from generators",
                             "A growing-book scenarios quadratic; constant-live churn linear",
                             "B variants approximately linear at bounded price count; deep-book B1/B2 linear-to-quadratic",
@@ -163,6 +169,8 @@ def main():
              "Per-phase 600s stopping and --skip-after-stop are included; all B repeats are unchanged.", "",
              "Declared 2026-11-22 BEFORE long measurements: A at 100k/1M uses one measured trial, no warm-up.",
              "Report large-size speedups as A: single trial. A at 1k/10k retains warm-up + 5 repeats.", "",
+             "Unmeasured versions/parts are excluded from duration projections: "
+             +str(report["unmeasured_versions_not_estimated"]+report["unmeasured_parts_not_estimated"]), "",
              "| Part | A hours | B1+B2+B3 hours | Total hours |", "|---|---|---|---|"]
     for row in report["parts"]:
         lo, hi = row["A_low_s"] + row["B_low_s"], row["A_high_s"] + row["B_high_s"]

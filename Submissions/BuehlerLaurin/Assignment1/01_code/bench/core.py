@@ -4,7 +4,7 @@ from lob import METHODS
 from lob.book_a import OrderBookA
 from lob.book_b import OperationCounters
 
-VERSIONS = ("A", "B1", "B2", "B3")
+VERSIONS = ("A", "B1", "B2", "B3", "B3r")
 
 
 class BaselineCounters(OperationCounters):
@@ -102,13 +102,20 @@ def sale_event(events, percent):
 
 def prepare_book(case, events, version, counted=False):
     book = make_book(version, counted)
-    if case["part"] == "liquidation":
-        replay(book, events)
+    replay(book, construction_events(case, events))
     return book
 
 
+def construction_events(case, events):
+    if case["part"] == "liquidation":
+        return events
+    return events[:case.get("prefill_events", 0)]
+
+
 def workload_events(case, events):
-    return [sale_event(events, case["percent"])] if case["part"] == "liquidation" else events
+    if case["part"] == "liquidation":
+        return [sale_event(events, case["percent"])]
+    return events[case["prefill_events"]:] if "prefill_events" in case else events
 
 
 def live_stats(book):
@@ -121,6 +128,16 @@ def live_stats(book):
 
 def check_case(case, events, version, counted=False):
     """Bounded prefix+tail sample; compare every result/book before measurement."""
+    if "prefill_events" in case:
+        def bounded(rows):
+            return rows if len(rows) <= 64 else rows[:32]+rows[-32:]
+        sample = bounded(construction_events(case, events)) + bounded(workload_events(case, events))
+        a, b = make_book("A"), make_book(version, counted)
+        for event in sample:
+            ra, rb = replay(a, [deepcopy(event)]), replay(b, [deepcopy(event)])
+            assert ra == rb, (version, case["id"], event, ra, rb)
+            assert a.snapshot() == b.snapshot(), (version, case["id"], event)
+        return len(sample)
     sample = events if len(events) <= 128 else events[:64] + events[-64:]
     a = prepare_book(case, sample, "A")
     b = prepare_book(case, sample, version, counted)

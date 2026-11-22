@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BASE = Path("06_data/generated/phase4")
 MANIFEST = BASE / "manifest.json"
+POST_MANIFEST = Path("06_data/generated/post_attack/manifest.json")
 SCENARIOS = ("buildup", "crowded", "mixed", "sweep", "cancel_churn")
 SIZES = (1000, 10000, 100000)
 SEEDS = (42, 43, 44)
@@ -66,6 +67,67 @@ def file_stats(path):
             events += chunk.count(b"\n")
     return {"sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             "content_sha256": digest.hexdigest(), "events": events, "bytes": path.stat().st_size}
+
+
+def post_attack_plans():
+    """Additional filter cases, labelled and separate from the registered grid."""
+    from datagen.attack_cases import REGISTRATION, SCENARIOS as ADDED
+    entries = []
+    for scenario in ADDED:
+        memory = scenario in ("rotating_bursts", "pinned_dead")
+        sizes = (25, 50, 100, 200) if scenario == "rotating_bursts" else (
+            (500, 1000, 2000, 4000) if scenario == "pinned_dead" else SIZES)
+        for n in sizes:
+            if scenario == "far_end_flicker":
+                pre, work = n, 2*n
+            elif scenario == "dead_slot_rebuild":
+                pre, work = 2*n-1, 2*(n//2)
+            elif scenario == "two_side_thrash":
+                pre, work = 3*n+3, 2*n
+            elif scenario == "spike_purge_at_threshold":
+                pre, work = 3*n, 1
+            else:
+                pre, work = 0, n*(4001 if scenario == "rotating_bursts" else 65)
+            path = POST_MANIFEST.parent / f"{scenario}_{n}.jsonl.gz"
+            entries.append({"id": f"post_attack_{scenario}_{n}", "part": "post_attack",
+                "workload": scenario, "size": work if memory else n, "driver_n": n,
+                "events": pre+work, "prefill_events": pre, "query_events": work,
+                "levels": n, "seed": 42, "deterministic": True, "own": True,
+                "kind": "post_attack", "registration": REGISTRATION,
+                "modes": ["memory"] if memory else ["timing", "latency", "memory", "counts"],
+                "path": path.as_posix(), "command": ["python", "run.py", "datagen.attack_cases",
+                    "--scenario", scenario, "--n", str(n), "--out", path.as_posix()]})
+    return entries
+
+
+def prepare_post_attack():
+    """Keep registered data/manifest unchanged; export a new combined catalog."""
+    catalog = load()
+    source = Path("01_code/datagen/attack_cases.py")
+    added = post_attack_plans()
+    for entry in added:
+        path = Path(entry["path"])
+        if not path.exists():
+            subprocess.run([sys.executable, *entry["command"][1:]], check=True, capture_output=True, text=True)
+        stats = file_stats(path)
+        assert stats["events"] == entry["events"], entry["id"]
+        metadata = json.loads(path.with_suffix(path.suffix+".metadata.json").read_text(encoding="utf-8"))
+        assert metadata["prefill_events"] == entry["prefill_events"] and metadata["sha256"] == stats["sha256"]
+        entry.update(stats, generator_sha256=hashlib.sha256(source.read_bytes()).hexdigest())
+        catalog["entries"].append(entry)
+        print(entry["id"], entry["sha256"], flush=True)
+    previous = json.loads(POST_MANIFEST.read_text(encoding="utf-8")) if POST_MANIFEST.exists() else {}
+    # Verification of identical inputs must not dirty a committed source tree.
+    catalog["post_attack_created_utc"] = (
+        previous["post_attack_created_utc"] if previous.get("entries") == catalog["entries"]
+        else datetime.now(timezone.utc).isoformat())
+    catalog["physical_files"] = len({e["path"] for e in catalog["entries"]})
+    catalog["physical_compressed_bytes"] = sum(e["bytes"] for e in {e["path"]: e for e in catalog["entries"]}.values())
+    data = json.dumps(catalog, indent=2)+"\n"
+    POST_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+    POST_MANIFEST.write_text(data, encoding="utf-8")
+    (ROOT/"00_docs/POST_ATTACK_MANIFEST.json").write_text(data, encoding="utf-8")
+    print(f"RESULT: PASS ({len(added)} added cases generated/hash-verified outside timing; original manifest unchanged)")
 
 
 def prepare():
@@ -135,8 +197,11 @@ def verify_and_export(catalog=None, verify_files=True):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify", action="store_true")
+    parser.add_argument("--post-attack", action="store_true", help="generate/verify additions and a new combined manifest")
     args = parser.parse_args()
-    if args.verify:
+    if args.post_attack:
+        prepare_post_attack()
+    elif args.verify:
         result = verify_and_export()
         print(f"RESULT: PASS ({len(result['entries'])} manifest entries / {result['physical_files']} physical files verified)")
     else:

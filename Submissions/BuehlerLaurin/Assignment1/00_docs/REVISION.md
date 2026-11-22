@@ -109,3 +109,25 @@ Revised planning reduces total estimated work from roughly 8-55 to 8-32 hours;
 this is smoke-based planning, not a measured performance improvement. B's
 protocol and estimates are unchanged. No long run, deletion, install or git
 mutation was executed.
+
+## B3r fallback after aif-attack (2026-11-22, base958c8b4)
+
+One engine change: B3r inherits B3 and rebuilds the changed side's heap when
+stale keys exceed both live levels and32. Filter the heap list, heapify,
+rebuild in_heap. No levels-dict iteration or two-side count is used. B3 stays
+unchanged as the comparison; B1/B2 are unchanged. SPEC gives the expected
+amortized cleanup argument, per-side key bound and single-event latency cost.
+Two no-timing planted trap variants are killed; original mutation controls
+and all registry-driven correctness tests also exercise B3r.
+
+Separate shared replay fix: ATK-01's unbounded integer input/output and BOM
+handling were reproduced by CLI regressions before changing replay.py. The
+JSON reader now permits arbitrary digit lengths and opens utf-8-sig. No price
+bound or hash defense is introduced; the documented collision limitation stays.
+
+Six post-Phase-4 cases are additions, not retroactive selection evidence.
+B2 burst saturation remains a weakness, not a filter violation. New generators,
+manifest and prefill/query pipeline support the nightly B3r / old-comparators /
+A sequence. A catalog timestamp integration bug was fixed after a minimal red
+regression. No performance optimization beyond the one requested B3r heap
+change, no old expected-file/test edits, no long measurements or git mutations.
