@@ -31,3 +31,9 @@ Baseline profile (committed B): `validate()` is ~50% of the time on both streams
 | 2 | `AddLimitOrder`: call the matching loop `_take` only if the order crosses the best opposite price (one comparison); inline `_Side.add` (no method call per insert). | 0.1747 s -> 0.1677 s (-4.0%) | 0.2009 s -> 0.1827 s (-9.0%) | 332 pass |
 | 3 (rejected) | `_take`: iterate the level with `for ... in level.items()` and delete used-up makers afterwards, instead of `next(iter(level.items()))` per fill. | 0.1670 s -> 0.1678 s (+0.5%) | 0.1833 s -> 0.1812 s (-1.2%) | 332 pass; reverted (within noise: few fills per event in these streams) |
 | 4 | `is_valid_fast` takes the order index itself (`order_id not in live_ids`) instead of a callable: one function call less per event. Fuzz test adapted (same checks). | 0.1671 s -> 0.1618 s (-3.2%) | 0.1836 s -> 0.1767 s (-3.7%) | 332 pass |
+
+Cumulative (committed B `2ef6e65` vs now, same method): mixed 0.1995 s -> 0.1617 s (-19.0%),
+buildup 0.2285 s -> 0.1748 s (-23.5%), identical output.
+
+Not tried yet: heap + lazy deletion instead of the sorted price list (bisect); `__slots__` /
+list records vs the current `[qty, seq]` lists; inlining validation into `process`.
