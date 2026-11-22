@@ -40,3 +40,4 @@ list records vs the current `[qty, seq]` lists; inlining validation into `proces
 | 5 (rejected) | Inline the fast validation into `process()` (no `is_valid_fast` call). | 0.1607 s -> 0.1624 s (+1.1%) | 0.1784 s -> 0.1799 s (+0.8%) | 333 pass; reverted (a function call is not the cost) |
 
 New test from this step, kept: `tests/test_process_fuzz.py` feeds fuzzed good and bad events to A and B `process()` and requires identical results and snapshots (covers every reason code and every status).
+| 6 (rejected) | Best price with a heap + lazy deletion (bids stored as `-price`; emptied levels stay in the heap until they reach the top) instead of the sorted list + bisect. | 0.1610 s -> 0.1682 s (+4.5%) | 0.1736 s -> 0.1856 s (+7.0%) | 333 pass; not kept. With ~1,000 levels, `list.insert` / `del` is one C memmove and cheaper than heap pushes plus stale-entry cleanup. Amortized cost of the heap is also worse for memory (stale entries grow with cancel churn). |
