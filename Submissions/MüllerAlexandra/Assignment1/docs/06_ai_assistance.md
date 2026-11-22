@@ -11,6 +11,9 @@ rejected with the reason and the verification performed.
 - Preserve stage-specific test logs and machine-readable metadata.
 - Keep importable Python modules unnumbered while numbering tests, commands,
   evidence, results, and documentation where ordering is meaningful.
+- Add a project-local `.gitattributes` policy that keeps text files at LF and
+  marks compressed/media files as binary. Git's Windows line-ending warnings
+  and the earlier peer-audit reproducer showed why byte-stable checkouts matter.
 
 ## Corrected so far
 
