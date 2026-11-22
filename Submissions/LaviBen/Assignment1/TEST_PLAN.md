@@ -81,5 +81,5 @@ commands, nonzero exit statuses, failure counts and reasons are preserved in
 they inspect deterministic clock/context/cleanup order and saved-record
 semantics, so they are stable across machines.
 
-The integrated post-audit run completed all 60 tests successfully. Passing
+The integrated post-audit run completed all 61 tests successfully. Passing
 remains evidence rather than a proof of correctness.

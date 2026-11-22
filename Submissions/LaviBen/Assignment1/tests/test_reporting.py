@@ -104,6 +104,45 @@ class ReportingTests(unittest.TestCase):
         self.assertIn("Requested / processed", report)
         self.assertIn("100 / 100", report)
 
+    def test_report_repeat_coverage_includes_fully_stopped_summaries(self) -> None:
+        partial = {
+            **REPORT["records"][0],
+            "measurement_kind": "timing_summary",
+            "phase": "engine_replay",
+            "version": "baseline",
+            "seed": 42,
+            "repeat": None,
+            "elapsed_seconds_median": 0.2,
+            "expected_repeat_count": 5,
+            "completed_repeat_count": 2,
+            "stopped_repeat_count": 3,
+            "missing_repeat_count": 0,
+            "completion_status": "partial",
+            "stopped": False,
+        }
+        stopped = {
+            **partial,
+            "seed": 43,
+            "elapsed_seconds_median": None,
+            "completed_repeat_count": 0,
+            "stopped_repeat_count": 5,
+            "completion_status": "stopped",
+            "stopped": True,
+            "stop_reason": "all raw repeats stopped at the declared limit",
+        }
+        revision_three = {
+            **REPORT,
+            "settings": {
+                **REPORT["settings"],
+                "measurement_integrity_revision": 3,
+            },
+            "records": [partial, stopped],
+        }
+
+        report = render_report(revision_three)
+
+        self.assertIn("2/10 (8 stopped)", report)
+
     def test_legacy_clean_report_is_marked_superseded(self) -> None:
         legacy = {
             **REPORT,

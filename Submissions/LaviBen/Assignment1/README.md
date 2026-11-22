@@ -20,8 +20,8 @@ exist:
   sorted price keys with eager cleanup.
 
 The complete post-audit suite passes. Both versions produce identical ordered
-results and identical
-canonical books after every event in all five supplied 10,000-event streams.
+results and identical canonical books after every event in all five supplied
+10,000-event streams.
 This agreement supplements the independently calculated examples and
 invariants; it is not a proof.
 
@@ -36,8 +36,8 @@ state comparison after every event; that test can take several minutes. The
 fresh-audit additions cover direct-method type safety, integer boundaries,
 ask-side FIFO, residual priority, repeat pairing, bounded diagnostics,
 object-lifecycle cleanup, strict report validation, missing-repeat disclosure,
-and a saved-sample latency ECDF. The verified result is `Ran 60 tests` followed
-by `OK` (208.320 seconds on the recorded development machine).
+and a saved-sample latency ECDF. The verified result is `Ran 61 tests` followed
+by `OK` (208.606 seconds on the recorded development machine).
 
 Replay the worked example with either version:
 
@@ -51,21 +51,18 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/replay.py \
 Both traces fill makers `b1`, `b2`, `b3`, then `b4`, leave four BTC on `b4`,
 leave the two-BTC ask unchanged and imply gross proceeds of `359400.00` USD.
 
-The tracked benchmark archive was produced from clean measurement commit
-`ffb474170b4849af850e31588f9a1a70dcf08da3`, but a later audit found timing
-lifecycle, incomplete-repeat, and unbounded-diagnostic defects. The files under
-`results/` and the generated `REPORT.md` are therefore preserved only as
-superseded provenance, not accepted canonical evidence. The revision-3 runner,
-dashboard, and report builder pass focused regression tests and a
-revision-3 eight-dataset pipeline smoke check (232 validated records, 14,000
-saved latency samples, zero stops, and zero missing repeats). A replacement
-canonical run requires the explicitly authorized measurement-code commit and a
-clean submission tree, as required by `AGENTS.md`. `dashboard.py` and
-`build_report.py` load saved results only; they never rerun benchmarks. Both
-builders require the corrected saved-data marker
-`measurement_integrity_revision: 3` before granting a clean run canonical status.
+The replacement canonical benchmark was run from clean measurement commit
+`3d4bacb5eb2527ac9b5be709d8cfad74b2c4da90`. It contains 73 datasets and
+3,744 records, including the declared one-million-event mixed attempt. All 76
+completed correctness rows agree; 15 bounded correctness attempts stopped,
+and no timing summary is missing a repeat. The archive records five raw repeats,
+latency samples, memory, operation counts, environment, settings, checksums and
+explicit stopped/partial evidence. `dashboard.py` and `build_report.py` load
+these saved results only; they never rerun benchmarks. Both builders require
+`measurement_integrity_revision: 3` before granting clean evidence canonical
+status.
 
-Render the archived raw data with the corrected builders using:
+Rebuild the two derived artifacts using:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 dashboard.py \
@@ -76,13 +73,11 @@ PYTHONDONTWRITEBYTECODE=1 python3 build_report.py \
   --output REPORT.md
 ```
 
-These outputs intentionally differ from the tracked legacy dashboard and
-`REPORT.md`: the corrected builders label that raw report superseded because it
-lacks measurement-integrity revision 3. The dashboard is dependency-free,
-works offline, exposes raw repeats/settings/environment, renders a latency ECDF
-from saved `samples_ns`, and changes filters without running measurement code.
-Byte-stable current artifacts will be recorded only after regeneration from
-the replacement canonical report.
+The dashboard is dependency-free, works offline, exposes raw repeats,
+settings, environment, stopped/missing evidence and diagnostic coverage,
+renders a latency ECDF from saved `samples_ns`, and changes filters without
+running measurement code. Both current artifacts rebuild byte-for-byte and are
+fingerprinted in `results/CHECKSUMS.json`.
 
 ## Frozen public API
 

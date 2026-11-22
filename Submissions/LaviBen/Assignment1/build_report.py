@@ -157,7 +157,6 @@ def render_report(report: dict[str, object]) -> str:
             for record in records
             if record["measurement_kind"] == "timing_summary"
             and record["phase"] in {"engine_replay", "application_total"}
-            and not record["stopped"]
         ),
         ("elapsed_seconds_median", "throughput_events_per_second_median"),
     )
@@ -185,7 +184,6 @@ def render_report(report: dict[str, object]) -> str:
             for record in records
             if record["measurement_kind"] == "timing_summary"
             and record["phase"] == "individual_sale"
-            and not record["stopped"]
         ),
         ("elapsed_seconds_median",),
     )

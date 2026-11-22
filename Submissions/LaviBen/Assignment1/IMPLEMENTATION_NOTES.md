@@ -135,7 +135,7 @@ After every accepted event:
   expected/stopped/missing summaries, and explicit stopped or unattempted work.
   Dashboard and short-report tests verify the saved-sample ECDF, revision-3
   evidence gate, diagnostic coverage, required views, and byte-stable
-  generation. The complete post-audit suite passes all 60 tests; its strict
+  generation. The complete post-audit suite passes all 61 tests; its strict
   50,000-event public-state comparison makes the run intentionally slow.
 - `REGRESSION_FIX_BASELINE.md` records the failing commands, exit statuses and
   reasons observed before the post-audit measurement and presentation fixes.
@@ -209,10 +209,9 @@ Rejected suggestions:
   dashboard meets the saved-data requirement without extra dependencies.
 
 Passing tests and cross-version agreement are evidence, not proof of
-correctness. The earlier canonical benchmark archive is superseded because its
-measurement lifecycle predates revision 3. The corrected eight-dataset smoke
-check produced 232 validated records and 14,000 saved latency samples with no
-stops or missing repeats; it measures rather than assumes that Version B is
-faster or smaller on every workload. A replacement canonical run remains
-pending a clean committed revision. Declared stops, partial or missing repeat
+correctness. The earlier canonical archive is superseded because its
+measurement lifecycle predates revision 3. After an eight-dataset smoke check,
+the replacement canonical run recorded 73 datasets and 3,744 records from the
+clean measurement commit. It measures rather than assumes that Version B is
+faster or smaller on every workload. Declared stops, partial or missing repeat
 sets, and unattempted operations remain visible and are not treated as passes.

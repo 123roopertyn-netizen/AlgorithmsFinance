@@ -26,7 +26,7 @@
 - [x] Dashboard and report builders load saved evidence only and are byte-stable.
 - [x] Docker packaging is intentionally omitted because it is optional.
 
-## Fresh-audit repairs in progress
+## Fresh-audit repairs completed
 
 - [x] Preserve the current working tree and identify the reviewed baseline.
 - [x] Record tests-first failures for every newly discovered defect.
@@ -37,7 +37,7 @@
 - [x] Render a true latency distribution from saved samples only.
 - [x] Freeze and enforce operation-specific direct-method behavior.
 - [x] Add the missing validation, FIFO-symmetry, and residual-priority tests.
-- [x] Run the complete corrected test suite (60 tests, 208.320 seconds).
+- [x] Run the complete corrected test suite (61 tests, 208.606 seconds).
 - [x] Run an eight-dataset revision-3 smoke benchmark and validate all 232 records.
 - [x] Update all documentation to match the corrected implementation.
 
@@ -45,22 +45,22 @@
 
 - [x] Explicitly authorize and create a new local commit containing the
   corrected measurement, dashboard, report, test, and documentation code.
-- [ ] Confirm or regenerate the canonical dataset grid from that committed code.
-- [ ] Run replacement canonical five-repeat timing/latency/memory measurements
+- [x] Confirm the 73-dataset canonical grid and all recorded checksums/events.
+- [x] Run replacement canonical five-repeat timing/latency/memory measurements
   from a clean tree.
-- [ ] Attempt the optional one-million-event case within the declared limit and
+- [x] Attempt the optional one-million-event case within the declared limit and
   retain stopped evidence if it is infeasible.
-- [ ] Generate `results/dashboard.html` and `REPORT.md` from replacement
+- [x] Generate `results/dashboard.html` and `REPORT.md` from replacement
   canonical results.
-- [ ] Verify the replacement dashboard visually and reproduce both generated
+- [x] Verify the replacement dashboard visually and reproduce both generated
   artifacts byte-for-byte.
-- [ ] Refresh `results/CHECKSUMS.json` for the replacement raw report,
+- [x] Refresh `results/CHECKSUMS.json` for the replacement raw report,
   dashboard, and root report.
-- [ ] Run the complete test suite and final Git scope/secret checks on the
-  clean submission candidate.
-- [ ] Record the new audited measurement commit in the replacement raw evidence
+- [x] Run the complete test suite (61 tests, 208.606 seconds) and final Git
+  scope/secret checks on the submission candidate.
+- [x] Record the new audited measurement commit in the replacement raw evidence
   and report. Commit `ffb474170b4849af850e31588f9a1a70dcf08da3` belongs only
   to the superseded archive.
-- [ ] Create a new immutable annotated audit/submission tag; do not move or
-  reuse an earlier tag.
+- [x] Create the new immutable annotated audit/submission tag
+  `laviben-assignment1-revision3-20261122`; do not move or reuse an earlier tag.
 - [ ] Push only when Ben Lavi explicitly requests it; do not merge the pull request.

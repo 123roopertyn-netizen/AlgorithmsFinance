@@ -269,3 +269,20 @@ revision 2, omitted expected/missing repeat fields, and labeled prefix
 operation counts only by processed `M`. After implementation, all four tests
 passed. The embedded JavaScript also passed `node --check`; the ECDF consumes
 only the report's saved `samples_ns` values.
+
+## Fully stopped summary coverage
+
+Canonical report review exposed that a fully stopped timing-summary row was
+excluded before aggregation, understating grouped repeat coverage. The report
+test was added before changing `build_report.py`:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests \
+  -p 'test_reporting.py' -v
+```
+
+Observed result before implementation: exit status `1`; six tests ran and one
+failed because two completed repeats plus three stopped repeats and a second
+fully stopped five-repeat row rendered as `2/5 (3 stopped)` instead of
+`2/10 (8 stopped)`. After including fully stopped summaries in aggregation,
+all six reporting tests exited `0`.

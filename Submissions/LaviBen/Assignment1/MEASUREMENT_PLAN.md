@@ -2,30 +2,22 @@
 
 ## Status
 
-Stages 7-9 are implemented in the corrected working tree:
+Stages 7-9 are implemented and have current canonical evidence:
 
 1. deterministic benchmark input preparation with settings and SHA-256;
 2. primary timing, throughput, separate per-event latency, correctness and
    operation-count runs; and
 3. fresh `tracemalloc` runs with explicit inclusion boundaries.
 
-The tracked `results/` archive and generated `REPORT.md` are **superseded**.
-They were produced from commit `ffb474170b4849af850e31588f9a1a70dcf08da3`,
-before an audit found that parse and liquidation repeats could charge prior
-object cleanup to the next timing window, timeout-handler setup/teardown was
-inside completed elapsed values, and skipped/partial work was not represented
-precisely enough. A fresh audit additionally found that unequal parse/replay
-counts could silently omit application totals, full operation diagnostics were
-unbounded, large correctness objects survived into later phases, and the
-dashboard exposed percentiles but no latency distribution. Revision 3 repairs
-those defects and has a validated eight-dataset smoke check, but no replacement
-canonical result yet.
+The tracked `results/` archive and generated `REPORT.md` were replaced after
+the measurement-integrity audit. The current archive is revision 3 evidence
+from clean commit `3d4bacb5eb2527ac9b5be709d8cfad74b2c4da90` and contains
+73 datasets plus 3,744 records. The earlier commit
+`ffb474170b4849af850e31588f9a1a70dcf08da3` remains historical provenance only.
 
 The runner refuses `--profile canonical` while the Assignment 1 tree is dirty.
-Under `AGENTS.md`, Ben must explicitly authorize committing the corrected
-measurement code before a replacement canonical run can start from a clean
-tree. This prevents results from naming a code version other than the code
-actually measured.
+The recorded run began from the clean committed tree, so its environment names
+the code actually measured.
 
 ## Dataset grid
 
@@ -66,8 +58,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 tools/run_benchmarks.py \
   --output tmp/benchmark_smoke.json.gz
 ```
 
-After committing the code and confirming a clean tree, the intended canonical
-command is:
+The canonical command executed from the clean tree was:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python3 tools/run_benchmarks.py \
@@ -194,7 +185,7 @@ allocations observed by `tracemalloc` are included; native/process allocations
 are not. A memory phase uses the same declared time limit and records
 partial/stopped evidence rather than hanging.
 
-## Provisional smoke evidence
+## Smoke preflight and canonical evidence
 
 The fresh revision-3 smoke report covers eight representative 1,000-event
 datasets and contains 232 validated records, including 14,000 saved latency
@@ -202,4 +193,11 @@ samples. It validates repeat pairing, prefix-bounded diagnostics, strict schema
 checks, and complete summaries with zero stops or missing repeats. Its dashboard
 and report rebuild byte-for-byte. This remains provisional because the source
 tree was dirty: every smoke report uses `provisional_smoke` and must not be
-copied into canonical results. The replacement canonical run remains pending.
+copied into canonical results.
+
+The subsequent clean canonical run contains 73 datasets and 3,744 records.
+All 76 completed correctness comparisons agree, 15 correctness attempts retain
+declared stopped evidence, and the timing summaries contain zero missing
+repeats. The one-million-event mixed case is present rather than silently
+omitted. `REPORT.md`, `results/dashboard.html`, and the compressed raw report
+are fingerprinted by `results/CHECKSUMS.json`.
