@@ -2,11 +2,18 @@
 
 Usage (from Assignment1/):
     python 03_code/replay.py <file> [<file> ...] --version a
-        [--check] [--results OUT.jsonl] [--csv OUT.csv]
+        [--check] [--results OUT.jsonl] [--csv OUT.csv] [--print-book]
 
-<file> is .jsonl or .jsonl.gz. Events are processed one at a time in file
-order (the supplied files are in strictly increasing seq order; an event
-with a non-increasing seq is rejected, never reordered).
+<file> is .jsonl or .jsonl.gz, one JSON event per line. Events are processed
+one at a time in file order (the supplied files are in strictly increasing
+seq order; an event with a non-increasing seq is rejected, never reordered).
+Input lines:
+  - empty (whitespace-only) lines are skipped;
+  - a line that is not valid JSON (also: invalid UTF-8, nesting too deep to
+    parse) gives the result {"event_id": null, "status": "rejected",
+    "reason": "malformed JSON line <n>"}, n = 1-based line number in the
+    (decompressed) file, and the replay continues; the book is not touched;
+  - valid JSON that is not a valid event is rejected by validation.py.
 
 Two passes per file, each on a fresh empty book, with events preloaded
 (file reading and JSON parsing are NOT timed):
@@ -18,6 +25,9 @@ Two passes per file, each on a fresh empty book, with events preloaded
      the benchmark (no warm-up, no repeats).
 
 --results writes one JSON result per event (from the timed pass; one file only).
+--print-book prints the final book after the summary line: a header line
+"final book: ...", then one JSON object per resting order (bids best first,
+then asks best first; FIFO within a price).
 --csv writes one summary row per file; rows of other versions already in
 that CSV are kept, rows of this version are replaced.
 """
@@ -41,12 +51,51 @@ CSV_FIELDS = ["version", "scenario", "events", "fills", "rejected",
               "final_book_size", "invariants_ok", "wall_seconds"]
 
 
+class MalformedLine:
+    """Stands in for an input line that could not be parsed as JSON."""
+
+    __slots__ = ("line_no",)
+
+    def __init__(self, line_no):
+        self.line_no = line_no
+
+    def __repr__(self):
+        return f"MalformedLine({self.line_no})"
+
+
 def load_events(path):
-    """Read a .jsonl or .jsonl.gz file into a list of dicts."""
+    """Read a .jsonl or .jsonl.gz file: one item per non-empty line, in file order.
+
+    A parsable line becomes its JSON value (normally an event dict). A line
+    that cannot be parsed becomes MalformedLine(n), n = its 1-based line
+    number. The file is read as bytes, so invalid UTF-8 in one line only
+    affects that line.
+    """
     path = Path(path)
     opener = gzip.open if path.suffix == ".gz" else open
-    with opener(path, "rt", encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
+    items = []
+    with opener(path, "rb") as fh:
+        for n, line in enumerate(fh, start=1):
+            if not line.strip():
+                continue
+            try:
+                items.append(json.loads(line))
+            except (ValueError, RecursionError):   # bad JSON or UTF-8; too deeply nested
+                items.append(MalformedLine(n))
+    return items
+
+
+def malformed_result(item):
+    """The result for a MalformedLine (the book is not involved)."""
+    return {"event_id": None, "status": "rejected",
+            "reason": f"malformed JSON line {item.line_no}"}
+
+
+def process(book, item):
+    """book.process_event for a parsed line; a rejected result for a malformed one."""
+    if type(item) is MalformedLine:
+        return malformed_result(item)
+    return book.process_event(item)
 
 
 def scenario_name(path):
@@ -66,15 +115,17 @@ def checked_replay(events, version):
              "peak_active_orders": 0, "peak_price_levels": 0,
              "invariants_ok": True, "first_error": ""}
     before = book.inspect_book()
-    for event in events:
-        result = book.process_event(event)
+    for i, event in enumerate(events, start=1):
+        result = process(book, event)
         after = book.inspect_book()
         try:
             book.assert_invariants()
-            check_event(before, event, result, after)
+            check_event(before, event, result, after)   # rejected: book unchanged
         except AssertionError as exc:
             if stats["invariants_ok"]:
-                stats["first_error"] = f"seq {event.get('seq')}: {exc}"
+                where = (f"seq {event.get('seq')}" if isinstance(event, dict)
+                         else f"item {i} of the file")
+                stats["first_error"] = f"{where}: {exc}"
             stats["invariants_ok"] = False
         status = result["status"]
         stats["fills"] += len(result.get("fills", []))
@@ -91,9 +142,10 @@ def checked_replay(events, version):
 def timed_replay(events, version):
     """One plain replay on a fresh book. Returns (results, seconds, book)."""
     book = make_book(version)
-    process = book.process_event
+    process_event = book.process_event
     start = time.perf_counter()
-    results = [process(event) for event in events]
+    results = [malformed_result(e) if type(e) is MalformedLine else process_event(e)
+               for e in events]
     seconds = time.perf_counter() - start
     return results, seconds, book
 
@@ -121,6 +173,8 @@ def main(argv=None):
                         help="check invariants after every event")
     parser.add_argument("--results", help="write per-event results (JSON lines)")
     parser.add_argument("--csv", help="write one summary row per file")
+    parser.add_argument("--print-book", action="store_true",
+                        help="print the final book (one JSON order per line)")
     args = parser.parse_args(argv)
     if args.results and len(args.files) > 1:
         parser.error("--results takes exactly one input file")
@@ -156,6 +210,12 @@ def main(argv=None):
                 print(f"  FIRST INVARIANT ERROR: {stats['first_error']}")
         rows.append(row)
         print("  ".join(f"{k}={row[k]}" for k in CSV_FIELDS))
+        if args.print_book:
+            final = book.inspect_book()
+            print(f"final book: {len(final)} resting orders (bids best first, then asks "
+                  "best first; FIFO within a price)")
+            for order in final:
+                print(json.dumps(order))
 
         if args.results:
             with open(args.results, "w", encoding="utf-8") as fh:

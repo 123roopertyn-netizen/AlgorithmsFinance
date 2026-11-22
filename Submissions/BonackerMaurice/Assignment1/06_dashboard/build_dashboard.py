@@ -13,8 +13,6 @@ Final benchmark (04_benchmarks/run_benchmark.py):
     memory_end_state.csv, memory_samples.csv
     opcounts.csv
 Correctness: tests_by_case.csv, differential_tests.csv.
-Appendix (earlier single-run exploration): scaling_version_*.csv,
-liquidation_version_*.csv, replay_summary.csv.
 The only other thing it reads is the checked-out code, to say whether it is
 the code that was measured (source fingerprint).
 Writes one self-contained HTML file; charts are PNGs embedded as base64.
@@ -60,13 +58,6 @@ def read_csv(name):
         return []
     with path.open(newline="", encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
-
-
-def read_csv_glob(pattern):
-    rows = []
-    for path in sorted(RESULTS.glob(pattern)):
-        rows.extend(read_csv(path.name))
-    return rows
 
 
 def read_json(name):
@@ -229,16 +220,30 @@ def current_fingerprint():
     sys.path.insert(0, str(ROOT / "04_benchmarks"))
     try:
         from bench_common import source_fingerprint
-        return source_fingerprint()["sha256"]
+        return source_fingerprint()
     except Exception:                                    # noqa: BLE001
         return None
+
+
+def code_match(run, now):
+    """'yes', 'unknown', or 'NO' plus the files that differ from the measured code."""
+    if not now:
+        return "unknown"
+    if now["sha256"] == run.get("source_sha256_start"):
+        return "yes"
+    old, new = run.get("source_files") or {}, now["files"]
+    parts = [("changed since the run", sorted(f for f in old.keys() & new.keys()
+                                              if old[f] != new[f])),
+             ("added", sorted(new.keys() - old.keys())),
+             ("removed", sorted(old.keys() - new.keys()))]
+    detail = "; ".join(f"{k}: {', '.join(v)}" for k, v in parts if v)
+    return f"NO ({detail}). The results describe the measured commit." if detail else "NO"
 
 
 def section_provenance(run, env):
     if not run:
         return "<h2>Provenance</h2>\n<p>No benchmark run saved (05_results/benchmark_run.json).</p>"
     git, s = run["git"], run["settings"]
-    measured = run.get("source_sha256_start")
     now = current_fingerprint()
     machine = env["machine"] if env else {}
     rows = [
@@ -246,8 +251,7 @@ def section_provenance(run, env):
         ["code committed and clean at start", "yes" if git.get("code_clean") else "NO"],
         ["whole repository clean at start", "yes" if git.get("tree_clean") else "no"],
         ["code unchanged during the run", "yes" if run.get("source_unchanged") else "NO"],
-        ["checked-out code = measured code",
-         "yes" if now and now == measured else ("unknown" if not now else "NO")],
+        ["checked-out code = measured code", code_match(run, now)],
         ["run status", run["status"]],
         ["started / finished (UTC)", f"{run['started_utc']} / {run['finished_utc']}"],
         ["tests before the run", ", ".join(f"{v} {k}" for k, v in
@@ -698,43 +702,6 @@ def section_opcounts():
                                  "heap rebuilds", "deque compactions"], b_rows))
 
 
-# ----- appendix: earlier single-run exploration -----------------------------------------
-
-def section_appendix():
-    rows = read_csv_glob("scaling_version_*.csv")
-    if not rows:
-        return ""
-    scenarios = scenarios_in(rows)
-    fig, axes = plt.subplots(2, 3, figsize=(11, 6), sharex=True, sharey=True, squeeze=False)
-    axes = axes.ravel()
-    for ax, scenario in zip(axes, scenarios):
-        for v in versions_in(rows):
-            ok = sorted((int(r["events"]), float(r["seconds"])) for r in rows
-                        if r["version"] == v and r["scenario"] == scenario
-                        and r["status"] == "ok")
-            ax.plot([x for x, _ in ok], [y for _, y in ok], marker="o", markersize=4,
-                    linewidth=2, color=VERSION_COLORS[v], label=label(v))
-        ax.set_xscale("log")
-        ax.set_yscale("log")
-        ax.set_title(scenario, loc="left", fontsize=10)
-        style_axes(ax)
-    for ax in axes[len(scenarios):]:
-        ax.axis("off")
-    h, lab = axes[0].get_legend_handles_labels()
-    axes[len(scenarios)].legend(h, lab, loc="center", frameon=False)
-    fig.supxlabel("events M (log scale)")
-    fig.supylabel("replay time (seconds, log scale)")
-    fig.tight_layout()
-    stopped = [f"{label(r['version'])}, {r['scenario']}, M = {int(r['events']):,}"
-               for r in rows if r["status"] == "stopped"]
-    return ("<h2>Appendix: earlier exploration (single runs, seed 42)</h2>\n"
-            "<p>scaling_version_*.csv: one replay per point, no warm-up or repeats, 600 s "
-            "limit for load + replay. Kept because it has M = 30,000, which shows Version "
-            "A's quadratic growth between 10k and 100k. Stopped (not plotted): "
-            + html.escape("; ".join(stopped)) + ".</p>\n"
-            + figure_to_img(fig, "exploration scaling"))
-
-
 def main():
     run = read_json("benchmark_run.json")
     env = read_json("environment.json")
@@ -746,7 +713,7 @@ def main():
                 section_replay(summary), section_throughput(summary),
                 section_sorted_vs_heap(summary), section_liquidation(summary, datasets),
                 section_concentration(summary, datasets), section_latency(),
-                section_memory(), section_opcounts(), section_appendix()]
+                section_memory(), section_opcounts()]
     warn = ""
     if run and (run["status"] != "complete" or not run["git"].get("code_clean")
                 or not run.get("source_unchanged")):

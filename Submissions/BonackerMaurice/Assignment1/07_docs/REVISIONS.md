@@ -650,3 +650,85 @@ The dashboard table "B-sorted vs B-heap" lists every workload.
 6. **Partly confirmed.** B uses more memory per order when orders are spread
    over many levels (1.4–3.0 times A at M = 10,000), but about half of A's
    memory on crowded, where many orders share each level.
+
+---
+
+## Revision 2: replay input robustness (`03_code/replay.py` only)
+
+**Status:** requested by Maurice on 22 Nov 2026, after the final benchmark.
+
+**Unchanged:**
+
+- the engines (`lob_a.py`, `lob_b_common.py`, `lob_b_sorted.py`,
+  `lob_b_heap.py`);
+- `validation.py` and the matching logic;
+- every expected test value.
+
+**What changed**
+
+- `load_events` now reads the file as bytes and parses it line by line.
+  - A line that cannot be parsed becomes a placeholder, `MalformedLine(n)`.
+    This covers invalid JSON, invalid UTF-8 and nesting too deep to parse.
+  - The replay turns that placeholder into
+    `{"event_id": null, "status": "rejected", "reason": "malformed JSON line <n>"}`
+    and continues. `n` is the 1-based line number in the decompressed file.
+    The book is not touched.
+  - Empty lines are skipped, as before.
+- `--print-book` prints the final book after the summary line, one JSON
+  order per line.
+- With `--check`, the first-error label no longer calls `.get` on events that
+  are not dicts.
+
+**Why.** Before this change, one bad line stopped the whole replay with an
+exception, and no result was written. Worse, a single invalid UTF-8 byte
+anywhere in the file failed the read before the first event was processed
+(text-mode decoding works on blocks, not lines). A Phase 2 auditor would try
+exactly this.
+
+**Evidence**
+
+- **Tests first.** `02_tests/test_robustness.py` was written before the
+  change. Its output on the old code is saved in
+  `05_results/tests_fail_first_robustness.txt`:
+  - 15 failed. 12 were malformed-line cases (`UnicodeDecodeError` while
+    reading). 3 were `--print-book` cases (unknown option).
+  - 127 passed. These are the adversarial-event cases, so `validation.py`
+    already handled all of them and no engine change was needed.
+- **The adversarial events cover** (each in all three versions):
+  - string, float and bool prices and quantities;
+  - zero and negative values;
+  - a lowercase or unknown side, an unknown or lowercase type;
+  - missing fields, a missing or non-integer `seq`, a repeated or decreasing
+    `seq`, a missing `event_id`;
+  - non-object events (list, string, number, null);
+  - a still-live duplicate id;
+  - huge quantities (10^30) in a limit order and a market sell;
+  - a cancel of a market-sell id;
+  - reuse of an id after its order was filled or cancelled;
+  - extra fields.
+- **What they check:**
+  - no exception;
+  - status `rejected` and a reason that names the cause;
+  - the book, `last_seq` and the event itself unchanged on a reject, and the
+    next `seq` still free;
+  - normal results for the valid edge cases;
+  - identical results and books in A, B-sorted and B-heap on one combined
+    adversarial stream, with invariants and `check_event` after every event.
+- **The malformed-line test** builds a `.jsonl` file and a `.jsonl.gz` file
+  containing empty lines, a cut-off line, plain text, invalid UTF-8, a line
+  nested 100,000 levels deep and a valid non-object. It runs both the timed
+  and the checked pass. The valid lines give exactly the results they give in
+  a clean file.
+- **After the change:** 142 of 142 new tests pass, and the full suite has 182
+  passed (`python -m pytest`).
+
+**Effect on the benchmark.**
+
+- The committed results were measured at `4b9df5f` with the previous
+  `load_events`. The benchmark's parse phase calls `load_events`, so a rerun
+  would time the new reader. Parse times from a rerun are therefore not
+  directly comparable with the committed ones.
+- Engine timings are unaffected, because the generated files are
+  checksum-verified and contain no malformed lines.
+- The dashboard's provenance row now names the files that differ from the
+  measured code, instead of a bare "NO".

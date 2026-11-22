@@ -225,11 +225,11 @@ the AI started the full run on a quiet, plugged-in laptop.
 
 | # | AI proposal | Decision |
 |---|---|---|
-| D1 | If a liquidation build is stopped, all three sales on that book are recorded as stopped (the builds are identical). | **Accepted** |
-| D2 | Version A also gets the 1,000,000-event attempt, under the same 120 s limit. | **Accepted** (it was stopped) |
-| D3 | Version A takes part in the concentration correctness check up to M = 10,000. | **Accepted** |
-| D4 | Latency, memory and operation counts run on seed 42 only. | **Accepted**, recorded as a limitation in the dashboard and REVISIONS.md |
-| D5 | `buildup --levels 4` produces the same file as `crowded` (same sha256, 9 of 9). | **Accepted** as a finding; documented, not worked around |
+| D14 | If a liquidation build is stopped, all three sales on that book are recorded as stopped (the builds are identical). | **Accepted** |
+| D15 | Version A also gets the 1,000,000-event attempt, under the same 120 s limit. | **Accepted** (it was stopped) |
+| D16 | Version A takes part in the concentration correctness check up to M = 10,000. | **Accepted** |
+| D17 | Latency, memory and operation counts run on seed 42 only. | **Accepted**, recorded as a limitation in the dashboard and REVISIONS.md |
+| D18 | `buildup --levels 4` produces the same file as `crowded` (same sha256, 9 of 9). | **Accepted** as a finding; documented, not worked around |
 
 ### Problems found and fixed while writing the scripts (before the commit)
 
@@ -271,4 +271,41 @@ the AI started the full run on a quiet, plugged-in laptop.
 | T11 | B-sorted vs B-heap uses a strict rule: "faster" only if one variant's slowest repeat beats the other's fastest repeat. It is conservative and reports most cells as "overlap". | |
 | T12 | Dashboard charts show the median over seeds of each seed's 5-repeat median. Error bars run from the fastest to the slowest of all 15 repeats. A point is drawn only if all three seeds finished. | |
 | T13 | The 1.9 ms slowest event of B at buildup 100k is explained as a dict resize. This is an inference from the memory steps at about 22k, 44k and 87k orders, not a direct measurement. | |
-| T14 | OneDrive syncing was not paused during the run. Seed 42 at buildup 100k was about 50% slower than seeds 43 and 44 for both B variants, and the cause is not identified. A rerun outside OneDrive would show whether it is noise. | |
+| T14 | OneDrive syncing was not paused during the run. Seed 42 at buildup 100k was about 50% slower than seeds 43 and 44 for both B variants, and the cause is not identified. A rerun outside OneDrive would show whether it is noise. | **Accepted as documented** (Maurice): no rerun; OneDrive syncing and the unexplained seed-42 outlier stay listed as limitations. |
+
+## Session 6: robustness and dashboard clean-up
+
+Maurice's task list:
+
+1. malformed JSON lines must not crash the replay;
+2. adversarial-event tests;
+3. remove the dashboard appendix;
+4. a README section "Replay your own event file".
+
+Constraints: no change to the matching logic or to expected test values.
+
+### What the AI produced
+
+| File | Content |
+|---|---|
+| `02_tests/test_robustness.py` | 142 test cases: 37 reject cases × 3 versions, 5 valid edge cases × 3, a cross-version adversarial stream, malformed-line replays (.jsonl and .gz, timed and checked passes) and `--print-book` |
+| `05_results/tests_fail_first_robustness.txt` | Fail-first output on the old replay.py (15 failed, 127 passed; home and temp paths redacted) |
+| `03_code/replay.py` | Malformed lines become rejected results; `--print-book`; safe error label in `--check` (REVISIONS.md, Revision 2) |
+| `06_dashboard/build_dashboard.py` | Appendix section and its CSV reader removed; the provenance row lists the files that differ from the measured code |
+| `README.md` | "Replay your own event file": command, options, input format, output formats, assumptions |
+
+### Findings
+
+- The engines already rejected all 37 adversarial cases correctly, in every
+  version, with the book unchanged. Only `replay.py` needed a change.
+- Before the change, one invalid UTF-8 byte anywhere in a file stopped the
+  replay before its first event.
+
+### Open points for Maurice
+
+| # | AI suggestion | Decision |
+|---|---|---|
+| T15 | "How to print the final book" is implemented as a new option, `--print-book`. It prints a header line, then one JSON order per line on stdout; redirect to save it. | |
+| T16 | Invalid UTF-8 and nesting too deep to parse are also reported as "malformed JSON line n". Both are lines the replay cannot parse. | |
+| T17 | The dashboard's test table still shows the 40 tests from the benchmark run (`tests_by_case.csv` was not refreshed), so it matches `benchmark_run.json`. The current suite has 182 tests. | |
+| T18 | Reject cases beyond your list were added: zero and negative values, a float `seq`, a decreasing `seq`, side `BID`, and a still-live duplicate id. The duplicate is the contrast to the "reuse after the order is gone" case. | |
