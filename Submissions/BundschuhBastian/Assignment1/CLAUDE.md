@@ -20,9 +20,9 @@ in SPEC.md without asking Bastian.
 |---|---|---|
 | 0 Setup + SPEC.md decisions (confirmed by Bastian) | done | 894bdf3 |
 | 1 Tests first: 328 tests, red against stubs (only NotImplementedError) | done | 2fad484 |
-| 2 Version A (baseline) | next | |
-| 3 Version B (revision) + REVISIONS.md | | |
-| 4 Own small generator `tools/gen_small.py` + A-vs-B equivalence after EVERY event | | |
+| 2 Version A (baseline): all `[A]` tests pass | done | 22b3da0 |
+| 3 Version B (revision) + REVISIONS.md: 333 tests pass; speed steps 1-8 measured (kept 1, 2, 4) | done | 2ef6e65 (correct), e519381 (last kept optimization), 1075e26 (REVISIONS final) |
+| 4 Own small generator `tools/gen_small.py` + A-vs-B equivalence after EVERY event | next | |
 | 5 `bench/make_data.sh`: all data, outside timing, with gz + decompressed sha256 | | |
 | 6 Benchmarks (time, latency, memory, counters, liquidation) → `results/` | | |
 | 7 Dashboard (Streamlit, like the lab) that only LOADS `results/` | | |
