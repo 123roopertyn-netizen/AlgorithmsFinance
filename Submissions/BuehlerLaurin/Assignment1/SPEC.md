@@ -45,6 +45,9 @@ B3r_fast. Registry/CLI naming updated 2026-11-23; no engine logic changed.
 
 Exact commands from the Assignment1 directory, with the README venv active:
 
+Omitting `--version` selects B = B3r by default (Laurin, 2026-11-23).
+`--version A` explicitly selects the baseline.
+
 ```powershell
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3r
@@ -76,7 +79,7 @@ Package `lob` in `01_code/lob/`; registry `METHODS` maps each name in the Final 
 
 - All public entry points validate through **one shared module** `lob/validation.py`, so A and B cannot diverge on bad input (aif-tdd Layer 2). Validation rules get their own contract checks.
 - The engine never mutates the input event dict.
-- Replay command: `python run.py lob.replay <file.jsonl[.gz]> --version <name>`, with `name` from the Final Version B table; prints one result per event as JSON Lines (R §Input files and interface: "supply a command to replay a file").
+- Replay command: `python run.py lob.replay <file.jsonl[.gz]> [--version <name>]`, with `name` from the Final Version B table and default B = B3r; prints one result per event as JSON Lines (R §Input files and interface: "supply a command to replay a file").
 - Trade history is **not** retained; each call returns only the current event's fills (R §Required results: history optional, must be declared as extra storage).
 
 ## Input domain
@@ -866,3 +869,40 @@ post-attack, memory and early-latency selections; checks headline CSV values,
 histogram totals, same-session fast score, missing-cell filtering and the
 Windows Git blob regression. Each tab has a saved numerical cross-check in
 05_evidence/dashboard-audit.json. Existing results/expected files stay unchanged.
+
+## Pre-report robustness fixes (Laurin, 2026-11-23)
+
+These amend the earlier interface/dashboard rules; no engine algorithm,
+validator, expected file, stored result, benchmark or final selection changes.
+
+1. If Git is usable in the checkout, retain immutable committed-blob loading.
+   If Git is unavailable or HEAD cannot be read (ZIP/copied submission outside
+   a checkout), read the same data allowlist under the submission root from
+   disk. Reject traversal and resolved paths outside that root. At the top,
+   before the title, show exactly: "Reading files from disk (no git checkout):
+   values are not verified against a commit." Recorded commits in disk-mode
+   captions are metadata, explicitly unverified. No engine imports or network
+   fetches in either mode. The optional developer audit CLI still requires Git.
+2. `lob.replay` defaults to final Version B = B3r via registry B; help states
+   that default. A remains explicitly selectable with --version A. All named
+   versions and valid event/result semantics stay unchanged.
+3. Malformed JSON, invalid UTF-8, UTF-16 or an unexpected extra BOM produces
+   one stderr line `<file>:<physical line>: <problem>`, no traceback, exit 1.
+   Earlier valid results remain on stdout. Blank lines count in diagnostics.
+   Ordinary valid-JSON event rejections remain engine JSON results, exit 0.
+   One leading UTF-8 BOM, CRLF/bare CR, gzip, huge integers and a BOM character
+   inside a JSON string retain their existing valid behaviour. Read/open/gzip
+   failures also use located input diagnostics. Engine exceptions are not
+   disguised as input errors.
+
+Implementation: text iteration with universal newlines and surrogateescape
+keeps decode failures local to the physical line despite TextIO read-ahead.
+Invalid byte markers are rejected before parsing/dispatch; escaped surrogate
+characters in valid JSON are unaffected. JSONDecodeError is wrapped in a
+dedicated ReplayInputError; only that reader error is formatted by the CLI.
+No integer cap is introduced; the existing unlimited integer conversion stays.
+
+Tests: final-B factory/default/help, located single-line diagnostics for plain
+and gzip files, valid-input regressions, Git-unavailable detection, disk path
+allowlist, and all eight tabs in independent processes on temporary submission
+copies without .git (both missing checkout and missing Git executable).

@@ -21,7 +21,11 @@ per-side heap rebuilds. This registry update changes no engine logic.
 
 From Assignment1 with the venv below active:
 
+Replay defaults to final Version B (B3r) when `--version` is omitted. Use
+`--version A` explicitly for the baseline; all explicit names remain available.
+
 ```powershell
+python run.py lob.replay 06_data/supplied/worked_example.jsonl
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3r
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
@@ -55,10 +59,18 @@ construction and individual sales have separate views; 1M results, actual
 latency histogram bins, early/late segments and post-cancellation state are
 included. Sources, recorded engine commits and units accompany the views.
 
-The app requires a Git checkout and reads a fixed HEAD snapshot using read-only `git show`: only committed
+When Git and a checkout are available, the app reads a fixed HEAD snapshot using read-only `git show`: only committed
 files under `03_results/runs/`, `05_evidence/`, `00_docs/FINAL_SELECTION.md` and
 `07_attack/ATTACK_REPORT.md`. Working-tree changes and new local runs are
-ignored. Engine modules and generators are never imported or executed.
+ignored in that mode. In a ZIP download/copied submission without a checkout,
+or when Git is unavailable, it reads those same allowlisted paths from disk and
+shows this banner at the top:
+
+> Reading files from disk (no git checkout): values are not verified against a commit.
+
+Disk paths are resolved within the submission root. Recorded run commits remain
+visible as metadata, explicitly unverified in disk mode. Engine modules and
+generators are never imported or executed.
 `.streamlit/config.toml` disables usage telemetry and binds the local server
 to 127.0.0.1; there are no remote data, font or chart requests in the app code.
 
@@ -82,7 +94,7 @@ Dashboard smoke/interaction and numerical checks:
 
 ```powershell
 python -m pytest 02_tests/test_dashboard.py -q
-python 04_dashboard/verify_saved.py                  # analyse committed files only
+python 04_dashboard/verify_saved.py                  # optional developer audit; requires Git
 ```
 
 The [per-tab audit](05_evidence/dashboard-audit.json) traces sample displayed
@@ -99,10 +111,10 @@ headline numbers match CSVs. No new benchmark or engine change.
 python -m venv "$env:USERPROFILE\.venvs\aif-a1"
 & "$env:USERPROFILE\.venvs\aif-a1\Scripts\Activate.ps1"
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # latest checkpoint: 999 passed
+python -m pytest -q                                   # latest checkpoint: 1027 passed
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
 python run.py bench.run_all                           # (planned) writes 03_results/runs/<run>/
-python -m streamlit run 04_dashboard/app.py           # http://localhost:8501, committed evidence only
+python -m streamlit run 04_dashboard/app.py           # localhost:8501; labelled disk fallback without Git
 ```
 `run.py` puts `01_code/` on the import path and runs a module; `pytest.ini` does the same for tests. No install step.
 
@@ -130,6 +142,20 @@ Final book (via `snapshot()`, not printed as an extra replay line): b4 retains
 Replay also accepts `.jsonl.gz` and every name in the Final Version B table. Events stream in file order; the shared validator rejects
 nonincreasing seq without advancing the last accepted seq. Each book starts empty;
 neither inputs nor result history are retained by the replay command.
+
+Malformed JSON, invalid UTF-8, UTF-16 and an unexpected additional BOM stop
+replay with one stderr line, `<file>:<line>: <problem>`, and a non-zero exit
+code. There is no traceback for these input errors. Line numbers include blank
+lines; results from earlier valid lines remain on stdout. Valid JSON events
+still use the unchanged validator and may produce normal JSON rejections.
+One leading UTF-8 BOM, CRLF/bare-CR newlines, gzip and unbounded integers remain
+supported. A BOM character inside a JSON string is ordinary data.
+
+Pre-report robustness verification: [1,027 standard tests](05_evidence/20261123T194432Z_47c0048-dirty_robustness-all-tests.txt)
+passed in 713.57 s; [1,995 attack tests](05_evidence/20261123T194432Z_47c0048-dirty_robustness-attack-suite.txt)
+passed in 95.10 s. This includes 28 new regression cases and all eight tabs in
+temporary no-checkout/no-Git copies. [Final review and source/XML hashes](05_evidence/robustness-verification.json)
+confirm unchanged engines, validator, existing expectations and stored results.
 
 Phase 3b verification and the authorized one-shot sanity command:
 

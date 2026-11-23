@@ -18,7 +18,7 @@ recorded in the final registry checkpoint at the end of this map.
 | R5 | Read JSON Lines (+ gzip) with stdlib `json`/`gzip`; replay in `seq` order from an empty book (R §Input files; S6) | All four verified | Shared JSON/gzip reader; 15 CLI cases cover A/B/B1/B2/B3; sanity checks each B variant on all five supplied 10k files against A. |
 | R6 | Event types LIMIT / MARKET_SELL / CANCEL with their required fields (R §Input files; S6) | All four/shared verified | Shared validator unchanged: 184 direct tests; 256 contract cases over four registry versions. |
 | R7 | Provide `AddLimitOrder`, `CancelOrder`, `FillMarketSell`, an event dispatcher and book inspection; document signatures (R §Input files; S6) | All four/shared verified | `check_direct_methods_match_process`, `check_direct_methods_validate`, `check_direct_methods_reject_wrong_type`; SPEC.md API/N2. |
-| R8 | Supply a command to replay a file (R §Input files) | Final registry implemented; fresh verification below | Replay accepts A/B/B1/B2/B3/B3r/B3r_fast; B = B3r, B1 selects the original class directly. SPEC/README list exact commands. Historical Phase 3b evidence: 15 CLI cases. |
+| R8 | Supply a command to replay a file (R §Input files) | Final registry/default implemented; fresh verification below | Replay defaults to B = B3r, accepts A/B/B1/B2/B3/B3r/B3r_fast explicitly; A is the baseline via --version A. Located single-line input diagnostics; SPEC/README commands/help updated. |
 | R9 | Both versions accept the same event files and return equivalent results (R §Input files) | All four verified in stated coverage | Three stateful machines (A vs each B), 64 contract cases per version and all supplied sanity result/final-book comparisons; intermediate full-stream coverage qualified below. |
 
 ## Matching, cancellation, validation
@@ -96,7 +96,7 @@ recorded in the final registry checkpoint at the end of this map.
 |---|---|---|---|
 | R56 | Machine-readable CSV/JSON results: version, scenario, seed, event count, active/level peaks, requested sell qty, fill count, phase, repeat, elapsed s, traced peak bytes; timing vs memory runs distinguishable (R §Results and dashboard) | Smoke machine-readable artifacts verified | Final smoke CSVs/journals include required metadata and counts; verification.json checks216 cells and semantic count parity. Full grid pending. |
 | R57 | Record Python, dependencies, machine, OS, code version, generator settings (R §Results and dashboard; S23) | Smoke metadata saved | Final smoke env.json, source hash, limits, GC policy, jobs, spec_snapshot.md; data generation settings/hashes in DATA_MANIFEST.json. |
-| R58 | Dashboard loads saved results only (no rerun) (R §Results and dashboard; S22) | Phase 5 implemented/targeted verified | 04_dashboard loads only full-commit Git blobs under Laurin's allowlist. No engine/benchmark imports or network data; telemetry off. New tests cover path restriction, long Git paths and external-network denial. |
+| R58 | Dashboard loads saved results only (no rerun) (R §Results and dashboard; S22) | Phase 5 plus no-Git fallback | Default full-commit Git blobs; without Git/checkout, same allowlisted disk paths with an explicit unverified banner. No engine/benchmark imports or network data; telemetry off. Temporary-copy tests render all tabs without checkout and without Git. |
 | R59 | Dashboard shows construction, replay and individual-sale scaling; A vs B; throughput and latency distributions; memory incl. post-cancellation; correctness table; workload settings; raw repeats; units; missing/stopped runs labelled (R §Results and dashboard; S22) | Eight tabs implemented/targeted verified | 16 dashboard gates, AppTest smoke + interaction test; per-tab numerical audit. Construction/sale selector, official and1M results, exact histograms/quantiles, churn/drift, correctness evidence, raw rows and provenance. Full Phase 5 evidence below. |
 | R60 | Explain at least one measured bottleneck with code, operation counts and complexity; revision need not win everywhere (R §Results and dashboard; S22) | Two bottlenecks explained | A per-fill rescan O(F·B), Q7 counters/exponent in measured A range; B1 far-end insert O(P) per change, counted movement and scaling. B3r cancel_churn loss and declared spike qualification displayed. |
 | R61 | Submission path `Submissions/BuehlerLaurin/Assignment1/`; course folders and other students' work unchanged (R §Submit; S23) | partial | Folder scaffolded 2026-11-21; final check at Phase 7 |
@@ -426,3 +426,26 @@ and suite hashes and verify protected code/data/results. The audit is rerunnable
 as `python 04_dashboard/verify_saved.py`; [submission-path evidence](../05_evidence/20261123T191421Z_337cc61-dirty_dashboard-reproducible-audit.txt).
 R58-R60 complete in the stated tested coverage. No new measurement or change
 to the final selection; unrelated 07_attack work excluded from this checkpoint.
+
+## Pre-report robustness checkpoint (2026-11-23, base `47c0048`)
+
+| Requirement / decision | Implementation and tests |
+|---|---|
+| R58 / dashboard portability | Git checkout remains the default source. Missing executable or unavailable HEAD selects a rooted disk store with the same allowlist, traversal protection, top warning and unverified provenance captions. Two real temporary submission copies contain no .git/engine code and render all eight tabs in separate processes; missing-checkout/missing-Git modes both tested. |
+| R8 / final-B default | No --version instantiates actual OrderBookB3r through registry B; factory spy catches accidental A selection. CLI output/help/default tests, explicit A and all names retained by original tests. |
+| R5, R8 / input diagnostics | Physical-line ReplayInputError, one stderr line and non-zero CLI exit, no traceback. Tests cover malformed JSON, invalid UTF-8, UTF-16 BOM/LE/BE and second BOM, plain/gzip, blank lines, valid prefix output and TextIO read-ahead. |
+| R9, R15, R36 / valid behaviour | No engine/shared-validator/existing assertion/expected/data/result changes. Positive cases retain leading BOM, CRLF/bare CR, gzip, 5,000-digit quantities and a BOM inside a JSON string. Semantic event rejections remain normal JSON output. |
+
+Test-first [red](../05_evidence/20261123T193220Z_47c0048-dirty_robustness-red.txt):
+24 failed /4 passed under the old behaviour. [Targeted green](../05_evidence/20261123T193940Z_47c0048-dirty_robustness-targeted.txt):
+93 passed (28 new regressions plus all existing replay/dashboard cases).
+[Attack suite](../05_evidence/20261123T194432Z_47c0048-dirty_robustness-attack-suite.txt):
+1,995 passed in 95.10 s. Full standard suite/final review follow below.
+
+Fresh completion evidence: [1,027 standard tests](../05_evidence/20261123T194432Z_47c0048-dirty_robustness-all-tests.txt)
+passed in 713.57 s, including all 28 new regressions, all 16 original dashboard
+checks, 448 contracts and all 17 mutant kills. Both suites are nonempty and
+wholly green (no skips). [Final review](../05_evidence/20261123T201613Z_47c0048-dirty_robustness-final-review.txt)
+and [verification JSON](../05_evidence/robustness-verification.json) record
+source/XML hashes and unchanged protected sources/expectations/results. No new
+measurements or dependency changes; all three requested fixes complete.

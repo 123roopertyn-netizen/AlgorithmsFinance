@@ -977,3 +977,79 @@ work; the evidence glob selects dashboard files only):
 git add -- .streamlit/config.toml 04_dashboard 02_tests/test_dashboard.py README.md SPEC.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 05_evidence/INDEX.md '05_evidence/*dashboard*'
 git commit -m "Assignment1: add committed-results dashboard with eight evidence tabs"
 ```
+
+## Three pre-report robustness fixes (Laurin, 2026-11-23, base `47c0048`)
+
+Applied aif-exercise, aif-tdd, aif-debug and aif-verify. User authorizes only
+dashboard portability, replay default and input diagnostics; engine algorithms,
+shared validator, original test expectations and stored results stay unchanged.
+No new measurements, generator runs or dependencies. No agents spawned.
+
+1. Git/checkout available: keep committed-blob loading. Git executable missing
+   or HEAD unavailable: DiskStore reads the identical allowlist under ROOT,
+   rejects traversal/resolved escapes and returns missing optional files as
+   missing. The first dashboard element is the exact requested warning; sidebar
+   and provenance captions explicitly mark disk metadata as unverified. No
+   engine imports or network fetches. AppTest runs in separate fresh processes
+   over temporary copies with no .git, all four source-run tables and required
+   docs/evidence; both no-checkout and PATH-without-Git modes render eight tabs.
+   Test copies live under Assignment1 scratch; GIT_CEILING_DIRECTORIES prevents
+   discovery of the ancestor course checkout. The default Git-mode tests stay.
+2. Replay defaults to registry B = actual OrderBookB3r. A remains --version A;
+   all explicit names and API/result semantics unchanged. A factory-spy test
+   would fail if A were still constructed, even though correct A/B outputs agree.
+   Help, README and SPEC state the default. No registry or engine edit needed.
+3. Dedicated ReplayInputError carries file/physical line/problem. The CLI
+   catches only this reader error, prints one stderr line and exits 1. JSON
+   syntax, UTF-8/UTF-16/extra-BOM, read/open/gzip errors are located; engine
+   exceptions are not hidden. Earlier valid results remain printed. Reading
+   still uses universal newlines and utf-8-sig. Surrogateescape prevents decoder
+   read-ahead from losing the physical error line; an invalid-byte regex rejects
+   those markers before json.loads or dispatch. Escaped Unicode surrogates and
+   a BOM character inside a JSON string remain valid data. No integer cap.
+
+Test-first [red](../05_evidence/20261123T193220Z_47c0048-dirty_robustness-red.txt):
+**24 failed, 4 passed in 10.89 s**. Failures reproduce the old A default,
+tracebacks on all requested bad inputs and unavailable-Git crashes; the four
+positive format/huge-int cases already pass. [Targeted green](../05_evidence/20261123T193940Z_47c0048-dirty_robustness-targeted.txt):
+**93 passed in 47.80 s**, including 28 new tests and the unchanged replay,
+replay-regression and dashboard suites. No expected value was corrected.
+
+The first implementation patch failed context validation before any mutation
+(misquoted module docstring); re-read exact source, applied the correct context.
+The first docs patch likewise failed atomically on an unnecessary context line
+and was reapplied correctly. No file deletion/move or behavioural detour.
+
+[Fresh attack suite](../05_evidence/20261123T194432Z_47c0048-dirty_robustness-attack-suite.txt):
+**1,995 passed in 95.10 s**, exit 0, --runxfail so fixed historical ATK-01 cases
+execute as ordinary tests. Full standard-suite and final source review below.
+
+[Fresh standard suite](../05_evidence/20261123T194432Z_47c0048-dirty_robustness-all-tests.txt):
+**1,027 passed in 713.57 s**, exit 0, no failures/skips. Command:
+`python -m pytest -q --tb=short --basetemp=scratch/pytest-robustness-all --junitxml=05_evidence/robustness-all-tests.xml`
+through evidence.py with the README venv Python. The attack command was
+`python -B -m pytest -p no:cacheprovider 07_attack -q --runxfail --tb=short --basetemp=scratch/pytest-robustness-attack --junitxml=05_evidence/robustness-attack-tests.xml`.
+Standard counts: existing 999 plus 28 new robustness cases; all original
+448 contracts, 25 mutant/control cases (17 kills), seven stateful machines,
+own/fast/validation/replay checks and 16 dashboard cases remain green.
+
+[Final source/suite review](../05_evidence/20261123T201613Z_47c0048-dirty_robustness-final-review.txt):
+PASS. The only Python edits are replay's input/CLI layer, the three dashboard
+entry/reader/view modules, and the new test_submission_robustness.py. Book
+algorithms, registry, shared validator, benchmark code, existing test files,
+03_results, 06_data, 07_attack and dependency pins are unchanged. Fresh XML
+reports are wholly green; both no-Git modes render eight tabs with the exact
+top warning. [Verification JSON](../05_evidence/robustness-verification.json)
+binds current sources and the two suite XMLs by SHA-256 and records per-file
+counts. Earlier dashboard/engine proofs are retained unchanged as history.
+
+Reviewed the complete generated source/docs diff for the logged injection:
+no traces and no new embedded instructions. No installs, dependency changes,
+deletions/moves, remote actions, new measurements or git mutations. No existing
+test expectation or result file changed. Open questions: none. STOP for review
+and Laurin's commit. Proposed commands, not executed:
+
+```powershell
+git add -- 01_code/lob/replay.py 04_dashboard/app.py 04_dashboard/saved_results.py 04_dashboard/views.py 02_tests/test_submission_robustness.py README.md SPEC.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 05_evidence/INDEX.md '05_evidence/*robustness*'
+git commit -m "Assignment1: add no-Git dashboard fallback and robust final-B replay CLI"
+```

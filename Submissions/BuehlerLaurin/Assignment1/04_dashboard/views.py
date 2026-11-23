@@ -21,7 +21,8 @@ class Dashboard:
         self.pairs = saved.a_vs_b(bundle)
 
     def source(self, roles=('baseline',)):
-        return ' · '.join(f'03_results/runs/{saved.RUNS[r]} | commit {self.b["envs"][r]["git_commit"]}' for r in roles)
+        suffix = '' if self.b['store'].revision else ' (recorded; disk files not commit-verified)'
+        return ' · '.join(f'03_results/runs/{saved.RUNS[r]} | commit {self.b["envs"][r]["git_commit"]}{suffix}' for r in roles)
 
     def table(self, frame, roles=('baseline',), note=None):
         st.caption(note or self.source(roles))
@@ -46,7 +47,8 @@ class Dashboard:
         st.altair_chart(alt.Chart(d).mark_line(point=True).encode(**enc).properties(height=310).interactive(), width='stretch')
 
     def document_source(self, name):
-        st.caption(f'{name} · snapshot commit {self.b["store"].revision}')
+        snapshot = self.b['store'].revision or 'disk files (not commit-verified)'
+        st.caption(f'{name} · snapshot {snapshot}')
 
     def overview(self):
         st.header('Final Version B = B3r')
@@ -312,11 +314,14 @@ def section(text, start, end=None):
 def main():
     b = saved.load_bundle(saved.head())
     st.set_page_config(page_title='AIF · Limit order book',page_icon='◈',layout='wide')
+    if b['store'].revision is None:
+        st.warning('Reading files from disk (no git checkout): values are not verified against a commit.')
     st.title('Limit order book · evidence explorer')
     st.caption('Assignment 1 / FIN71055 · Saved observations, explicit limits, reproducible decisions')
     st.sidebar.header('Committed evidence')
-    st.sidebar.code(b['store'].revision[:12])
-    st.sidebar.caption('HEAD snapshot only. No working-tree CSVs, engine execution or network fetches.')
+    st.sidebar.code(b['store'].revision[:12] if b['store'].revision else 'Disk files · unverified')
+    st.sidebar.caption('HEAD snapshot only. No working-tree CSVs, engine execution or network fetches.'
+                       if b['store'].revision else 'Allowlisted disk files. No commit verification, engine execution or network fetches.')
     st.sidebar.markdown('[Final selection](?document=selection)')
     st.sidebar.info('B = B3r. Historical labels are preserved.')
     view = Dashboard(b)

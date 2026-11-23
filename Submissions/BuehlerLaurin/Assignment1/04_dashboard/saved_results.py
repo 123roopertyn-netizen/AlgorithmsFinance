@@ -1,4 +1,4 @@
-"""Analysis of saved, committed blobs only. No engine or benchmark imports.
+"""Analysis of saved evidence. Prefer committed blobs; label a no-Git fallback.
 
 Adapted from aif-exercise/assets/dashboard_app.py: incomplete/invalid cells
 are quarantined before aggregation. Each measured seed retains its identity.
@@ -25,8 +25,19 @@ RUNS = {
 
 
 def head():
-    return subprocess.run(['git','rev-parse','HEAD'], cwd=ROOT, check=True,
-                          capture_output=True, text=True).stdout.strip()
+    try:
+        return subprocess.run(['git','rev-parse','HEAD'], cwd=ROOT, check=True,
+                              capture_output=True, text=True).stdout.strip()
+    except (OSError,subprocess.CalledProcessError):
+        return None
+
+
+def check_path(relative):
+    parts = PurePosixPath(relative).parts
+    if ('..' in parts or '\\' in relative or relative.startswith('/') or not
+        (relative.startswith('03_results/runs/') or relative.startswith('05_evidence/')
+         or relative in ('00_docs/FINAL_SELECTION.md','07_attack/ATTACK_REPORT.md'))):
+        raise ValueError('dashboard data path outside the allowlist')
 
 
 class CommittedStore:
@@ -38,11 +49,7 @@ class CommittedStore:
 
     @lru_cache(maxsize=80)
     def text(self, relative):
-        parts = PurePosixPath(relative).parts
-        if ('..' in parts or '\\' in relative or relative.startswith('/') or not
-            (relative.startswith('03_results/runs/') or relative.startswith('05_evidence/')
-             or relative in ('00_docs/FINAL_SELECTION.md','07_attack/ATTACK_REPORT.md'))):
-            raise ValueError('dashboard data path outside the allowlist')
+        check_path(relative)
         # The trailing -- forces revision syntax. Without it, Windows Git may
         # stat the long SHA:path as a filename and fail before resolving a blob.
         cp = subprocess.run(['git','show',f'{self.revision}:{PREFIX}{relative}','--'],
@@ -59,6 +66,21 @@ class CommittedStore:
     def json(self, path):
         text = self.text(path)
         return json.loads(text) if text else {}
+
+
+class DiskStore(CommittedStore):
+    """ZIP/copied-submission fallback; metadata is not commit-verified."""
+    def __init__(self, root):
+        self.revision = None
+        self.root = Path(root).resolve()
+
+    @lru_cache(maxsize=80)
+    def text(self, relative):
+        check_path(relative)
+        path = (self.root / relative).resolve()
+        if not path.is_relative_to(self.root):
+            raise ValueError('dashboard data path resolves outside the submission')
+        return path.read_text(encoding='utf-8') if path.is_file() else None
 
 
 def validate_summary(summary, timing, cells):
@@ -99,7 +121,8 @@ def validate_summary(summary, timing, cells):
 
 @lru_cache(maxsize=2)
 def load_bundle(revision=None):
-    store = CommittedStore(revision or head())
+    revision = revision or head()
+    store = CommittedStore(revision) if revision else DiskStore(ROOT)
     tables, envs, snapshots = {}, {}, {}
     for role, run in RUNS.items():
         prefix = f'03_results/runs/{run}/'

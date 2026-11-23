@@ -1,7 +1,7 @@
 ﻿"""Saved-results dashboard; starting asset: aif-exercise/assets/dashboard_app.py.
 
 Start: python -m streamlit run 04_dashboard/app.py
-Data reads are committed blobs only; no engine or benchmark imports.
+Data reads prefer committed blobs, with a labelled no-Git fallback; no engine imports.
 """
 from pathlib import Path
 import sys
