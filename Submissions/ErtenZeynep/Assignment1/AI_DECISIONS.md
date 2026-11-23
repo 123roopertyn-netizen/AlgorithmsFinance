@@ -369,3 +369,125 @@ This history records meaningful changes without creating duplicate current-statu
 - Randomized check: 10 seeds times 40 events passed for Version A through the baseline projection.
 - Mutation tests and benchmarks: not executed.
 - Remaining risks: Version B correctness and cleanup are unverified; the list baseline may be impractically slow on large/deep workloads; POSIX commands remain documented but unexecuted in this Windows environment; benchmark limits and measurement protocols still require approval and empirical validation.
+
+## Stage 4B Gate A mutation evidence
+
+### DEC-019 - Six primary Version A mutations
+
+- Status: VERIFIED.
+- Isolation: every mutation used a fresh temporary package inside the approved project, a new subprocess, and a printed resolved import path pointing to the temporary module. Original production hashes were checked before and after every mutation.
+- Result: six `KILLED`, zero `SURVIVED`, zero `INVALID`.
+- Detectors and observed violations:
+  1. `test_matching.TestMatching.test_partial_fill_preserves_fifo_for_follow_up_taker` rejected reset arrival priority and reversed follow-up maker order.
+  2. `test_matching.TestMatching.test_multilevel_crossing_buy_rests_residual_with_original_sequence` rejected taker-price fills `[100, 100]` in place of maker prices `[99, 100]`.
+  3. `test_matching.TestMatching.test_one_unit_exact_price_crossing` rejected an equal-price order that rested without fills.
+  4. `test_cancellation_and_sequences.TestCancellationAndSequences.test_cancel_middle_and_last_order_then_follow_up_match` rejected a cancelled order left in the canonical book.
+  5. `test_cancellation_and_sequences.TestCancellationAndSequences.test_equal_decreasing_and_other_rejections_are_atomic` rejected quantity mutation from 1 to 0 before a zero-quantity event was rejected.
+  6. `test_validation.TestStatelessValidation.test_exact_integer_validation_rejects_bool_float_string_and_none` rejected boolean-as-integer behavior for sequence, price, and quantity.
+- Diagnostic qualification: mutation 6 produced three assertion failures for `False` and three directly caused `None`-result errors for accepted `True` values. The detector is effective; adding `assertIsNotNone` later would improve failure clarity but is not a material coverage requirement.
+- Preservation: the original 45-test Version A projection passed after cleanup, production hashes remained exact, and no mutation artifact or cache remained.
+
+### DEC-020 - Secondary mutation value and cost
+
+- Status: DEFERRED; not executed.
+- Resting a market-sell residual: high incremental value and low execution cost; existing exact-depth-plus-one and transition-verifier cases should detect it.
+- Stopping a crossing limit one eligible level early: high incremental value and low cost; existing multilevel BUY/SELL cases should detect it.
+- Reversing best-price priority: high incremental value and low cost; the exact price-priority/proceeds case should detect it.
+- Failing to remove an empty price level: low value as a Version A mutation because Version A has no price-level container. It becomes high-value Version B internal-invariant coverage and should be handled there instead of forcing an artificial baseline structure.
+- Deadline decision: defer all four until both engines and mandatory experiments are complete.
+
+### DEC-021 - Refined independent Version B storage plan
+
+- Status: APPROVED FOR FUTURE GATE B; not implemented.
+- Use an implementation-owned `active_by_id` dictionary, bid/ask price-level dictionaries, one `OrderedDict` FIFO per level, and side-specific heaps containing `(heap_key, generation, price)` entries.
+- A heap entry is valid only if its generation matches the current level generation. A disappeared and recreated price receives a new generation, preventing an old entry from becoming valid again.
+- Proposed compaction choice: rebuild when `heap_length > 2 * active_level_count + 64`. Evaluate this after both new-level insertion and every level deletion caused by cancellation or exhaustion. These are the only operations that increase heap length or reduce active-level count, so no additional structural trigger is needed for the bound. Top-stale cleanup still occurs before best-price use; it reduces rather than worsens heap storage.
+- Expected costs: average `O(1)` ID lookup/cancellation within a nonempty level, `O(log P)` new-level heap insertion, and `O(F + (L + S) log P)` matching for `F` makers, `L` exhausted levels, and `S` stale entries popped.
+- Amortized costs: an occasional `O(P)` rebuild is charged to accumulated stale entries, keeping heap space `O(P)` under the threshold policy.
+- Worst cases: dictionary operations can degrade to `O(B)` theoretically; one cancellation or match can trigger `O(P)` rebuild; stale cleanup can cost `O(S log P)`; canonical snapshot construction remains `O(B log B)` and must stay outside primary timing.
+
+### DEC-022 - Future optimized internal-invariant verification
+
+- Status: APPROVED FOR FUTURE GATE B; file not created.
+- Approved path: `03_tests/test_optimized_invariants.py`.
+- Verify exact agreement between `active_by_id` and all level queues, unique membership, nonempty active levels, arrival-sequence FIFO, exactly one valid current-generation heap entry per active price, generation safety after recreation, removal of exhausted/cancelled orders, bounded stale storage under churn/sweeps, and behavior preservation across heap rebuilds.
+- Implementation-specific inspection belongs only in this file. It must not become shared matching logic or a third reference engine.
+- Identical-stream differential verification remains approved for future `03_tests/test_pregenerated_differential.py` using existing 1,000-event workloads and per-event results, sequences, snapshots, and transition verification.
+
+### DEC-023 - Benchmark budget worst-case recalculation
+
+- Status: OPEN; planning only, no benchmark run.
+- Mandatory core matrix assumption: 45 workload combinations, two engines, five repeats = 450 timed repeats.
+- If every configuration times out on its first repeat, immediate stop gives: 30 engine-configurations at 1,000 events × 30 seconds = 15 minutes; 30 at 10,000 × 30 seconds = 15 minutes; 30 at 100,000 × 120 seconds = 60 minutes. This exactly consumes the 90-minute primary budget before overhead.
+- A stricter worst case is runs finishing just below their timeout: 150 repeats × 30 seconds for 1,000 events = 75 minutes; another 75 minutes for 10,000; and 150 × 120 seconds = 300 minutes for 100,000, totaling 450 minutes before setup. Therefore the complete declared matrix cannot be guaranteed within the proposed 90-minute primary or 150-minute overall budget.
+- Proposed transparent policy: preserve the 150-minute global limit; execute mandatory configurations in paired engine order, complete all 1,000-event configurations first, then 10,000, then 100,000, rotating scenarios and seeds consistently within each size. Stop at the declared global limit; retain valid observations; record every incomplete/skipped configuration and reason; never compute a normal five-repeat median for an incomplete configuration. Do not substitute optional stress work for an unfinished mandatory configuration.
+- Before benchmark execution, run a separately approved small preflight to estimate whether practical durations make full completion likely. Any proposal to change per-repeat or global limits requires user approval.
+
+### Stage 4B Gate A risk conclusion
+
+- Verified: Version A tests detect the six primary defects; mutation isolation preserved every production hash; the original baseline remains GREEN.
+- Plausible risk: mutation 6 diagnostics are less clean for accepted `True` values, but the defect cannot pass silently.
+- Open: Version B state/index synchronization, heap generations, stale-entry bounds, and compaction behavior remain unimplemented and unverified.
+- Deadline implication: with the 26 November 2026 18:00 deadline, Gate B correctness and required benchmarking take priority. Secondary mutations and optional stress experiments should remain deferred unless mandatory work finishes early.
+
+## Stage 4B Gate B decisions and evidence
+
+### DEC-024 - Independent indexed Version B architecture
+
+- Status: IMPLEMENTED and VERIFIED FOR CORRECTNESS.
+- Storage: direct active-ID dictionary, separate bid/ask level dictionaries, `OrderedDict` FIFO queues, and independent bid/ask heaps.
+- Independence: Version B shares only stateless validation and public constants. Its mutable storage, state validation, matching, cancellation, partial-fill handling, and cleanup do not call Version A.
+- Heap safety: each level creation receives a monotonic generation; validity requires both active price and matching generation. Stale heap-top entries are removed lazily.
+- Compaction: rebuild when `heap_length > 2 * active_level_count + 64`, checked after level creation and after deletion by cancellation or exhaustion. The threshold is an engineering choice, not an assignment requirement.
+- No empirical performance advantage is claimed before benchmarking.
+
+### DEC-025 - Version B complexity boundary
+
+- Status: DOCUMENTED; theoretical, not empirical.
+- Expected: average `O(1)` ID lookup/cancellation and same-level insertion; `O(log P)` new-level insertion; matching `O(F + (L + S) log P)` for makers `F`, exhausted levels `L`, and stale entries popped `S`.
+- Amortized: occasional `O(P)` rebuild is charged to accumulated stale entries, keeping persistent heap storage `O(P)` under the threshold. Total indexed storage is `O(B + P)`.
+- Worst case: a single insertion/deletion can trigger `O(P)` rebuilding; stale cleanup may cost `O(S log P)`; pathological dictionary behavior can degrade; canonical snapshot construction costs `O(B log B)`.
+- Workload risks: buildup stresses `B/P` and object memory; crowded/concentration stress long FIFO queues; mixed stresses index synchronization; sweep stresses repeated exhaustion; cancel_churn stresses generation safety and stale-heap bounds.
+
+### DEC-026 - Permanent optimized invariant and differential evidence
+
+- Status: VERIFIED.
+- Four internal methods verify exact active-index/level union, unique membership, nonempty levels, FIFO arrival order, exactly one valid current-generation entry per active price, cancellation/exhaustion cleanup, bounded heap storage, recreation safety, and matching after rebuild.
+- Per-event differential verification used all fifteen existing 1,000-event core workloads: 15,000 events. Both engines received identical parsed events and matched exact public results, accepted sequences, and canonical snapshots after every event; both transitions were independently verified.
+- Boundary: differential agreement is supplemental. Hand-calculated deterministic fixtures and the supplied worked example remain primary oracles.
+
+### DEC-027 - Version B mutation evidence
+
+- Status: VERIFIED.
+- Exhausted active-ID retention: `KILLED` by active-index/level union mismatch.
+- Empty-level retention: `KILLED` by the nonempty-level invariant.
+- Disabled generation validity: `KILLED` because an old generation became valid after price recreation.
+- Isolation: fresh temporary source and process per mutation, printed temporary import path, exact production hashes checked before and after every experiment.
+- Result: three `KILLED`, zero `SURVIVED`, zero `INVALID`; no temporary artifact remained.
+
+### DEC-028 - Gate B GREEN checkpoint
+
+- Status: VERIFIED.
+- Complete suite: 51 tests, zero failures, zero errors, zero skips.
+- Version A regression: 45 applicable original tests, all passed.
+- Worked example: Version B matched all six events' final market result, remaining book, and gross proceeds exactly.
+- Fixed-seed randomized test, fifteen-stream differential test, and four internal-invariant tests passed.
+- Production suite remained GREEN after all mutation copies were removed.
+
+### DEC-029 - Proposed benchmark pilot
+
+- Status: PROPOSED; not executed.
+- Purpose: estimate practical runtime before finalizing the provisional 150-minute resource budget; pilot observations are not final benchmark repetitions.
+- Matrix: one engine-only repeat for both engines on each of the five supplied 10,000-event scenarios, plus one repeat on existing 100,000-event `buildup` and `cancel_churn` streams.
+- Boundary: parse before timing; fresh engine per run; discard each returned event result after processing; exclude snapshots, logging, memory tracing, transition checks, and counters.
+- Limits: 30 seconds per 10,000-event run, 120 seconds per 100,000-event run, and 12 minutes globally. First timeout stops that engine/workload configuration and is recorded explicitly.
+- Use: extrapolate realistic five-repeat runtime by scenario, size, and engine. Do not silently omit a mandatory configuration or report pilot data as a normal five-repeat result.
+
+### Stage 4B Gate B remaining risks
+
+- Correctness evidence is strong but finite; it does not prove behavior for every possible stream.
+- `OrderedDict`, duplicated indexes, level objects, and stale heap entries may cost more memory than the baseline on small or crowded books.
+- Heap rebuild pauses may affect tail latency even if amortized complexity is favorable.
+- Canonical snapshots are intentionally expensive and must stay outside primary timing.
+- The provisional benchmark matrix cannot be guaranteed within 90 primary minutes under near-timeout durations; the pilot requires separate approval before limits are finalized.
+- POSIX commands remain documented but unexecuted in the current Windows environment.

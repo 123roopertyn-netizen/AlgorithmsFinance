@@ -655,3 +655,147 @@ No mutation experiment, benchmark, Version B implementation, dependency installa
 - Supplied fixture preservation: `worked_example.jsonl` SHA-256 `831015ac71d56ada0898b0bf8f59f125900b4dc32134d6ef37bd3cec304798ec`; `worked_expected.json` SHA-256 `c715f52724df6bbfcedcad0e203ddb5a7752d38c809f4cf12b513ba809554d2c`.
 - Generated-manifest preservation: SHA-256 `5c408a6ac8aec13f0596f20ab974a526fe238a99f2f68ec32195a1a82ee16ca5`, unchanged from the Stage 2 migration record.
 - Cache artifacts: zero.
+
+## 2026-11-23 - Stage 4B Gate A focused mutation verification
+
+### 67. Established the immutable production baseline and exact detectors
+
+- User evidence: the user confirmed that the verified Version A GREEN checkpoint was manually committed and that Git showed no uncommitted production-source changes. The assistant performed no Git or GitHub operation.
+- Hashed every Python production source before mutation work:
+  - `__init__.py`: `3d66c22f15c7324adc9c92c4dc90c2556dca30b94d0516a4e338f4cb8a46f71a`
+  - `baseline.py`: `a9836eb21682a82491c01935fe46475b88b69f817f9556964e9ade6f82565f8b`
+  - `contracts.py`: `c2d55a0b9eb45fd18e2e9035b71b21652ffbc9a3844857a849026ba04bae1e6b`
+  - `optimized.py`: `60617165c7aae2fe11a5252313ddddea4d9485e6f52d873e60bea759473d8fba`
+  - `replay.py`: `0b74f1a87cb396a591b9b853d947c9720336d393853bed2160aac1dda66461ba`
+  - `validation.py`: `d22baa7d2c288e200ba5e1a3772bb34c62c15924b9a5882cf2e857202879f517`
+- Discovered test methods from the actual files. Confirmed that the matching module is `test_matching.py`, not the earlier speculative `test_limit_matching.py` name.
+- Ran each of the six exact detector IDs against unmodified Version A before mutation. Each ran once and passed with zero failures and zero errors.
+- Exact detectors:
+  1. `test_matching.TestMatching.test_partial_fill_preserves_fifo_for_follow_up_taker`
+  2. `test_matching.TestMatching.test_multilevel_crossing_buy_rests_residual_with_original_sequence`
+  3. `test_matching.TestMatching.test_one_unit_exact_price_crossing`
+  4. `test_cancellation_and_sequences.TestCancellationAndSequences.test_cancel_middle_and_last_order_then_follow_up_match`
+  5. `test_cancellation_and_sequences.TestCancellationAndSequences.test_equal_decreasing_and_other_rejections_are_atomic`
+  6. `test_validation.TestStatelessValidation.test_exact_integer_validation_rejects_bool_float_string_and_none`
+
+### 68. Created the isolated mutation workspace safely
+
+- Requested write permission for the approved temporary subtree and the two approved logs. The sandbox could not create a child under a grant for a nonexistent path, so a project-root write grant was requested for the technical operation; actual writes remained limited to `mutation_gate_a_tmp` and the logs.
+- First creation attempt changed nothing: constrained PowerShell rejected a static path-method call and the narrow permission denied directory creation/copying.
+- Created a fresh `source/orderbook` copy for each mutation. Original production and test files were never patched, renamed, deleted, overwritten, or restored.
+- Each mutation ran in a new Python subprocess with `PYTHONDONTWRITEBYTECODE=1` and its temporary `source` first on `PYTHONPATH`.
+- Every subprocess printed the resolved imported module path. Each path pointed to that mutation's temporary `baseline.py` or `validation.py`, never production.
+- Recomputed all six original production hashes before and after every mutation. Every comparison was exact.
+
+### 69. Executed six mandatory primary mutations
+
+1. FIFO priority reset after partial fill — `KILLED`.
+   - Temporary change: a partially filled maker received a new later arrival sequence.
+   - Detector observed `AssertionError` at the expected-snapshot invariant.
+   - Activation evidence: after the first partial fill, maker `z` changed from arrival sequence 1 to 3 and sorted behind `a`; the follow-up fills were `a:4` then `z:1`, rather than `z:3` then `a:2`.
+2. Taker-price execution — `KILLED`.
+   - Temporary change: crossing-limit fills were rewritten to the incoming limit price.
+   - Detector observed `AssertionError` at exact result comparison.
+   - Activation evidence: the two fill prices were `[100, 100]` instead of maker prices `[99, 100]`.
+3. Strict crossing — `KILLED`.
+   - Temporary change: inclusive `<=`/`>=` eligibility became strict `<`/`>`.
+   - Detector observed `AssertionError` at exact result comparison.
+   - Activation evidence: equal-price BUY and SELL orders both rested, with status `resting` and no fills, instead of executing.
+4. Cancelled order retained — `KILLED`.
+   - Temporary change: successful cancellation returned `cancelled` without removing the order.
+   - Detector observed `AssertionError` at the expected-snapshot invariant.
+   - Activation evidence: the result reported two units cancelled while order `b` remained active with two units.
+5. Mutation before validation — `KILLED`.
+   - Temporary change: a market-sell path decremented a resting maker before stateless validation.
+   - Detector produced two relevant assertion failures, beginning with rejected-event snapshot atomicity.
+   - Activation evidence: invalid zero-quantity market sell returned `rejected`, sequence remained 10, but active quantity changed from 1 to 0. This was an actual pre-rejection state mutation, not a behaviorally neutral statement reorder.
+6. Booleans accepted as integers — `KILLED`.
+   - Temporary change: exact `type(value) is int` checks became `isinstance(value, int)` for sequence, price, and quantity.
+   - Detector produced three directly relevant assertion failures for `False` (`invalid_sequence`/`nonpositive_*` instead of `invalid_field_type`) and three directly related errors for `True`, where accepted validation returned `None` and the test attempted to inspect a rejection.
+   - Activation evidence: `validate_event` returned `None` for valid LIMIT events with `True` in each of `seq`, `price_ticks`, and `qty_units`.
+- Summary: six `KILLED`, zero `SURVIVED`, zero `INVALID`. No material test-coverage weakness was found. The boolean detector could later use `assertIsNotNone` for clearer diagnostics, but it reliably detects the defect and does not require a Gate A correction.
+
+### 70. Removed temporary artifacts and reverified original Version A
+
+- Removed each verified mutation directory using its exact resolved path after its run. No supplied, generated, production, test, or unrelated file was removed.
+- The final staging parent contained zero entries. Its first removal attempt was denied by Windows. Inspection found attributes `ReadOnly, Directory, Archive, ReparsePoint`; constrained PowerShell disallowed changing the property, but the subsequent exact native PowerShell removal succeeded. Final `mutation_gate_a_tmp` existence: false.
+- Reran the original Version A projection against `04_implementation`: 46 methods discovered, 45 applicable, exactly one two-engine comparison excluded; 45 run, zero failures, zero errors, zero skips, successful true.
+- Final hashes for all six production sources exactly matched the pre-mutation values above.
+- Final cache audit: zero `__pycache__` directories and zero `.pyc` files.
+
+No original production source or correctness test was modified. No secondary mutation, Version B implementation, future Version B test file, benchmark, data generation, dependency installation, network access, Git command, or GitHub operation occurred.
+
+### 71. Performed the final Gate A documentation and integrity audit
+
+- Rehashed all six production sources after log updates: every value still matched the immutable Gate A baseline.
+- Confirmed the mutation staging directory is absent and cache counts remain zero.
+- Confirmed the new Gate A evidence sections exist in both approved logs.
+- An auxiliary PowerShell expression incorrectly isolated zero Risk Register rows because of its string-splitting expression; it did not modify anything and was not treated as document evidence.
+- Corrected read-only Python check: 25 canonical Risk Register rows, 25 unique IDs, no duplicates.
+
+## 2026-11-23 - Stage 4B Gate B optimized implementation and verification
+
+### 72. Audited the approved contracts, test support, and workload inventory
+
+- Read the optimized stub, package exports, independent transition verifier, existing tests, and generated 1,000-event filenames.
+- Confirmed fifteen existing 1,000-event core streams: five scenarios × seeds 42/43/44. No dataset was generated or modified.
+- Requested write permission only for the four approved existing files and two approved new test files. A later project-root grant was used solely for approved temporary mutation copies.
+- An initial combined patch was rejected before changing anything because it attempted delete and add operations on `optimized.py` in one request. The same content was applied in supported single-target steps.
+
+### 73. Implemented independent Version B and its approved tests
+
+- Replaced the optimized RED stub with implementation-owned order objects, `active_by_id`, bid/ask level dictionaries, `OrderedDict` FIFO queues, side-specific heaps, generation-tagged entries, stale-top cleanup, and bounded rebuilds.
+- Implemented Version B's own sequence/live-ID validation, matching, partial fills, cancellation, level cleanup, and canonical inspection. It reuses only shared stateless validation and contracts.
+- Compaction condition: `heap_length > 2 * active_level_count + 64`, evaluated after both level insertion and deletion.
+- Created `03_tests/test_optimized_invariants.py` with four methods covering index union, unique membership, FIFO, partial fills, cancellation/exhaustion cleanup, generation recreation, heap bounds under 160 churn cycles, rebuild behavior, and post-rebuild price priority.
+- Created `03_tests/test_pregenerated_differential.py`, comparing exact results, ordered fills, accepted sequence, canonical snapshots, and independent transition verification after each of 15,000 existing events.
+
+### 74. Ran implementation and internal-invariant gates
+
+- First syntax/import command used `03_tests` as its working directory while resolving root-relative paths. It found zero files and raised `ModuleNotFoundError`; no file changed.
+- Corrected root-based gate compiled all 17 implementation/test Python files, imported production `optimized.py`, and constructed an empty engine.
+- Optimized internal tests: four run in 0.002 seconds, four passed.
+- The first compact full-suite runner returned no usable output or exit code and was treated as inconclusive evidence.
+- The ordinary verbose suite ran substantive tests successfully but the two existing replay tests raised `PermissionError` because the sandbox blocked their self-cleaning temporary directories under `03_tests`.
+- Requested and received directory-scoped permission only for those replay fixtures. No test source changed and no fixture remained.
+
+### 75. Established complete GREEN evidence
+
+- Reran complete discovery after fixture permission: 51 tests, zero failures, zero errors, zero skips, successful true.
+- Exact Version A regression projection: 51 discovered; six Version-B/two-engine-only methods excluded; 45 original applicable tests run; zero failures and errors.
+- Version B worked example: six events; exact final market result, final canonical snapshot, and gross proceeds all matched supplied expectations.
+- Fixed-seed randomized transition test passed for both engines as part of complete discovery.
+- Pre-generated differential test passed for fifteen files and 15,000 events, with comparisons after every event.
+- Internal index/FIFO/heap/cleanup tests: four passed.
+
+### 76. Executed three isolated Version B mutations
+
+- Pre-mutation production hashes:
+  - `__init__.py`: `3d66c22f15c7324adc9c92c4dc90c2556dca30b94d0516a4e338f4cb8a46f71a`
+  - `baseline.py`: `a9836eb21682a82491c01935fe46475b88b69f817f9556964e9ade6f82565f8b`
+  - `contracts.py`: `c2d55a0b9eb45fd18e2e9035b71b21652ffbc9a3844857a849026ba04bae1e6b`
+  - `optimized.py`: `ba02ec39a8d191cf0b6b2adffeaf0e7057201df27c3687cd0cf6694a3624dbaf`
+  - `replay.py`: `0b74f1a87cb396a591b9b853d947c9720336d393853bed2160aac1dda66461ba`
+  - `validation.py`: `d22baa7d2c288e200ba5e1a3772bb34c62c15924b9a5882cf2e857202879f517`
+- Each detector passed unmodified before mutation. Every mutation used a fresh `mutation_gate_b_tmp` package and subprocess; each printed an imported path inside that temporary copy.
+- Retain exhausted order in `active_by_id` — `KILLED` by `test_optimized_invariants.TestOptimizedInternalInvariants.test_exhaustion_and_cancellation_remove_all_indexes`. The union invariant reported exhausted `b1` only in `active_by_id`; direct activation showed zero-quantity `b` retained with no bid level.
+- Fail to remove empty price level — `KILLED` by the same detector. It asserted that `OrderedDict()` at an active level was empty; direct activation showed `{100: []}` with an empty active index.
+- Disable generation validity — `KILLED` by `test_optimized_invariants.TestOptimizedInternalInvariants.test_recreated_price_invalidates_old_heap_generation`. Generation 1 incorrectly became valid after price 100 was recreated as generation 2.
+- All six production hashes matched after every mutation. Summary: three `KILLED`, zero `SURVIVED`, zero `INVALID`.
+
+### 77. Cleaned mutation artifacts and reran final production GREEN
+
+- Removed each exact resolved mutation directory after its experiment and removed the verified empty `mutation_gate_b_tmp` parent. No production, test, data, or unrelated file was removed.
+- Final production suite after mutation cleanup: 51 tests, zero failures, zero errors, zero skips, successful true.
+- Documented the provisional timeout rule and proposed an unexecuted 12-minute runtime pilot. No benchmark or pilot ran.
+
+No existing correctness test, baseline, validation, replay, contract, package export, supplied dataset, or generated workload was modified. No benchmark, data generation, dependency installation, network access, Git command, or GitHub operation occurred.
+
+### 78. Performed final Gate B integrity audit
+
+- Compiled all 17 implementation/test Python files in memory: passed.
+- Final production SHA-256 values matched the post-implementation, pre-mutation set, including optimized `ba02ec39a8d191cf0b6b2adffeaf0e7057201df27c3687cd0cf6694a3624dbaf` and unchanged baseline `a9836eb21682a82491c01935fe46475b88b69f817f9556964e9ade6f82565f8b`.
+- README Markdown fences: 34, balanced.
+- Canonical Risk Register: 25 rows, 25 unique IDs.
+- Mutation staging directories present: zero. Cache directories and `.pyc` files: zero.
+- Confirmed the six authorized changed/created documentation, implementation, and test files exist with nonzero content.

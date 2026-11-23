@@ -8,7 +8,7 @@ This project implements, tests, compares, and benchmarks two Python limit order 
 4. Implementation and benchmarking
 5. Documentation and reproducibility
 
-Stages 1-3 and Stage 4A are complete. Version A (the transparent baseline) is implemented and passes every applicable deterministic and fixed-seed randomized correctness test. Version B and all benchmarks remain deliberately unimplemented.
+Stages 1-3 and Stage 4A/4B correctness work are complete. Both independently implemented engines pass the complete deterministic, fixed-seed randomized, internal-invariant, worked-example, and pre-generated differential suite. Benchmarks remain deliberately unexecuted.
 
 ## Environment
 
@@ -41,6 +41,24 @@ Canonical inspection must be tested against independently hand-calculated books.
 With `B` active orders and `F` makers filled by one event, validation and cancellation take `O(B)` time, matching takes `O(B log B + F)` time because eligible makers are sorted, and insertion is `O(1)` amortized. Active book storage is `O(B)` and one matching operation uses up to `O(B)` temporary references. This is the audit-friendly baseline, not the optimized design.
 
 Rejected events are fully validated before any state mutation. A rejected event leaves both the active book and `last_accepted_seq` unchanged. Accepted unknown cancellations advance the sequence and leave the book unchanged, as specified by the approved engineering contract.
+
+### Version B indexed price-level design
+
+`OptimizedOrderBook` independently owns an active-order ID dictionary, separate bid/ask price-level dictionaries, one `OrderedDict` FIFO queue per active price, and side-specific best-price heaps. It does not reuse Version A's list, matching routine, cancellation logic, state-dependent validation, or mutable state.
+
+Each heap entry contains its price and a monotonically increasing level generation. An entry is valid only while its generation equals the current generation of that active price. Recreating a previously removed price therefore cannot reactivate an old heap entry. Stale entries are removed lazily from the heap top.
+
+Heap storage is bounded by the provisional engineering rule:
+
+```text
+heap_length > 2 * active_level_count + 64
+```
+
+The condition is evaluated after new-level insertion and after level deletion by cancellation or exhaustion. When true, the heap is rebuilt with exactly one current entry per active level. This threshold is not an instructor requirement, and its empirical effect has not yet been benchmarked.
+
+Let `B` be active orders, `P` active price levels, `F` makers filled, `L` levels exhausted, and `S` stale entries removed. Expected direct lookup and cancellation within a nonempty level are `O(1)`; insertion into an existing level is `O(1)`, while creating a level is `O(log P)`. Matching is `O(F + (L + S) log P)`, excluding an occasional rebuild. Rebuilding is `O(P)` and is amortized over accumulated stale entries. A single operation can therefore still cost `O(P)` in the worst case. Canonical inspection is `O(B log B)` and is excluded from primary timing. Persistent indexed storage is `O(B + P)` under the compaction rule. Python dictionary operations have their usual theoretical pathological worst cases.
+
+These are algorithmic expectations, not measured speed or memory improvements.
 
 ## Repository structure
 
@@ -156,11 +174,29 @@ python3 -m orderbook.replay "02_data/supplied/data/worked_example.jsonl" --engin
 
 The unchanged full suite intentionally remains RED until Version B exists. At the Stage 4A checkpoint it ran 46 methods with zero assertion failures and 37 errors, all explicitly raised by untouched `OptimizedOrderBook` stubs.
 
+After Stage 4B, the current complete command is:
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE = '1'
+$env:PYTHONPATH = (Resolve-Path '04_implementation').Path
+python -m unittest discover -s '03_tests' -p 'test_*.py' -v
+```
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 \
+PYTHONPATH="$(pwd -P)/04_implementation${PYTHONPATH:+:$PYTHONPATH}" \
+python3 -m unittest discover -s "03_tests" -p "test_*.py" -v
+```
+
+Observed Windows result: 51 tests run, zero failures, zero errors, and zero skips. This includes exact worked-example verification, 10 fixed seeds × 40 randomized events, four optimized internal-invariant methods, and per-event comparison of both engines across fifteen existing 1,000-event workloads (15,000 events total).
+
 ### Future benchmark stop policy
 
 No benchmark has yet been run. The proposed Stage 4 resource policy is a 30-second per-repeat limit for 1,000- and 10,000-event workloads and 120 seconds for 100,000-event workloads. On the first timeout, stop that engine/workload configuration immediately, skip its remaining repeats, and record the threshold, elapsed time, completed repeats, skipped repeats, and reason. Never calculate an ordinary five-repeat median from an incomplete configuration.
 
 The proposed total benchmark wall-time budget is 150 minutes: 90 minutes for primary engine-only replay, 45 minutes for separate latency/memory/liquidation/diagnostic modes, and 15 minutes for integrity checks. A global cutoff wins over per-run limits, and incomplete mandatory observations must be reported rather than hidden. Primary timing excludes parsing, result logging, canonical snapshots, memory tracing, transition verification, and diagnostic counters. No one-million-event workload is planned.
+
+The full five-repeat matrix cannot be guaranteed within 90 primary minutes under worst-case near-timeout durations; its theoretical upper bound is 450 minutes. Before finalizing limits, the proposed pilot is one engine-only repeat for both engines on each supplied 10,000-event scenario, plus one repeat on the existing 100,000-event `buildup` and `cancel_churn` workloads. Events are parsed before timing, every run uses a fresh engine, and snapshots, tracing, counters, and logging stay outside the timed region. Per-repeat limits remain 30 seconds for 10,000 events and 120 seconds for 100,000 events, with a 12-minute global pilot cutoff. The pilot is only for runtime estimation and cannot replace the required five-repeat measurements. It has not been authorized or run.
 
 ## Decisions required before Stage 3
 
