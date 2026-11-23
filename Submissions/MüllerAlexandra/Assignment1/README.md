@@ -66,7 +66,8 @@ files belong under `data/generated/` and are not committed.
 2. Transparent baseline: implemented and passing its applicable contract tests.
 3. Revised implementation: not implemented.
 4. Throughput harness: smoke-verified; formal measurements not started.
-5. Latency, memory, experiment matrix, and dashboard: not implemented.
+5. Per-event latency harness: smoke-verified; formal measurements not started.
+6. Memory, experiment matrix, and dashboard: not implemented.
 
 Validate the baseline against all supplied 10,000-event streams:
 
@@ -99,4 +100,25 @@ $env:PYTHONPATH = "src"
 
 The command refuses to overwrite an existing result. Choose a new explicitly
 labelled output path to repeat the smoke check.
+
+The separate latency smoke check performs one untimed replay on its own book,
+then records each event on a new empty book. It retains raw nanoseconds and
+summarizes overall, per-event-type, and early/late-window latency:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python.exe scripts\04_benchmark.py `
+  --phase latency `
+  --version baseline `
+  --input data\supplied\cancel_churn_10000.jsonl.gz `
+  --max-events 100 `
+  --warmups 1 `
+  --repeats 5 `
+  --out evidence\06_latency_smoke\06_baseline_cancel_churn_100.json
+```
+
+Every measured repeat uses a new empty book, and raw records retain both repeat
+and event indices. Like the throughput smoke check, this verifies
+instrumentation and persistence; its 100-event timings are not formal
+performance evidence.
 

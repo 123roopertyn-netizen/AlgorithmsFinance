@@ -65,6 +65,23 @@ rejected with the reason and the verification performed.
   enumerate the required dashboard evidence. The method was corrected before
   the measurement helpers or benchmark harness were implemented and before any
   performance result was observed.
+- After the first latency smoke check, AI compared the implementation with the
+  fixed measurement protocol and found that the latency branch ignored the
+  configured untimed warm-up. The latency test contract was strengthened first:
+  four failures were preserved, covering separate warm-up state, invalid
+  warm-up counts, and saved settings. AI then implemented a warm-up on its own
+  book followed by a fresh measured book, regenerated the non-formal smoke
+  output, and reran the unchanged helper and harness tests. This correction was
+  completed before formal measurements and did not change an expected engine
+  result.
+- Before committing the latency phase, the user requested a further critical
+  review rather than accepting passing tests as sufficient. AI found that the
+  shared `--repeats` option was silently ignored for latency, the tests covered
+  only one warm-up, and the 10% window test did not exercise ceiling behavior.
+  The user accepted strengthening the contract before implementation. The
+  preserved failing run exposed those gaps; latency now performs five measured
+  fresh-book repeats by default, retains repeat and event indices, pools
+  within-repeat edge windows, and rejects malformed configurations and records.
 - During the walkthrough, the user identified that the pre-implementation
   suite included the supplied worked example and hand-calculated contract
   cases but omitted the requested small generated streams. Four deterministic

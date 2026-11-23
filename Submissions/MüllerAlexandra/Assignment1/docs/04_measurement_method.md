@@ -55,19 +55,26 @@ under an explicit boundary.
 
 ## Processing-latency instrumentation
 
-Per-event processing latency is collected in a separate run because two clock
-calls per event add overhead. The event timer surrounds only `process_event`.
-Raw integer nanoseconds are retained. Report median, 95th percentile, and 99th
-percentile overall and by event type. For submission floods, also compare the
-first and last 10% of events.
+Per-event processing latency is collected in separate instrumented runs because
+two clock calls per event add overhead. The event timer surrounds only
+`process_event`. Raw integer nanoseconds retain both repeat and event indices.
+After the configured untimed warm-ups, perform five measured repeats, each on a
+fresh empty book. Report median, 95th percentile, and 99th percentile across
+all retained samples overall and by event type. For submission floods, also
+compare the first and last 10% of events.
+
+Perform the configured untimed warm-up on a separate book, then create a new
+empty book for the instrumented replay. Thus warm-up does not deplete or grow
+the state used for the recorded early/late comparison.
 
 Percentiles use the nearest-rank convention. Sort `N` samples and select the
 one-based rank `ceil(p / 100 * N)`. The reciprocal of throughput is not reported
 as latency.
 
-The early and late windows each contain `max(1, ceil(0.10 * M))` events. For
-very small smoke inputs these windows may overlap; formal workloads are large
-enough that they are distinct.
+Within every repeat, the early and late windows each contain
+`max(1, ceil(0.10 * M))` events. Corresponding windows are then pooled across
+repeats for their summaries. For very small smoke inputs these windows may
+overlap; formal workloads are large enough that they are distinct.
 
 ## Memory instrumentation
 

@@ -18,7 +18,11 @@ from time import perf_counter
 
 from .baseline import BaselineOrderBook
 from .interface import Event, OrderBook
-from .measurement import measure_throughput_repeats
+from .measurement import (
+    latency_breakdown_ns,
+    measure_event_latencies,
+    measure_throughput_repeats,
+)
 from .revised import RevisedOrderBook
 from .stream_io import iter_events
 
@@ -180,6 +184,11 @@ def book_factory(version: str) -> type[OrderBook]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--phase",
+        choices=("throughput", "latency"),
+        default="throughput",
+    )
     parser.add_argument("--version", choices=("baseline", "revised"), required=True)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--max-events", type=_positive_integer)
@@ -197,23 +206,44 @@ def main(arguments: Sequence[str] | None = None) -> int:
             args.input,
             max_events=args.max_events,
         )
-        records = measure_throughput_repeats(
-            book_factory(args.version),
-            events,
-            warmups=args.warmups,
-            repeats=args.repeats,
-        )
+        factory = book_factory(args.version)
+        if args.phase == "throughput":
+            records = measure_throughput_repeats(
+                factory,
+                events,
+                warmups=args.warmups,
+                repeats=args.repeats,
+            )
+            settings: dict[str, object] = {
+                "warmups": args.warmups,
+                "repeats": args.repeats,
+            }
+            summary: dict[str, object] = summarize_throughput_records(records)
+        else:
+            records = measure_event_latencies(
+                factory,
+                events,
+                warmups=args.warmups,
+                repeats=args.repeats,
+            )
+            settings = {
+                "clock": "time.perf_counter_ns",
+                "warmups": args.warmups,
+                "repeats": args.repeats,
+                "window_fraction": 0.1,
+            }
+            summary = latency_breakdown_ns(records)
         document: dict[str, object] = {
             "schema_version": 1,
             "created_utc": datetime.now(timezone.utc).isoformat(),
-            "phase": "throughput",
+            "phase": args.phase,
             "version": args.version,
             "command": [sys.executable, *sys.argv],
             "environment": environment_metadata(),
             "input": input_metadata,
-            "settings": {"warmups": args.warmups, "repeats": args.repeats},
+            "settings": settings,
             "records": records,
-            "summary": summarize_throughput_records(records),
+            "summary": summary,
         }
         write_json_exclusive(args.out, document)
     except (FileExistsError, FileNotFoundError, ValueError) as error:
