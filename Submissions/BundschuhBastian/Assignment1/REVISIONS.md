@@ -39,13 +39,27 @@ Baseline profile (committed B): `validate()` is ~50% of the time on both streams
 | 7 (rejected) | Order record as a `__slots__` class (`rec.qty`, `rec.seq`) instead of the list `[qty, seq]`. | 0.1622 s -> 0.1646 s (+1.5%) | 0.1771 s -> 0.1845 s (+4.2%) | 333 pass; not kept (creating an object costs more than creating a small list) |
 | 8 (rejected) | Order record as an immutable tuple `(qty, seq)`, replaced on a partial fill. | 0.1621 s -> 0.1604 s (-1.1%) | 0.1793 s -> 0.1750 s (-2.4%) | 333 pass; not kept (inside the ~2% noise; buildup minimum got worse) |
 | 9 | Per price level a `deque` of records `[qty, seq, order_id]` with lazy cancel (qty set to 0, live/dead counters, compaction when more than half is dead) instead of an `OrderedDict`. Details, costs and memory: step 9 below. | 0.1657 s -> 0.1673 s (+1.0%) | 0.1790 s -> 0.1505 s (-15.9%) | 388 pass; kept. Also faster on sweep (-12.9%) and crowded (-12.5%), slower on cancel_churn (+11.6%) |
+| 10 (rejected) | Pool of up to 32 emptied levels per side (deque cleared, counters reset) reused for new price levels instead of allocating `[deque(), 0, 0]`. Details: step 10 below. | 0.1646 s -> 0.1604 s (-2.6%) | 0.1445 s -> 0.1447 s (+0.1%) | 391 pass with the new pool tests; reverted: sweep +2.8% (+2.9%, +4.8% in the other runs) is past the 2% limit |
 
-Cumulative (committed B `2ef6e65` vs now, same method): mixed 0.1995 s -> 0.1617 s (-19.0%),
-buildup 0.2285 s -> 0.1748 s (-23.5%), identical output.
+Cumulative, first correct B (`2ef6e65`) vs the current B (steps 1, 2, 4 and 9 kept; 3, 5, 6, 7, 8
+and 10 rejected). Same method, one interleaved run over all five scenarios, identical output in all:
+
+| Scenario | first correct B | current B | change |
+|---|---|---|---|
+| mixed | 0.2041 s | 0.1740 s | -14.8% |
+| buildup | 0.2290 s | 0.1427 s | -37.7% |
+| sweep | 0.2669 s | 0.1900 s | -28.8% |
+| crowded | 0.2136 s | 0.1387 s | -35.0% |
+| cancel_churn | 0.1635 s | 0.1382 s | -15.4% |
+
+Measured earlier, after steps 1, 2, 4 only (before step 9): mixed 0.1995 s -> 0.1617 s (-19.0%),
+buildup 0.2285 s -> 0.1748 s (-23.5%). Step 9 made `mixed` slightly slower than that (see step 9);
+the absolute times of the first correct B differ between runs of this machine (0.1995 s earlier,
+0.2041 s now), which is why only same-run interleaved pairs are compared.
 
 New test from this step, kept: `tests/test_process_fuzz.py` feeds fuzzed good and bad events to A and B `process()` and requires identical results and snapshots (covers every reason code and every status).
 
-Final state after steps 1-9: kept 1, 2, 4, 9. Rejected 3, 5, 6, 7, 8. Profile of what was left before
+Final state after steps 1-10: kept 1, 2, 4, 9. Rejected 3, 5, 6, 7, 8, 10. Profile of what was left before
 step 9 (mixed, 100,000 events): `is_valid_fast` ~25%, `AddLimitOrder` ~18%, `_take` ~17%, `process` ~15%. What remains is
 mostly the work the interface requires (one result dict per event, one fill dict per fill) and the
 checks that make the engine safe against bad input.
@@ -116,6 +130,47 @@ allocator overhead, so the numbers are not the same as total process memory.
 Decision: kept. Faster on buildup, sweep and crowded, slower on cancel_churn and slightly slower on
 mixed. If the evaluation data are mostly cancel-heavy, revert the step 9 commit (the
 `OrderedDict` version is the code at `e519381`).
+
+### Step 10 (rejected): pool of emptied price levels
+
+Question: is allocating a level (`[deque(), 0, 0]`) a real cost on `cancel_churn`, where every order
+creates and drops its own price level (step 9 made that scenario +10% to +13% slower)?
+
+Profile first (`cProfile`, `cancel_churn`, 100,000 events, 0.343 s under the profiler): `is_valid_fast`
+0.093 s, `AddLimitOrder` 0.074 s, `process` 0.058 s, `CancelOrder` 0.041 s, `drop_level` 0.025 s,
+`_Side.cancel` 0.023 s. Allocation hides inside `AddLimitOrder`, so I timed it separately
+(1,000,000 repetitions): `[deque(), 0, 0]` 0.179 s, `OrderedDict()` 0.063 s, `[[], 0, 0]` 0.043 s,
+`deque.clear()` 0.015 s. The extra 0.116 microseconds per level times 50,000 levels is about 5.8 ms
+of a replay of about 137 ms. So allocation explains roughly 40% of the 10-13% regression: a real
+but partial cost. The rest is the larger record (three fields, a 3-tuple in the index) and the
+lazy-cancel bookkeeping.
+
+Change tried: each side keeps `pool`, a list of at most 32 emptied levels. `drop_level` clears the
+deque, resets `dead`, and appends the level to the pool; a new price level takes one from the pool
+if there is one. New tests (extra assertions in `check_structure`, which runs after every event, plus
+three tests): a reused level starts with an empty deque and `live = dead = 0`, also when it held dead
+records; a level emptied by matching is pooled and reused clean; the pool never exceeds 32 and no level
+is in the pool and in the book at the same time. A planted bug (pool without `clear()`) was caught.
+391 tests passed.
+
+Timing (`tools/ab_timing.py`, interleaved, 11 repeats, median; before = step 9, after = pool):
+
+| Scenario | run 1 | run 2 | run 3 |
+|---|---|---|---|
+| cancel_churn | 0.1410 -> 0.1357 s (-3.7%) | 0.1385 -> 0.1359 s (-1.9%) | 0.1386 -> 0.1348 s (-2.7%) |
+| mixed | 0.1645 -> 0.1604 s (-2.5%) | 0.1646 -> 0.1604 s (-2.6%) | 0.1667 -> 0.1620 s (-2.8%) |
+| buildup | 0.1448 -> 0.1451 s (+0.2%) | 0.1445 -> 0.1447 s (+0.1%) | 0.1459 -> 0.1462 s (+0.1%) |
+| crowded | 0.1414 -> 0.1420 s (+0.4%) | 0.1418 -> 0.1421 s (+0.3%) | 0.1444 -> 0.1435 s (-0.6%) |
+| sweep | 0.1937 -> 0.1992 s (+2.9%) | 0.1935 -> 0.1990 s (+2.8%) | 0.1949 -> 0.2043 s (+4.8%) |
+
+Decision rule (set before the run): keep only if `cancel_churn` and `mixed` improve and nothing else
+gets worse by more than about 2%. Both targets improved (about -2.8% and -2.6%), buildup and crowded
+stayed flat, but `sweep` got worse by 2.8% to 4.8% in all three runs. Rejected and reverted
+(code and pool tests). I did not find out why `sweep` loses: it drops about 1,000 levels and creates
+almost none, so the pool cannot help there and only adds the `clear()` and the pool bookkeeping to
+`drop_level`; the size of the effect is larger than that alone would explain, and I did not
+investigate further within the time limit. The gain on `cancel_churn` (about 2.8%) would also have
+removed only a quarter of its 10-13% loss from step 9.
 
 ## 3. All five scenarios, Version B (100,000 events, seed 42, `gc` off, median of 11)
 
