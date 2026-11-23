@@ -59,7 +59,8 @@ long benchmark runs in the morning) · Thu 26 phase 8.
 - Version B (suggestion, Bastian decides): per side dict price → OrderedDict(order_id →
   [qty, seq]) for FIFO + O(1) delete; sorted price list via bisect (best price O(1), new or
   emptied level O(P)); index order_id → (side, price). Clean up empty levels immediately
-  → no stale entries (matters for cancel churn). Alternative to discuss in the report:
+  → no stale entries (matters for cancel churn). Phase 3 step 9 replaced the per-level OrderedDict by a deque with lazy
+  cancel + compaction (records <= 2·B, see REVISIONS.md step 9). Alternative to discuss in the report:
   heap + lazy deletion (costs only amortized, memory can grow with submissions).
 - Notation in the report: M events, B active orders, P price levels, F fills, L emptied levels.
 

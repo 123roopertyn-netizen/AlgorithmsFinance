@@ -1,5 +1,6 @@
 """Interleaved before/after timing of two version_b.py files.
-Usage: ab.py BEFORE.py AFTER.py   (each a path to a version_b-style module)"""
+Usage: ab_timing.py BEFORE.py AFTER.py [scenario ...]   (default: mixed buildup)
+Each of BEFORE/AFTER is a path to a version_b-style module; streams: data/generated/<scenario>_100000_s42.jsonl.gz"""
 import gc, hashlib, importlib.util, json, statistics, sys, time
 sys.path.insert(0, ".")
 from lob.common import load_events
@@ -10,7 +11,7 @@ def load(path, tag):
 
 variants = {"before": load(sys.argv[1], "vb"), "after": load(sys.argv[2], "va")}
 REPEATS = 11
-for name in ("mixed", "buildup"):
+for name in (sys.argv[3:] or ["mixed", "buildup"]):
     events = load_events(f"data/generated/{name}_100000_s42.jsonl.gz")
     times = {k: [] for k in variants}; digest = {}
     for rep in range(REPEATS + 1):                      # rep 0 = warm-up

@@ -1,27 +1,35 @@
 """Version B: revised data organization (Phase 3).
 
 Per side:
-  - `levels`: dict  price -> OrderedDict(order_id -> [qty, arrival_seq])
-    The OrderedDict keeps FIFO order inside a price. Deleting any order is O(1), and a
-    partial fill changes the qty in place, so the order keeps its place in the queue.
+  - `levels`: dict  price -> level = [queue, live, dead]
+    `queue` is a deque of order records [qty, arrival_seq, order_id] in arrival order (FIFO).
+    A partial fill changes qty in place, so the order keeps its place.
+    Cancel is LAZY: the record stays in the deque with qty = 0 ("dead") and is skipped or
+    popped when it reaches the front. `live` counts records with qty > 0, `dead` counts the
+    zeros, so a price level whose last live order goes away is still dropped at once.
+    Compaction: after a cancel or a match, if more than half of a deque is dead, it is
+    rebuilt without the dead records. Then len(queue) <= 2 * live at all times between
+    operations, so memory stays O(B) (not O(number of submissions)).
   - `keys`: sorted list of occupied prices (bisect). Asks are stored negated (-price), so
     on BOTH sides the best price is the LAST element: best price O(1), remove best O(1).
     A new or emptied price level costs O(P) (list insert / delete in the middle).
-One index for both sides: order_id -> (is_bid, price). It answers "is this id live?" and
-finds a cancel target in O(1). Empty price levels are removed at once, so there are no
-stale entries.
+One index for both sides: order_id -> (is_bid, price, record). It answers "is this id live?"
+and finds a cancel target in O(1).
+Cost: cancel O(1) amortized (a compaction costs O(len) but removes more than len/2 dead
+records, each paid for by one earlier cancel); worst single cancel O(len of its queue).
 
 Interface: SPEC.md section 6. Final design and the A -> B changes: REVISIONS.md.
 """
 from __future__ import annotations
 
 from bisect import bisect_left, insort
-from collections import OrderedDict
+from collections import deque
 
 from lob.common import (BUY, CANCEL, LIMIT, SELL, is_valid_fast, rejected_result,
                         validate)
 
-QTY, SEQ = 0, 1     # positions inside an order record [qty, arrival_seq]
+QTY, SEQ, OID = 0, 1, 2          # positions inside an order record [qty, arrival_seq, order_id]
+QUEUE, LIVE, DEAD = 0, 1, 2      # positions inside a price level [queue, live, dead]
 
 
 class _Side:
@@ -31,7 +39,7 @@ class _Side:
 
     def __init__(self, is_bid: bool) -> None:
         self.is_bid = is_bid
-        self.levels: dict[int, OrderedDict] = {}
+        self.levels: dict[int, list] = {}      # price -> [deque of records, live, dead]
         self.keys: list[int] = []      # sorted ascending; best price is keys[-1]
 
     def key(self, price: int) -> int:
@@ -43,20 +51,23 @@ class _Side:
     def best_price(self) -> int | None:
         return self.price_of(self.keys[-1]) if self.keys else None
 
-    def add(self, order_id: str, price: int, qty: int, seq: int) -> None:
-        level = self.levels.get(price)
-        if level is None:
-            level = self.levels[price] = OrderedDict()
-            insort(self.keys, self.key(price))
-        level[order_id] = [qty, seq]
-
-    def remove(self, order_id: str, price: int) -> list:
-        """Remove one order; drop its price level if it becomes empty. Returns the record."""
+    def cancel(self, price: int, rec: list) -> None:
+        """Lazy cancel of one live record: mark it dead, drop the level if no live order is
+        left, compact the queue if more than half of it is dead."""
         level = self.levels[price]
-        rec = level.pop(order_id)
-        if not level:
+        rec[QTY] = 0
+        level[LIVE] -= 1
+        if level[LIVE] == 0:
             self.drop_level(price)
-        return rec
+        else:
+            level[DEAD] += 1
+            self.compact_if_needed(level)
+
+    @staticmethod
+    def compact_if_needed(level: list) -> None:
+        if level[DEAD] * 2 > len(level[QUEUE]):
+            level[QUEUE] = deque(r for r in level[QUEUE] if r[QTY])
+            level[DEAD] = 0
 
     def drop_level(self, price: int) -> None:
         del self.levels[price]
@@ -76,7 +87,7 @@ class OrderBookB:
         self.last_seq = 0
         self._bids = _Side(True)
         self._asks = _Side(False)
-        self._index: dict[str, tuple[bool, int]] = {}    # order_id -> (is_bid, price)
+        self._index: dict[str, tuple[bool, int, list]] = {}    # order_id -> (is_bid, price, record)
 
     # --- entry point -------------------------------------------------------------
     def process(self, event: dict) -> dict:
@@ -107,10 +118,12 @@ class OrderBookB:
             levels = own.levels                     # inlined _Side.add (hot path)
             level = levels.get(price)
             if level is None:
-                level = levels[price] = OrderedDict()
+                level = levels[price] = [deque(), 0, 0]
                 insort(own.keys, price if is_buy else -price)
-            level[order_id] = [remaining, event["seq"]]
-            self._index[order_id] = (is_buy, price)
+            rec = [remaining, event["seq"], order_id]
+            level[QUEUE].append(rec)
+            level[LIVE] += 1
+            self._index[order_id] = (is_buy, price, rec)
         return {"event_id": event["event_id"], "order_id": order_id,
                 "status": "resting" if remaining > 0 else "filled",
                 "unfilled_qty_units": remaining, "fills": fills}
@@ -127,10 +140,11 @@ class OrderBookB:
         if where is None:
             return {"event_id": event["event_id"], "target_order_id": target,
                     "status": "not_found", "cancelled_qty_units": 0, "fills": []}
-        is_bid, price = where
-        rec = (self._bids if is_bid else self._asks).remove(target, price)
+        is_bid, price, rec = where
+        cancelled_qty = rec[QTY]                    # read before cancel() zeroes it
+        (self._bids if is_bid else self._asks).cancel(price, rec)
         return {"event_id": event["event_id"], "target_order_id": target,
-                "status": "cancelled", "cancelled_qty_units": rec[QTY], "fills": []}
+                "status": "cancelled", "cancelled_qty_units": cancelled_qty, "fills": []}
 
     # --- inspection ----------------------------------------------------------------
     def snapshot(self) -> list[dict]:
@@ -138,9 +152,10 @@ class OrderBookB:
         for side, name in ((self._bids, BUY), (self._asks, SELL)):
             for key in reversed(side.keys):        # best price first = canonical order
                 price = side.price_of(key)
-                for oid, rec in side.levels[price].items():     # FIFO = arrival order
-                    out.append({"order_id": oid, "side": name, "price_ticks": price,
-                                "qty_units": rec[QTY], "arrival_seq": rec[SEQ]})
+                for rec in side.levels[price][QUEUE]:           # FIFO = arrival order
+                    if rec[QTY]:                                # skip dead records
+                        out.append({"order_id": rec[OID], "side": name, "price_ticks": price,
+                                    "qty_units": rec[QTY], "arrival_seq": rec[SEQ]})
         return out
 
     def best_bid(self) -> int | None:
@@ -164,17 +179,26 @@ class OrderBookB:
                     price < limit_price if is_bid else price > limit_price):
                 break
             level = side.levels[price]
-            while qty > 0 and level:
-                maker_id, rec = next(iter(level.items()))     # oldest order at this price
-                traded = qty if qty < rec[QTY] else rec[QTY]
-                fills.append({"maker_id": maker_id, "taker_id": taker_id,
+            queue = level[QUEUE]
+            while qty > 0 and level[LIVE]:
+                rec = queue[0]                                  # oldest record at this price
+                rec_qty = rec[QTY]
+                if rec_qty == 0:                                # dead (cancelled) record
+                    queue.popleft()
+                    level[DEAD] -= 1
+                    continue
+                traded = qty if qty < rec_qty else rec_qty
+                fills.append({"maker_id": rec[OID], "taker_id": taker_id,
                               "price_ticks": price, "qty_units": traded})
                 qty -= traded
-                if traded == rec[QTY]:
-                    del level[maker_id]
-                    del index[maker_id]
+                if traded == rec_qty:
+                    queue.popleft()
+                    level[LIVE] -= 1
+                    del index[rec[OID]]
                 else:
-                    rec[QTY] -= traded
-            if not level:
+                    rec[QTY] = rec_qty - traded
+            if level[LIVE] == 0:
                 side.drop_level(price)
+            else:
+                side.compact_if_needed(level)
         return fills, qty
