@@ -65,6 +65,10 @@ Percentiles use the nearest-rank convention. Sort `N` samples and select the
 one-based rank `ceil(p / 100 * N)`. The reciprocal of throughput is not reported
 as latency.
 
+The early and late windows each contain `max(1, ceil(0.10 * M))` events. For
+very small smoke inputs these windows may overlap; formal workloads are large
+enough that they are distinct.
+
 ## Memory instrumentation
 
 Memory is measured in runs separate from primary timing using `tracemalloc`.
