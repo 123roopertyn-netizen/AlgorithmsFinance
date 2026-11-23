@@ -51,3 +51,9 @@ outside tracing. Non-formal 100-event smoke records exercise cancellation churn
 and buildup only to validate the harness; they are not used to justify Version
 B or claim a performance improvement.
 
+The formal runner was fixed before any Version A pilot. It preregisters 114
+tasks per version and applies a 60-second wall-clock limit to every child
+configuration. Validated results are promoted atomically from pending paths as
+gzip-compressed JSON. Timeout and failure statuses remain visible with their
+environment and code version; they never contain an inferred result.
+

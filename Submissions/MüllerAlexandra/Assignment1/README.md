@@ -76,6 +76,22 @@ The command refuses to replace the saved plan. Generated compressed streams
 remain ignored; their small metadata files and the complete verified plan are
 committed for reproducibility.
 
+Formal tasks use a preregistered 60-second wall-clock limit per configuration,
+identically for both implementations. The runner saves gzip-compressed raw
+results only after validation and otherwise saves an explicit failure or
+timeout status without inventing a measurement:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python.exe scripts\07_run_formal.py `
+  --version baseline `
+  --resume
+```
+
+Filters such as `--phase`, `--scenario`, `--event-count`, `--seed`, and
+`--task-id` support pilots and review. Formal execution begins only from a
+committed runner checkpoint.
+
 ## Development status
 
 1. Specification and independent tests: strengthened by pre-revision critical review.
@@ -85,7 +101,8 @@ committed for reproducibility.
 5. Per-event latency harness: smoke-verified; formal measurements not started.
 6. Memory harness: smoke-verified; formal measurements not started.
 7. Formal input matrix: generated and checksum-verified; measurements not started.
-8. Experiment runner and dashboard: not implemented.
+8. Timeout-aware formal runner: implemented; no formal task run yet.
+9. Dashboard: not implemented.
 
 Validate the baseline against all supplied 10,000-event streams:
 

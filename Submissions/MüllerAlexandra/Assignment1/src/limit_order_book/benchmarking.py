@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timezone
+import gzip
 import hashlib
 import importlib.metadata
 from itertools import islice
@@ -123,7 +124,11 @@ def write_json_exclusive(path: Path, payload: Mapping[str, object]) -> None:
     """Create a JSON result without silently replacing earlier evidence."""
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("x", encoding="utf-8", newline="\n") as stream:
+    if path.suffix == ".gz":
+        stream_context = gzip.open(path, "xt", encoding="utf-8", newline="\n")
+    else:
+        stream_context = path.open("x", encoding="utf-8", newline="\n")
+    with stream_context as stream:
         json.dump(payload, stream, indent=2)
         stream.write("\n")
 
@@ -149,11 +154,23 @@ def _git_metadata() -> dict[str, object]:
         )
         return completed.stdout.strip() if completed.returncode == 0 else None
 
-    status = git_value("status", "--short", "--", ".")
+    assignment_status = git_value("status", "--short", "--", ".")
+    code_status = git_value(
+        "status",
+        "--short",
+        "--",
+        ".",
+        ":(exclude)results",
+        ":(exclude)evidence",
+    )
     return {
         "commit": git_value("rev-parse", "HEAD"),
         "branch": git_value("branch", "--show-current"),
-        "dirty": None if status is None else bool(status),
+        "dirty": None if assignment_status is None else bool(assignment_status),
+        "assignment_dirty": (
+            None if assignment_status is None else bool(assignment_status)
+        ),
+        "code_dirty": None if code_status is None else bool(code_status),
     }
 
 

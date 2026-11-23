@@ -46,6 +46,11 @@ rejected with the reason and the verification performed.
   buildup input. The copied generator was hash-checked against the lecturer's
   source; every explicit generation setting, metadata file, byte count, and
   checksum is verified before an input enters the saved plan.
+- AI proposed a resumable formal runner with a 60-second per-configuration
+  limit, applied identically to both versions. The user authorized proceeding
+  with that preregistered limit and the explicit phase allocation. Completed
+  results are checksum-validated before promotion; stopped tasks retain their
+  reason and environment without a fabricated result.
 
 ## Pending suggestions
 
@@ -94,6 +99,12 @@ rejected with the reason and the verification performed.
   preserved failing run exposed those gaps; latency now performs five measured
   fresh-book repeats by default, retains repeat and event indices, pools
   within-repeat edge windows, and rejects malformed configurations and records.
+- Before any formal pilot, AI review found that raw latency JSON could become
+  unnecessarily large and that earlier saved results would make later Git
+  metadata look code-dirty. The runner was corrected to save gzip-compressed
+  raw JSON and to distinguish assignment-output changes from actual code or
+  configuration changes. Timeout records were also strengthened to retain the
+  stopping reason, environment, and code commit when no child result exists.
 - During the walkthrough, the user identified that the pre-implementation
   suite included the supplied worked example and hand-calculated contract
   cases but omitted the requested small generated streams. Four deterministic

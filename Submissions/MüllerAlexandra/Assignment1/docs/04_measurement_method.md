@@ -38,6 +38,21 @@ memory limit will be recorded before those attempts and applied identically to
 both versions. A stopped run remains in the results with its limit and reason;
 missing results are never invented or extrapolated.
 
+For the preregistered 1,000-, 10,000-, and 100,000-event tasks, each child
+configuration has a 60-second wall-clock limit, applied identically to both
+versions. A timeout produces a status record containing its command, input
+settings, environment, code version, elapsed time, limit, and stopping reason;
+it produces no fabricated measurement. Only a completed child result whose
+phase, version, and input checksum match the task is promoted from its pending
+path.
+
+The formal plan contains 114 tasks per version: throughput and state-memory
+measurements on all 46 inputs; latency on all nine core buildup inputs and the
+five supplied 10,000-event scenario inputs, with their overlap counted once;
+and retained-output memory on the nine core cancellation-churn inputs. Large
+liquidation and diagnostic-count experiments remain separate so their heavy
+instrumentation does not alter primary timing.
+
 ## Primary replay timing
 
 Events are parsed and held in memory before the engine timer starts. Each
@@ -175,6 +190,11 @@ contains:
 Summaries are derived from raw records and never replace them. The dashboard
 loads saved raw/summary results and never reruns an experiment when a view
 changes.
+
+Formal raw records are gzip-compressed JSON. Result files and timeout/failure
+status files are separate. Environment metadata distinguishes changes to saved
+outputs from changes to code, tests, methods, or configuration, so later tasks
+do not appear to use modified code merely because earlier results exist.
 
 The dashboard compares construction, replay, and individual-sale scaling for
 both versions. It shows throughput, processing-latency distributions, memory

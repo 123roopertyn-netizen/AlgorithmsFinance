@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+import gzip
 import hashlib
 import json
 import os
@@ -153,6 +154,20 @@ def test_json_writer_creates_parent_and_refuses_overwrite(tmp_path: Path) -> Non
         write_json_exclusive(output, {"different": True})
 
 
+def test_json_writer_compresses_gzip_output_and_refuses_overwrite(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "nested" / "result.json.gz"
+    payload = {"schema_version": 1, "records": [{"event_index": 1}]}
+
+    write_json_exclusive(output, payload)
+
+    with gzip.open(output, "rt", encoding="utf-8") as stream:
+        assert json.load(stream) == payload
+    with pytest.raises(FileExistsError):
+        write_json_exclusive(output, {"different": True})
+
+
 def benchmark_environment() -> dict[str, str]:
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(PROJECT_ROOT / "src")
@@ -248,5 +263,7 @@ def test_benchmark_cli_writes_one_smoke_result_document(tmp_path: Path) -> None:
     assert document["summary"]["repeat_count"] == 1
     assert document["environment"]["python_version"]
     assert document["environment"]["platform"]
+    assert "assignment_dirty" in document["environment"]["git"]
+    assert "code_dirty" in document["environment"]["git"]
     assert document["created_utc"].endswith("+00:00")
     assert document["command"]
