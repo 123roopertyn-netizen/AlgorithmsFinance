@@ -216,6 +216,42 @@ The controller refuses to overwrite an existing result. The completed pilot wrot
 
 The worker-controller protocol parses and constructs a fresh engine before `READY`, waits for a nonce-matched `START`, emits `STARTED`, then measures only sequential `process_event` calls with `time.perf_counter`. Garbage collection remains enabled after one pre-timing `gc.collect()`. The controller supervises only its exact `Popen` handle and reaps terminated workers.
 
+### Final primary timing commands
+
+Stage 4D added a resumable final-primary plan but did not execute it. Verify all 450 repetitions, 90 engine/workload configurations, 45 input files, manifests, hashes, and current resume state without creating a result file:
+
+```powershell
+python '05_benchmarks/run_benchmarks.py' final `
+    --output '07_results/raw/timing.jsonl' `
+    --global-budget-seconds 5400 `
+    --dry-run
+```
+
+```bash
+python3 05_benchmarks/run_benchmarks.py final \
+    --output 07_results/raw/timing.jsonl \
+    --global-budget-seconds 5400 \
+    --dry-run
+```
+
+Start final primary timing only after explicit approval and only when the output is absent:
+
+```powershell
+python '05_benchmarks/run_benchmarks.py' final --output '07_results/raw/timing.jsonl' --global-budget-seconds 5400
+```
+
+Resume an interrupted approved run without overwriting valid records:
+
+```powershell
+python '05_benchmarks/run_benchmarks.py' final --output '07_results/raw/timing.jsonl' --global-budget-seconds 5400 --resume
+```
+
+Use `python3` with the same arguments on macOS/Linux. Resume validates every retained identity, hash, environment fingerprint, policy, protocol version, status, and JSONL boundary before skipping a completed repetition. A processing timeout is terminal for that engine/workload configuration; later repetitions are recorded `skipped_after_timeout`. Session elapsed time is retained and charged across resumes, so the cumulative 5,400-second budget cannot reset silently. Pilot records never qualify as final records.
+
+Final protocol `final-primary-v2` records two source fingerprints in every repetition. The implementation fingerprint uses this fixed order: the selected engine module (`baseline.py` or `optimized.py`), `validation.py`, `contracts.py`, then `__init__.py`. The harness fingerprint uses `05_benchmarks/run_benchmarks.py` followed by `05_benchmarks/_benchmark_worker.py`. Each component is represented by its normalized project-relative POSIX path and SHA-256 content hash. The aggregate is SHA-256 over UTF-8 JSON serialized with sorted object keys, compact separators, ASCII escaping, and preserved list order. Both aggregate hashes and their ordered component records belong to the resume identity; a mismatch stops execution instead of combining incompatible measurements.
+
+The cumulative budget has two documented accounting limits. The final record's fsync and controller shutdown happen after its session timestamp and can therefore be slightly undercounted. In addition, abrupt external process termination can bypass normal exact-handle worker cleanup and cannot reconstruct elapsed time that was never durably recorded. After any abnormal interruption, inspect the result boundary and running processes manually before authorizing `--resume`; never truncate, repair, or reinterpret evidence silently.
+
 ## Decisions required before Stage 3
 
 | Topic | Assignment requirement | Recommended default | Deadline |

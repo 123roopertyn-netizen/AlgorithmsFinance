@@ -862,3 +862,82 @@ No full benchmark, latency, memory, diagnostic, liquidation, dashboard, or repor
 - README fences: 38 and balanced; canonical Risk Register: 25 rows and 25 unique IDs.
 - Detected `03_tests/__pycache__` containing eleven `.pyc` files timestamped earlier on 23 November. Verified the exact project-contained path, exact count, and `.pyc` extensions; removed each exact file and then the empty directory. No test source was modified. Final cache count: zero.
 - Final privacy scan reproduced the same ten historical ACTION_LOG findings and no findings in README, AI_DECISIONS, AGENTS, or `08_documentation`.
+
+## 2026-11-23 - Stage 4D resumable final-primary implementation
+
+### 86. Audited the interrupted implementation read-only
+
+- The user interrupted Stage 4D after one successful partial patch.
+- Confirmed only `05_benchmarks/run_benchmarks.py` had changed during the interrupted session. It compiled, but contained only plan/hash/resume parsing helpers; no final runner or CLI existed.
+- Confirmed `07_results/raw/timing.jsonl` was absent, the pilot retained 16 records and its checksum, all production hashes matched Gate B, and no cache existed.
+- A filtered CIM command-line process query was denied by Windows and its zero count was rejected as evidence. A narrower `Get-Process` check succeeded and found zero Python/PythonW processes; no benchmark worker was running.
+
+### 87. Completed final planning and strict resume integration
+
+- Continued the existing controller without reverting or duplicating helpers.
+- Added the 450-repetition plan: five scenarios × three sizes × three seeds × two engines × five repetitions, in increasing event-size order with alternating engine order.
+- Added manifest-backed verification of 45 workload hashes, engine-source hashes, environment fingerprint, GC/timeout policy, and controller protocol version.
+- Added strict newline-terminated JSONL parsing; malformed, truncated, unexpected, duplicate, contradictory, failed, and incomplete completed records stop resume.
+- Added terminal configuration timeout validation and explicit `skipped_after_timeout` behavior.
+- Added final start/resume/dry-run CLI paths and preserved the pilot path unchanged.
+- Added controller-session IDs and elapsed-session accounting. Resume charges the maximum recorded elapsed time for every prior session against the fixed 5,400-second cumulative budget.
+
+### 88. Ran syntax, help, and non-executing dry-run verification
+
+- Controller syntax and both final/pilot help paths passed.
+- Final dry-run emitted 450 plan lines plus one summary and exited zero.
+- Dry-run summary: 450 repetitions; 90 engine/workload configurations; 45 unique manifest-verified files; 225 repetitions per engine; 150 per event size; no existing final records; all 450 planned.
+- `07_results/raw/timing.jsonl` was absent before and after. The dry-run did not import an engine, launch a worker, replay an event, or write a final measurement.
+- Pilot plan regression: unchanged 16 runs, 1,020 processing-cap seconds, and 420 preparation-cap seconds.
+
+### 89. Tested resume safety using isolated synthetic fixtures
+
+- Created fixtures only in a self-cleaning temporary directory under `05_benchmarks`; never used or created the real final timing path.
+- Passed: valid completed-record parsing, duplicate logical-key rejection, conflicting engine-hash rejection, malformed JSON rejection, truncated-final-record rejection, and fixture cleanup.
+- Passed timeout fixture: one baseline timeout plus four `skipped_after_timeout` records validated; a later completed repetition was rejected. A dry-run containing only the timeout reported exactly four future skip states, one existing timeout, and did not modify the fixture.
+- Passed cumulative budget fixture: two records from session A at 100/150 elapsed seconds plus session B at 50 seconds charged 200 seconds, using the maximum elapsed time per session rather than resetting or double-counting.
+- Verified exact plan coverage: 50 supplied-file repetitions and 400 generated-file repetitions, corresponding to five supplied and forty generated workload files.
+
+### 90. Performed expanded read-only privacy review
+
+- Scanned project-owned text artifacts, benchmark code/results, manifests, metadata, root documentation, and supplied text using redacted pattern labels rather than printing matched values.
+- Absolute personal-path findings: 285 lines in `02_data/generated_manifest.json`, nine lines in `02_data/supplied_verification.json`, and ten historical lines in `ACTION_LOG.md`.
+- README matches were portable `Submissions/ErtenZeynep` examples rather than absolute home paths. The AI decision match was a general OneDrive measurement recommendation, not a personal path.
+- Pilot records contain repeated environment characteristics (OS, CPU description/count, RAM, Python), which support reproducibility but can contribute to device fingerprinting. They contain no hostname or home path.
+- No redaction was performed. Historical logs, manifests, supplied originals, metadata, and pilot results remain byte-preserved.
+
+No final benchmark, result-digest replay, liquidation, concentration generation, latency, memory, diagnostic, dashboard, or report operation occurred. No engine, correctness test, dataset, pilot record, dependency, network state, Git state, or GitHub state was changed.
+
+## 2026-11-23 - Stage 4D resume-fingerprint correction
+
+### 91. Recorded preservation checkpoints and inspected the approved scope
+
+- Read `AGENTS.md`, the final benchmark sections of `README.md`, the Stage 4D decisions and canonical Risk Register in `AI_DECISIONS.md`, and the complete relevant controller/worker source. These were inspection commands only.
+- Before correction, SHA-256 values were: baseline `a9836eb21682a82491c01935fe46475b88b69f817f9556964e9ade6f82565f8b`; optimized `ba02ec39a8d191cf0b6b2adffeaf0e7057201df27c3687cd0cf6694a3624dbaf`; validation `d22baa7d2c288e200ba5e1a3772bb34c62c15924b9a5882cf2e857202879f517`; contracts `c2d55a0b9eb45fd18e2e9035b71b21652ffbc9a3844857a849026ba04bae1e6b`; package initializer `3d66c22f15c7324adc9c92c4dc90c2556dca30b94d0516a4e338f4cb8a46f71a`; worker `d81442db198c256424e3d60faa692669b2d7e41451611ec3a44712aca5ee0a64`; pilot result `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`.
+- The first attempted PowerShell data-tree digest was blocked by constrained-language restrictions on .NET method invocation. It produced a file count of 106 but no digest; this failed result was not treated as evidence.
+
+### 92. Implemented complete implementation and harness fingerprints
+
+- Modified only `05_benchmarks/run_benchmarks.py`, `README.md`, `ACTION_LOG.md`, and `AI_DECISIONS.md`.
+- Replaced the engine-module-only resume field with ordered component records and an aggregate implementation SHA-256. Fixed order is selected engine, `validation.py`, `contracts.py`, `__init__.py`.
+- Added ordered harness component records and an aggregate harness SHA-256. Fixed order is controller, then worker.
+- Every component contains a normalized project-relative POSIX path and its content SHA-256. Aggregate serialization uses UTF-8 JSON with sorted object keys, compact separators, ASCII escaping, and preserved list order.
+- Added both aggregate hashes and both component lists to every final record and to `_RESUME_FIELDS`. Bumped `FINAL_PROTOCOL_VERSION` from `final-primary-v1` to `final-primary-v2`. Pilot schema and pilot data were untouched.
+
+### 93. Ran isolated synthetic verification
+
+- Command form: set `PYTHONDONTWRITEBYTECODE=1`, pipe an assertion-only Python script to `python -`, then remove the temporary environment variable. The script imported the controller by file path; it did not invoke its CLI entry point or import an engine.
+- The first run passed syntax, identical-fingerprint, five mismatch, duplicate, and contradictory assertions, then stopped with `PermissionError` when the sandbox denied creation of the project-local temporary fixture directory. No fixture or result file was created. After narrowly granting temporary write access to `05_benchmarks`, the complete script was rerun.
+- Passed: AST syntax; identical fingerprints recognized; simulated `validation.py`, `contracts.py`, selected `baseline.py`, worker, and controller changes rejected; duplicate and contradictory records rejected; malformed and truncated JSONL rejected; timeout plus four later skips accepted; post-timeout completion rejected.
+- Passed cumulative-budget fixture: one synthetic prior completed record charged exactly 5,400 seconds; all 449 remaining repetitions became `skipped_global_budget`; a patched `Popen` assertion proved no worker launch occurred.
+- Passed dry-run fixture: 450 plan lines, 90 configurations, 45 workloads, all 450 states planned, no worker launch, and `07_results/raw/timing.jsonl` absent before and after.
+- A final in-memory sensitivity pass changed every component position independently. It passed for both baseline and optimized implementation sets, including `__init__.py`, and for both harness files.
+- Verified aggregate fingerprints: baseline implementation `afa06981e3b1d79b8c10903bd6f8d0cc9d648373b7fc9b20e8e14f431a5770fc`; optimized implementation `06e5ebb794e11852f4b6b6c49df54134a2dd3d3e2e489a4ef269afc35aef9490`; harness `484913af7e980803308968794bc9c7b4f1d722974fff12c98b818754b5448925`.
+
+### 94. Verified preservation after correction
+
+- All seven protected engine/shared/worker/pilot hashes matched the pre-correction values recorded above.
+- The 106-file `02_data` tree digest, calculated from sorted `project-relative-path|file-SHA-256` rows, was `16718acb281d3f2a3a041a33f7dcef1fdf5d2ea134dab0005570d52f60135cb6` both before documentation edits and after all verification.
+- Final controller SHA-256: `8f44e4204354d042c58f410e0d7f85b40e80189cb38388002b71add78351fd8f`.
+- `07_results/raw/timing.jsonl` remained absent. The self-cleaning fixture directory left no artifact. No Python/PythonW process remained.
+- No pilot, final benchmark, performance experiment, dataset generation, dependency installation, network access, Git operation, or GitHub operation occurred.

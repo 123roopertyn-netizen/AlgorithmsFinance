@@ -273,6 +273,7 @@ Each Risk ID appears exactly once in this canonical table. The table contains on
 | RR-023 | Four-bucket pairing merges strict price priority into FIFO queues and may be misinterpreted as changing lookup cost alone. | Medium | Certain | Stage 2B-4/concentration experiment | Preserve all non-price fields, verify monotonic mapping, and describe the experiment as the combined effect of fewer levels and longer queues. | Pair comparison recorded zero non-price/formula mismatches, four prices per side, equal quantities, monotonicity, and uncrossed books. | MITIGATED |
 | RR-024 | A correct canonical snapshot conceals stale auxiliary entries or future cleanup failures. | High | Medium | Stage 4/optimized storage | Probe removed identifiers with follow-up operations and separately inspect memory/storage cleanup under churn. | Stage 3 follow-up matching tests plus Stage 4 internal-storage and memory-growth verification. | DEFERRED |
 | RR-025 | A hand-calculated test oracle contains an internally inconsistent fill, residual, sequence, or book. | High | Medium | Stage 3/tests | Verify each deterministic transition before calling an engine and self-test the verifier with valid and corrupted transitions. | Nine verifier self-tests passed; complete RED audit contained no assertion failure. | MITIGATED |
+| RR-026 | Resumed timing combines records produced by changed engine dependencies or benchmark harness code. | Critical | Medium without complete fingerprints | Stage 4D/resume integrity | Fingerprint the selected engine plus shared validation/contracts/package initializer and fingerprint the controller/worker harness; make both ordered component sets and aggregate hashes part of resume identity. | Synthetic records with simulated changes to every named component must be rejected; identical fingerprints must be accepted. | MITIGATED |
 
 ## Risk Status History
 
@@ -520,7 +521,7 @@ This history records meaningful changes without creating duplicate current-statu
 
 ### DEC-033 - Proposed resumable final timing design
 
-- Status: PROPOSED; not implemented.
+- Status: SUPERSEDED by the implemented `final-primary-v2` rules in DEC-036 and DEC-041; retained as historical design evidence.
 - Append one fsynced JSONL record per repetition to `07_results/raw/timing.jsonl`; never overwrite completed evidence.
 - Resume key: phase, mode, engine, scenario, event count, seed, repetition, workload SHA-256, engine-source SHA-256, Python/environment fingerprint, GC policy, timeout policy, and controller protocol version.
 - Before skipping a completed repetition, require exact key/checksum/environment agreement and status `completed`. Duplicate or contradictory keys stop execution for review.
@@ -541,3 +542,67 @@ This history records meaningful changes without creating duplicate current-statu
 - Process startup/preparation overhead is small in this pilot but becomes material across hundreds of final workers and must be budgeted separately.
 - OneDrive/background load and thermal variation remain uncontrolled environmental risks; final runs need alternating order and documented conditions.
 - Final latency, memory, diagnostics, liquidation protocols and their repetition counts still require approval.
+
+## Stage 4D resumable final-primary design
+
+### DEC-035 - Final matrix and dry-run contract
+
+- Status: IMPLEMENTED AND DRY-RUN VERIFIED; final benchmark not executed.
+- Coverage: 450 repetitions, 90 engine/workload configurations, 45 manifest-verified workloads, 225 repetitions per engine, and 150 repetitions at each of 1,000/10,000/100,000 events.
+- Ordering: increasing event size, scenario and seed grouping, and alternating engine order by configuration/repetition.
+- Dry-run lists every repetition and exact input/output while performing no engine import, worker launch, replay, or result write.
+
+### DEC-036 - Resume identity and evidence rules
+
+- Status: IMPLEMENTED AND SYNTHETICALLY VERIFIED.
+- Resume identity includes phase/mode, engine, scenario, count, seed, repetition, workload hash, complete implementation and harness fingerprints, environment fingerprint, GC/timeout policy, and protocol version.
+- The implementation fingerprint records the selected engine, `validation.py`, `contracts.py`, and `__init__.py` in that fixed order. The harness fingerprint records `run_benchmarks.py` and `_benchmark_worker.py` in that fixed order. Each aggregate is stable SHA-256 over ordered normalized relative paths and per-file SHA-256 values.
+- Only verified `completed` records are reused as measurements. `timed_out`, `skipped_after_timeout`, and `skipped_global_budget` are validated terminal decisions, not completed observations.
+- Malformed, truncated, duplicate, contradictory, unexpected, failed, or incomplete completed records stop execution for investigation. Existing evidence is append-only and never overwritten.
+- Synthetic fixtures verified all required rejection paths without touching the real final output.
+
+### DEC-037 - Cumulative budget and timeout behavior
+
+- Status: IMPLEMENTED AND SYNTHETICALLY VERIFIED.
+- Fixed cumulative allowance: 5,400 seconds. Every written record carries a controller-session ID and elapsed session time; resume charges the maximum elapsed time for each prior session.
+- A processing timeout is recorded once and makes later repetitions of the same engine/workload configuration `skipped_after_timeout`. A post-timeout completion is contradictory and rejected.
+- Global exhaustion records every unstarted repetition as `skipped_global_budget`. Completed repetitions remain durable, but incomplete configurations receive no ordinary five-repeat median or speedup.
+- Limitation: an abrupt external process kill between durable records cannot reconstruct unrecorded elapsed time. Normal controller completion/resume is cumulative; abnormal termination must be disclosed before resume.
+
+### DEC-038 - Proposed untimed ordered-result digest verification
+
+- Status: PROPOSED; not implemented or executed.
+- Use one separate untimed replay per approved workload/engine, hashing each canonical result dictionary in event order with a length prefix, plus the final snapshot digest. Do not add this work to primary timing.
+- Estimated cost: roughly the engine replay cost plus JSON canonicalization, plausibly 1.5–3× completed replay duration. A complete pass may require 45–90 minutes and cannot guarantee completion for Version A configurations already exceeding 120 seconds.
+- Recommendation: prioritize all 1,000-event streams and completed final configurations; treat timed-out digest runs explicitly as incomplete. Existing deterministic and per-event 1,000-event correctness tests remain the stronger correctness evidence.
+
+### DEC-039 - Later liquidation, concentration, and diagnostic recommendations
+
+- Status: PROPOSED; no data or experiment created.
+- Liquidation source: supplied seed-42 `buildup_10000.jsonl.gz`. Version A constructed it in about 11.66 pilot seconds, making fresh reconstruction feasible. Record construction separately, calculate 10%/100%/200% sale quantities from actual reconstructed active bid depth, and time only the market sell. The specification clearly requires the three ratios and fresh books but does not clearly extend the primary five-repeat rule; recommend five repetitions if the approved budget permits.
+- Concentration: existing 100,000-event paired files are likely to time out for Version A. Proposed additional files, subject to approval, are `buildup_10000_seed42_levels4_paired.jsonl.gz`, `buildup_10000_seed43_levels4_paired.jsonl.gz`, and `buildup_10000_seed44_levels4_paired.jsonl.gz`, created by the existing price-only transformation from corresponding 10,000-event buildup streams. Expected generation/verification cost is under one minute and storage well below the existing 100,000-event pairs. Do not generate without approval.
+- Diagnostics: separate untimed/instrumented runs should count Version A active-list length, duplicate-ID scan comparisons, maker candidates, and sorting inputs; Version B should report active levels/orders and stale heap entries. Combine code inspection, counts, and timings before concluding that scans dominate buildup/crowded behavior.
+
+### DEC-040 - Expanded privacy findings
+
+- Status: OPEN; redaction not authorized.
+- Historical absolute paths occur extensively in the generated manifest, supplied verification record, and ACTION_LOG. They preserve actual provenance but expose the personal home/project location.
+- README student-name matches are portable submission paths, not machine paths. Pilot environment fields contain reproducibility characteristics but no hostname/home directory; they may still be fingerprintable.
+- Recommended future decision: preserve cryptographic hashes and an unredacted private archive, then create explicitly labelled privacy-redacted public copies of project-owned logs/manifests. Never modify instructor originals or imply redacted commands were executed literally.
+
+### DEC-041 - Complete source fingerprints for final resume
+
+- Status: IMPLEMENTED AND SYNTHETICALLY VERIFIED; final benchmark not executed.
+- Protocol version is `final-primary-v2`. The former engine-module-only field was replaced by `implementation_fingerprint_sha256` plus its ordered component records, and `harness_fingerprint_sha256` plus its ordered component records.
+- Stable serialization is UTF-8 JSON with sorted object keys, compact separators, ASCII escaping, and preserved component-list order. Paths are project-relative POSIX strings and every component carries its own SHA-256.
+- Verified current aggregate fingerprints: baseline implementation `afa06981e3b1d79b8c10903bd6f8d0cc9d648373b7fc9b20e8e14f431a5770fc`, optimized implementation `06e5ebb794e11852f4b6b6c49df54134a2dd3d3e2e489a4ef269afc35aef9490`, and harness `484913af7e980803308968794bc9c7b4f1d722974fff12c98b818754b5448925`.
+- Identical fingerprints recognized a valid completed synthetic repetition. Simulated changes to `validation.py`, `contracts.py`, the selected engine, the worker, and the controller were each rejected as contradictory resume identities. Additional sensitivity verification covers `__init__.py` and both selected-engine variants.
+- Fingerprint mismatch is a stop condition, never permission to merge measurements. The current normal cumulative-budget mechanism remains intact.
+- Remaining limitations: the last record's fsync and controller shutdown can be slightly undercounted; abrupt external termination can bypass normal worker cleanup and leave elapsed time unrecorded. Any abnormal interruption requires manual result-boundary and process inspection before resume.
+
+### Stage 4D remaining risks
+
+- Final mode is dry-run tested but has not yet executed a real repetition; the first authorized session should be monitored closely and stopped on protocol anomalies.
+- Hard external termination between durable records can undercount unrecorded session time; disclose it and obtain direction before resuming.
+- Environment fingerprints intentionally prevent resume across changed environments, which may require restarting rather than mixing incomparable observations.
+- Primary timing still excludes concentration, latency, memory, diagnostics, liquidation, and result-digest verification; each requires separate authorization and measurement boundaries.
