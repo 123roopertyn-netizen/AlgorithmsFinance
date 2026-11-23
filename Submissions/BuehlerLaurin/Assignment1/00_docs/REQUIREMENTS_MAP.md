@@ -96,9 +96,9 @@ recorded in the final registry checkpoint at the end of this map.
 |---|---|---|---|
 | R56 | Machine-readable CSV/JSON results: version, scenario, seed, event count, active/level peaks, requested sell qty, fill count, phase, repeat, elapsed s, traced peak bytes; timing vs memory runs distinguishable (R §Results and dashboard) | Smoke machine-readable artifacts verified | Final smoke CSVs/journals include required metadata and counts; verification.json checks216 cells and semantic count parity. Full grid pending. |
 | R57 | Record Python, dependencies, machine, OS, code version, generator settings (R §Results and dashboard; S23) | Smoke metadata saved | Final smoke env.json, source hash, limits, GC policy, jobs, spec_snapshot.md; data generation settings/hashes in DATA_MANIFEST.json. |
-| R58 | Dashboard loads saved results only (no rerun) (R §Results and dashboard; S22) | todo | |
-| R59 | Dashboard shows construction, replay and individual-sale scaling; A vs B; throughput and latency distributions; memory incl. post-cancellation; correctness table; workload settings; raw repeats; units; missing/stopped runs labelled (R §Results and dashboard; S22) | todo | |
-| R60 | Explain at least one measured bottleneck with code, operation counts and complexity; revision need not win everywhere (R §Results and dashboard; S22) | todo | |
+| R58 | Dashboard loads saved results only (no rerun) (R §Results and dashboard; S22) | Phase 5 implemented/targeted verified | 04_dashboard loads only full-commit Git blobs under Laurin's allowlist. No engine/benchmark imports or network data; telemetry off. New tests cover path restriction, long Git paths and external-network denial. |
+| R59 | Dashboard shows construction, replay and individual-sale scaling; A vs B; throughput and latency distributions; memory incl. post-cancellation; correctness table; workload settings; raw repeats; units; missing/stopped runs labelled (R §Results and dashboard; S22) | Eight tabs implemented/targeted verified | 16 dashboard gates, AppTest smoke + interaction test; per-tab numerical audit. Construction/sale selector, official and1M results, exact histograms/quantiles, churn/drift, correctness evidence, raw rows and provenance. Full Phase 5 evidence below. |
+| R60 | Explain at least one measured bottleneck with code, operation counts and complexity; revision need not win everywhere (R §Results and dashboard; S22) | Two bottlenecks explained | A per-fill rescan O(F·B), Q7 counters/exponent in measured A range; B1 far-end insert O(P) per change, counted movement and scaling. B3r cancel_churn loss and declared spike qualification displayed. |
 | R61 | Submission path `Submissions/BuehlerLaurin/Assignment1/`; course folders and other students' work unchanged (R §Submit; S23) | partial | Folder scaffolded 2026-11-21; final check at Phase 7 |
 | R62 | Include both versions, tests, own generators and exact run commands (R §Submit; S23) | Implementations and runner commands present; long execution pending | A/B1/B2/B3 unchanged; BENCHMARK_PLAN.md has six exact PowerShell commands, staged execution and estimates. |
 | R63 | Include saved raw results, environment/settings metadata, dashboard code, dependency versions (R §Submit; S23) | Partial Phase 4a | Smoke raw results/environment/settings and dependency versions saved; dashboard and full long results pending. |
@@ -393,3 +393,36 @@ contracts (64 per name), 60 final-alias/factory cases, 25 mutant/control cases
 [Verification JSON](../05_evidence/final-b-registry-verification.json) stores
 current source and suite XML hashes plus every test-file/class count.
 Registry task complete; no measurement or change to the committed selection.
+
+## Phase 5 dashboard checkpoint (2026-11-23, base `87ed911`)
+
+Course README Results and dashboard, lines 124-130, was read and mapped to the
+eight-tab updated task. No engine, generator, expected file, dependency pin or
+03_results change is part of this phase. External concurrent attack files are
+not modified or proposed for this commit.
+
+| Coverage | Dashboard implementation / saved evidence |
+|---|---|
+| R48-R49, R59 scaling | Official log-log views and measured-range exponents; separate Q7 construction and 10/100/200% sale;1M table, A stops/scope. |
+| R33, R37, R59 comparison | Final B3r selection, all explicit historical variants, same-input ratios and reported robustness outcomes; both fast comparisons, binding 0.873 score/1.068 loss displayed unchanged. |
+| R51-R52, R59 distributions | Events/replay seconds; actual latency_histogram.csv bins; exact p50/p95/p99/max by type/segment, early/late selections, explicit declared spike. |
+| R53-R55, R59 memory | Peaks/includes, insertion curves, final churn state, B3/B3r drift; sampled peak/live normalization labelled. |
+| R26-R30, R59 correctness | Committed proof/XML hashes, suites/counts,17 mutant kills, stateful/own/worked checks, per-worker checks.csv, attributed independent reference and attack report. |
+| R56-R58, R63 provenance | Each chart/table has source captions and recorded commits; raw repeats/settings/checksums/env; generator commands reconstructed and labelled. Git HEAD blob loading excludes dirty/untracked results. |
+| R60 bottleneck | Code excerpts + counts + complexity + measured exponents;500,500 A scans on1k full liquidation and20bn B1 shifts at100k independently cross-checked in audit. |
+
+Targeted evidence: [16 dashboard gates](../05_evidence/20261123T190241Z_87ed911-dirty_dashboard-verified.txt)
+and [all-eight-tab numerical audit](../05_evidence/20261123T190442Z_87ed911-dirty_dashboard-values-audit.txt)
+with [traceable values](../05_evidence/dashboard-audit.json). Full standard
+suite and final protected-file review follow below when complete.
+
+Final fresh evidence: [999 standard tests](../05_evidence/20261123T190332Z_87ed911-dirty_dashboard-all-tests.txt)
+passed in 785.23 s, including 16 dashboard cases, all 448 contracts and all 17
+mutant kills. [Latest-HEAD dashboard checks](../05_evidence/20261123T191536Z_337cc61-dirty_dashboard-current-head-smoke.txt)
+passed 16/16 after the external attack addendum commit. Both suites have no
+failures/skips. [Final review](../05_evidence/20261123T191653Z_337cc61-dirty_dashboard-final-review.txt)
+and [verification JSON](../05_evidence/dashboard-verification.json) bind source
+and suite hashes and verify protected code/data/results. The audit is rerunnable
+as `python 04_dashboard/verify_saved.py`; [submission-path evidence](../05_evidence/20261123T191421Z_337cc61-dirty_dashboard-reproducible-audit.txt).
+R58-R60 complete in the stated tested coverage. No new measurement or change
+to the final selection; unrelated 07_attack work excluded from this checkpoint.

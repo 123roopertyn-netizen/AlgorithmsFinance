@@ -855,3 +855,125 @@ STOP for Claude (chat) review and Laurin's commit. Proposed commands, not run:
 git add -- 01_code/lob/__init__.py 01_code/lob/replay.py 01_code/bench/core.py 01_code/bench/sanity.py 02_tests 07_attack/measure.py 07_attack/test_attack.py 07_attack/ATTACK_REPORT.md SPEC.md README.md 00_docs 05_evidence
 git commit -m "Assignment1: make B the final B3r and preserve explicit B1 variant"
 ```
+
+## Phase 5: committed-results Streamlit dashboard (2026-11-23, base `87ed911`)
+
+Laurin's updated eight-tab prompt replaces the initial seven-tab outline.
+Scope: dashboard/tests/docs, no new experiment, engine change, generator run,
+dependency or reassessment of the final selection. Applied aif-exercise (read
+its dashboard_app.py asset), aif-bench dashboard contract, aif-verify and
+aif-debug for reproduced dashboard/test defects. No agent was spawned.
+
+The supplied README Results and dashboard section (lines 124-130) was read at
+`C:/Users/laubu/Downloads/Assignment1/Assignment1/README.md`; sha256
+`17ce011bb3eec68d608ccbb5416ccc459e17764ae610c8111ba6cb4028961da9`
+matches the course source already verified. Its complete required content is
+mapped in REQUIREMENTS_MAP R58-R60 and the Phase 5 table. Runtime does not load
+that source README; it loads only Laurin's allowlisted committed evidence.
+
+Implementation: 04_dashboard/app.py is the entry point, views.py renders eight
+tabs and saved_results.py validates/analyses saved files. Read-only Git blob
+reads are pinned to a full HEAD SHA; dirty CSVs/untracked runs cannot enter.
+Allowed data: 03_results/runs/*, 05_evidence/*, FINAL_SELECTION.md and the attack
+report. No engine, benchmark or generator imports, no experiment controls or
+remote fetches. Existing Streamlit/pandas/Altair installation used unchanged.
+Telemetry off, loopback server binding and local Arial theme in .streamlit.
+
+Every chart/table has source captions and recorded commits. Raw-repeat IDs,
+counts, finite seconds, worker status and saved medians are checked before
+aggregation. Limits/partial/not_run/missing cells remain explicit. Only A's
+recorded phase_time_limit on replay can give >600 s and a speedup lower bound;
+a subprocess timeout cannot. Fits stop at measured sizes. A single large trial
+is labelled. Q7 construction/reset stays separate from individual-sale time.
+Latency uses saved histogram counts, not synthetic distributions; memory
+includes final post-churn state and explicitly sampled peak/live normalization.
+Code/count/exponent bottlenecks cover A rescans and B1 far-end list movement.
+Both fast comparisons retain their original decisions; same-session 0.873 and
+the binding 1.068 loss are derived/checked against that session's CSVs.
+
+Test-first [red](../05_evidence/20261123T165345Z_87ed911-dirty_dashboard-red.txt):
+6 failures +4 fixture errors from explicit NotImplemented stubs, not imports.
+Subsequent failures were preserved as evidence and corrected at root cause:
+
+- Windows Git tried to stat a long SHA:path as a filename. A read-only direct
+  reproduction showed Filename too long. Adding trailing -- forces revision
+  syntax; missing optional files then use Git's bad-revision diagnostic. The
+  initial chat diagnosis that JSON was uncommitted was wrong and corrected:
+  both acceptance JSON files are committed and used unchanged.
+- A named B1 counter regression failed because post-attack comparators live in
+  the B3r session, while only original-grid B1 rows had been included. The
+  source selector now includes both historical locations without relabelling.
+- The test's external-network guard initially blocked Windows asyncio's local
+  socketpair; allow loopback, deny external addresses, use getattr for absent
+  AF_UNIX. Histogram totals require sorted version indexes (same values, no
+  expectation change). A new test's misplaced interaction lines were moved
+  back to their owning AppTest function. These were test-harness mistakes.
+- Two whole-file asset patch attempts failed without changing the asset; the
+  final update uses a small entry point plus separate analysis/render modules.
+  No file was deleted or moved.
+
+[Targeted green](../05_evidence/20261123T190241Z_87ed911-dirty_dashboard-verified.txt):
+**16 passed in 16.71 s**, including all eight tabs, headline CSV geomeans and 13
+A replay limits; construction/sale, post-attack, memory and early-latency
+interactions; same-session score; exact histogram totals; invalid/duplicate/
+partial cells, external-network denial and Windows Git path regression.
+
+[Per-tab audit](../05_evidence/20261123T190442Z_87ed911-dirty_dashboard-values-audit.txt)
+and [values](../05_evidence/dashboard-audit.json): independent arithmetic against
+raw CSV/JSON/XML on every tab. Examples: B3r official geomean 0.424684429 s;
+A buildup exponent 2.0911 over 1k-10k; Q7 10k s42 100% construction 0.0386168 s,
+sale 0.0093366 s; spike max 57,415,300 ns; drift retained B3/B3r 36,948,344/5,080
+bytes at 1M with 2 live orders; A scans 500,500 entries on 1k liquidation; B1 moves
+20,000,000,000 references at 100k far_end_flicker. All are saved-file checks,
+not new timings. Existing engine-proof 983 standard /1,995 attack XMLs were
+also hash-verified, not re-described as a fresh independent reference run.
+
+Other work appeared concurrently in 07_attack (report, campaign/probe scripts
+and logs). It is left untouched and excluded from proposed git paths. The app
+uses the committed attack report, not those in-progress working-tree changes.
+Full standard-suite results and final source review follow below when complete.
+
+The numerical audit is also included as 04_dashboard/verify_saved.py so its
+exact checks can be repeated after checkout. Running the submission-path
+script saved [reproducible audit](../05_evidence/20261123T191421Z_337cc61-dirty_dashboard-reproducible-audit.txt).
+Between checks, Laurin committed the unrelated final-B correctness attack as
+337cc61. Read-only diff from87ed911 confirms only 07_attack changed; no engine,
+tests, results or data. The new committed addendum is rendered as attributed
+report content. It reports no performance re-measurement. The dashboard gates
+are refreshed against the new HEAD; no attack script is invoked in this task.
+
+Final fresh standard suite:
+`python -m pytest -q --tb=short --basetemp=scratch/pytest-dashboard-all --junitxml=05_evidence/dashboard-all-tests.xml`
+through evidence.py with the README venv Python → **999 passed in 785.23 s**,
+exit 0, no failures/skips. [Full output](../05_evidence/20261123T190332Z_87ed911-dirty_dashboard-all-tests.txt).
+Counts: contract448, validation184, fast_equivalence115, final_version60,
+b_internal32, b3r6, bench_pipeline30, fast_assessment10, mutants25 (17 kills
++8 controls), own_datasets4, post_attack_pipeline13, replay21,
+replay_regressions28, stateful6 A-vs-version +1 B3r-vs-fast, dashboard16.
+The new dashboard test is the only test file added/changed by this task.
+
+Full-suite start snapshot was87ed911. After the unrelated 337cc61 attack-only
+commit, all [16 dashboard gates](../05_evidence/20261123T191536Z_337cc61-dirty_dashboard-current-head-smoke.txt)
+were repeated, **16 passed in 17.79 s**. This exercises the newly committed
+report while engines/results/expected data are unchanged across both commits.
+[Final review](../05_evidence/20261123T191653Z_337cc61-dirty_dashboard-final-review.txt)
+passes: nonempty wholly-green suites/XMLs, eight numerical tab audits,
+dashboard module import review, telemetry/loopback config and protected paths.
+[Verification](../05_evidence/dashboard-verification.json) records all four
+dashboard module hashes, test/config hashes, suites and per-file/class counts.
+
+Reviewed the full generated source and documentation diff for the known
+injection: no traces and no new embedded instructions. The committed attack
+addendum's replay-default observation is report data, not a request to change
+engine/CLI behaviour; no such change made. No new measurement, generation,
+install, dependency change, deletion/move, external-network action or git
+mutation by Codex. Final selection remains B3r; B3r_fast remains rejected.
+Open questions: none. STOP for review and Laurin's commit.
+
+Proposed commands from Assignment1, not executed (exclude the separate attack
+work; the evidence glob selects dashboard files only):
+
+```powershell
+git add -- .streamlit/config.toml 04_dashboard 02_tests/test_dashboard.py README.md SPEC.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 05_evidence/INDEX.md '05_evidence/*dashboard*'
+git commit -m "Assignment1: add committed-results dashboard with eight evidence tabs"
+```

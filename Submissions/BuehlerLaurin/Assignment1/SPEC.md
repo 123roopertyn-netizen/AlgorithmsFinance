@@ -812,3 +812,57 @@ does not start a measurement. No automatic retry or new-session override.
 Assessment writes immutable fast_rematch_acceptance.json, preserving the old
 cross-session result alongside the new per-scenario method and rationale.
 This implementation checkpoint executes tests/preview only, no rematch.
+
+## Phase 5: committed-evidence dashboard (2026-11-23)
+
+Scope chosen by Laurin: dashboard and its tests/docs only; no new measurement,
+engine change, data generation or reassessment of the final B selection.
+The course package README, lines 124-130 (Results and dashboard), was read:
+sha256 `17ce011bb3eec68d608ccbb5416ccc459e17764ae610c8111ba6cb4028961da9`.
+Its required construction/replay/individual-sale scaling, version comparison,
+throughput/latency distributions, post-cancellation memory, correctness table,
+units/status labels and code/count/complexity bottleneck explanation are covered.
+
+Entry point: `python -m streamlit run 04_dashboard/app.py` from Assignment1.
+Starting asset: aif-exercise/assets/dashboard_app.py; pure saved-file analysis
+in saved_results.py and tab rendering in views.py, both under 04_dashboard.
+The eight tabs follow Laurin's updated Phase 5 prompt. Original and final
+variants remain labelled at their recorded commits; B3r_fast is faster in the
+binding same-session official grid but rejected by its pre-registered rule.
+
+Runtime data reads are read-only `git show <full HEAD SHA>:<path> --` on this
+allowlist only: 03_results/runs/*, 05_evidence/*, FINAL_SELECTION.md and
+07_attack/ATTACK_REPORT.md. Cache identity includes the full commit. The
+trailing -- avoids Windows Git's long-filename ambiguity. No engine/benchmark
+imports, experiment-start controls, live data, installations or remote fetches.
+Telemetry is disabled and the local server binds to loopback.
+
+Aggregation validates raw measured repeat IDs/counts, finite nonnegative
+seconds, worker completion and agreement with the saved median. Duplicate,
+partial, missing, stopped and not_run cells cannot enter ratios, fits or
+throughput. A phase-only replay time limit yields the recorded >600 s lower
+bound; subprocess or non-replay limits yield no replay bound. Never replace
+an unobserved replay median with a limit. Missing supplementary A cells above
+10k are labelled not measured (declared scope). A 100k/1M remains single trial.
+
+Exponents: OLS log(time) versus log(size), median of seed medians at each
+completed measured size; min/max range and point count shown, no extrapolated
+points. Q7 construction and individual sales stay separate. Latency uses actual
+saved histogram counts and exact recorded nearest-rank quantiles, not inferred
+samples or inverse throughput. Zero-start histogram bins stay in the raw table
+and are omitted from logarithmic axes. Memory shows recorded includes/excludes;
+peak/order denominator is maximum sampled live count, zero/unknown stays missing.
+
+Correctness outcomes retain proof/XML hashes, evidence paths, dirty-source
+provenance, sample-worker checks and attributed independent reference checks.
+Code excerpts are static, checked against the recorded implementations; the
+dashboard never loads engine source at runtime. Complexity arguments are from
+code, while displayed exponents are supporting measurements. Generator command
+examples are reconstructed from saved case settings, explicitly labelled and
+never executed; displayed input_sha256 values are the workers' archive hashes.
+
+Verification: AppTest renders all eight tabs, changes construction/sale,
+post-attack, memory and early-latency selections; checks headline CSV values,
+histogram totals, same-session fast score, missing-cell filtering and the
+Windows Git blob regression. Each tab has a saved numerical cross-check in
+05_evidence/dashboard-audit.json. Existing results/expected files stay unchanged.

@@ -35,21 +35,74 @@ python run.py lob.replay 06_data/supplied/mixed_10000.jsonl.gz --version B
 Saved result labels keep their meaning at the recorded commit: historical B
 means B1. Nothing under `03_results` is renamed or remeasured by this update.
 
-Verification (2026-11-23): [983 standard tests](05_evidence/20261123T162212Z_dd88f22-dirty_final-b-all-tests.txt)
+Registry verification (2026-11-23): [983 standard tests](05_evidence/20261123T162212Z_dd88f22-dirty_final-b-all-tests.txt)
 passed in 909.96 s; [1,995 attack tests](05_evidence/20261123T162213Z_dd88f22-dirty_final-b-attack-suite.txt)
 passed in 125.90 s. Both suites have zero failures/skips, including all 17 mutant
 kills and all seven registered names. [Registry/source verification](05_evidence/final-b-registry-verification.json)
 records source and XML hashes; no engine logic or historical result changed.
+
+## Dashboard (Phase 5)
+
+From Assignment1 with the existing venv active:
+
+```powershell
+python -m streamlit run 04_dashboard/app.py
+```
+
+Eight tabs cover Overview, Scaling, Original vs revised & variants, Throughput
+& latency, Memory, Correctness, Bottleneck explained, and Method & data. Q7
+construction and individual sales have separate views; 1M results, actual
+latency histogram bins, early/late segments and post-cancellation state are
+included. Sources, recorded engine commits and units accompany the views.
+
+The app requires a Git checkout and reads a fixed HEAD snapshot using read-only `git show`: only committed
+files under `03_results/runs/`, `05_evidence/`, `00_docs/FINAL_SELECTION.md` and
+`07_attack/ATTACK_REPORT.md`. Working-tree changes and new local runs are
+ignored. Engine modules and generators are never imported or executed.
+`.streamlit/config.toml` disables usage telemetry and binds the local server
+to 127.0.0.1; there are no remote data, font or chart requests in the app code.
+
+Only complete raw-repeat sets with a matching saved summary and completed
+worker enter medians, throughput or fits. Missing, invalid, stopped and not_run
+cells stay explicit. A replay `phase_time_limit` can produce `> 600 s` and a
+strict speedup lower bound; a subprocess/other timeout cannot. A large-cell
+observation remains labelled **A: single trial**. Exponents use the measured
+size range only. Memory peak/order is explicitly normalized by the maximum
+sampled live count, never by an almost-empty final state.
+
+Both fast comparisons remain visible; the same-session ratio and binding
+rejection come from the committed rematch. Correctness counts refer to the
+labelled committed evidence source, not uncommitted tests running locally.
+Generator commands in Method & data are reconstructions from saved settings,
+with local output paths; recorded archive hashes are not presented as hashes
+of a regenerated file. Raw repeats, settings, environment and inclusion flags
+are available in the tables.
+
+Dashboard smoke/interaction and numerical checks:
+
+```powershell
+python -m pytest 02_tests/test_dashboard.py -q
+python 04_dashboard/verify_saved.py                  # analyse committed files only
+```
+
+The [per-tab audit](05_evidence/dashboard-audit.json) traces sample displayed
+values to their CSV/JSON/XML files. It is saved-file analysis, not measurement.
+
+Phase 5 verification: [999 standard tests](05_evidence/20261123T190332Z_87ed911-dirty_dashboard-all-tests.txt)
+passed in 785.23 s; [16 dashboard gates on the latest committed snapshot](05_evidence/20261123T191536Z_337cc61-dirty_dashboard-current-head-smoke.txt)
+passed in 17.79 s. [Final verification](05_evidence/dashboard-verification.json)
+records source and XML hashes. All eight tabs and interactive selections render;
+headline numbers match CSVs. No new benchmark or engine change.
 
 ## Clean-environment run path (PowerShell, from this folder)
 ```powershell
 python -m venv "$env:USERPROFILE\.venvs\aif-a1"
 & "$env:USERPROFILE\.venvs\aif-a1\Scripts\Activate.ps1"
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # latest checkpoint: 983 passed
+python -m pytest -q                                   # latest checkpoint: 999 passed
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
 python run.py bench.run_all                           # (planned) writes 03_results/runs/<run>/
-python -m streamlit run 04_dashboard/app.py           # (planned) http://localhost:8501, reads 03_results/ only
+python -m streamlit run 04_dashboard/app.py           # http://localhost:8501, committed evidence only
 ```
 `run.py` puts `01_code/` on the import path and runs a module; `pytest.ini` does the same for tests. No install step.
 
