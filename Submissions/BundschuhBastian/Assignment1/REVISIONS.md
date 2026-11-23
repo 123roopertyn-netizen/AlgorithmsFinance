@@ -31,18 +31,15 @@ Baseline profile (committed B): `validate()` is ~50% of the time on both streams
 | 2 | `AddLimitOrder`: call the matching loop `_take` only if the order crosses the best opposite price (one comparison); inline `_Side.add` (no method call per insert). | 0.1747 s -> 0.1677 s (-4.0%) | 0.2009 s -> 0.1827 s (-9.0%) | 332 pass |
 | 3 (rejected) | `_take`: iterate the level with `for ... in level.items()` and delete used-up makers afterwards, instead of `next(iter(level.items()))` per fill. | 0.1670 s -> 0.1678 s (+0.5%) | 0.1833 s -> 0.1812 s (-1.2%) | 332 pass; reverted (within noise: few fills per event in these streams) |
 | 4 | `is_valid_fast` takes the order index itself (`order_id not in live_ids`) instead of a callable: one function call less per event. Fuzz test adapted (same checks). | 0.1671 s -> 0.1618 s (-3.2%) | 0.1836 s -> 0.1767 s (-3.7%) | 332 pass |
+| 5 (rejected) | Inline the fast validation into `process()` (no `is_valid_fast` call). | 0.1607 s -> 0.1624 s (+1.1%) | 0.1784 s -> 0.1799 s (+0.8%) | 333 pass; reverted (a function call is not the cost) |
+| 6 (rejected) | Best price with a heap + lazy deletion (bids stored as `-price`; emptied levels stay in the heap until they reach the top) instead of the sorted list + bisect. | 0.1610 s -> 0.1682 s (+4.5%) | 0.1736 s -> 0.1856 s (+7.0%) | 333 pass; not kept. With ~1,000 levels, `list.insert` / `del` is one C memmove and cheaper than heap pushes plus stale-entry cleanup. Amortized cost of the heap is also worse for memory (stale entries grow with cancel churn). |
+| 7 (rejected) | Order record as a `__slots__` class (`rec.qty`, `rec.seq`) instead of the list `[qty, seq]`. | 0.1622 s -> 0.1646 s (+1.5%) | 0.1771 s -> 0.1845 s (+4.2%) | 333 pass; not kept (creating an object costs more than creating a small list) |
+| 8 (rejected) | Order record as an immutable tuple `(qty, seq)`, replaced on a partial fill. | 0.1621 s -> 0.1604 s (-1.1%) | 0.1793 s -> 0.1750 s (-2.4%) | 333 pass; not kept (inside the ~2% noise; buildup minimum got worse) |
 
 Cumulative (committed B `2ef6e65` vs now, same method): mixed 0.1995 s -> 0.1617 s (-19.0%),
 buildup 0.2285 s -> 0.1748 s (-23.5%), identical output.
 
-Not tried yet: heap + lazy deletion instead of the sorted price list (bisect); `__slots__` /
-list records vs the current `[qty, seq]` lists; inlining validation into `process`.
-| 5 (rejected) | Inline the fast validation into `process()` (no `is_valid_fast` call). | 0.1607 s -> 0.1624 s (+1.1%) | 0.1784 s -> 0.1799 s (+0.8%) | 333 pass; reverted (a function call is not the cost) |
-
 New test from this step, kept: `tests/test_process_fuzz.py` feeds fuzzed good and bad events to A and B `process()` and requires identical results and snapshots (covers every reason code and every status).
-| 6 (rejected) | Best price with a heap + lazy deletion (bids stored as `-price`; emptied levels stay in the heap until they reach the top) instead of the sorted list + bisect. | 0.1610 s -> 0.1682 s (+4.5%) | 0.1736 s -> 0.1856 s (+7.0%) | 333 pass; not kept. With ~1,000 levels, `list.insert` / `del` is one C memmove and cheaper than heap pushes plus stale-entry cleanup. Amortized cost of the heap is also worse for memory (stale entries grow with cancel churn). |
-| 7 (rejected) | Order record as a `__slots__` class (`rec.qty`, `rec.seq`) instead of the list `[qty, seq]`. | 0.1622 s -> 0.1646 s (+1.5%) | 0.1771 s -> 0.1845 s (+4.2%) | 333 pass; not kept (creating an object costs more than creating a small list) |
-| 8 (rejected) | Order record as an immutable tuple `(qty, seq)`, replaced on a partial fill. | 0.1621 s -> 0.1604 s (-1.1%) | 0.1793 s -> 0.1750 s (-2.4%) | 333 pass; not kept (inside the ~2% noise; buildup minimum got worse) |
 
 Final state after steps 1-8: kept 1, 2, 4. Rejected 3, 5, 6, 7, 8. Profile of what is left (mixed,
 100,000 events): `is_valid_fast` ~25%, `AddLimitOrder` ~18%, `_take` ~17%, `process` ~15%. What remains is
