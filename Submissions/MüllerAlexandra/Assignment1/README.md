@@ -65,7 +65,8 @@ files belong under `data/generated/` and are not committed.
 1. Specification and independent tests: strengthened by pre-revision critical review.
 2. Transparent baseline: implemented and passing its applicable contract tests.
 3. Revised implementation: not implemented.
-4. Measurements and dashboard: not started.
+4. Throughput harness: smoke-verified; formal measurements not started.
+5. Latency, memory, experiment matrix, and dashboard: not implemented.
 
 Validate the baseline against all supplied 10,000-event streams:
 
@@ -78,4 +79,24 @@ The baseline deliberately uses a list of individual resting orders. It scans
 and sorts that list during matching and scans it during cancellation. This is
 the transparent Version A to preserve before a measured data-organization
 revision.
+
+## Non-formal benchmark smoke check
+
+The smoke check exercises input parsing, checksumming, fresh-state warm-up and
+repeats, exclusive JSON persistence, and environment metadata on only the
+first 100 events. It is harness verification, not a formal performance result:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python.exe scripts\04_benchmark.py `
+  --version baseline `
+  --input data\supplied\cancel_churn_10000.jsonl.gz `
+  --max-events 100 `
+  --warmups 1 `
+  --repeats 2 `
+  --out evidence\05_benchmark_smoke\05_baseline_cancel_churn_100.json
+```
+
+The command refuses to overwrite an existing result. Choose a new explicitly
+labelled output path to repeat the smoke check.
 
