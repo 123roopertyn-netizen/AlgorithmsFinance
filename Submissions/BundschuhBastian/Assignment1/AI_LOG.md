@@ -71,6 +71,16 @@ Cumulative speed-up of kept steps: mixed -19.0%, buildup -23.5% (0.1995 -> 0.161
 | My first mutation run | corrected | two `sed -i` commands failed on macOS (needs `-i ''`), so mutation 1 never ran and "4 passed" meant nothing. Redone with Python edits |
 | Pyright: `__doc__.splitlines()` may be `None` | accepted | fixed with `(__doc__ or "")`; pyright reports 0 errors on the new files |
 
+## Phase 5: benchmark data
+
+| Suggestion | Decision | Reason / evidence |
+|---|---|---|
+| `bench/make_data.sh`: grid of 5 scenarios x M in {1000, 10000, 100000} x seeds {42, 43, 44} (45 files), 1,000,000 events for all five scenarios at seed 42, and a queue-concentration set (`buildup`, 100,000 events, `--levels` 4/16/64/256/4000, plus the 1000-level grid file) | accepted | assignment "Benchmark experiments"; 55 files, about 100 MB, 100 s to generate; all in the gitignored `data/generated/`; existing files are kept (`--force` regenerates) |
+| One million events only with seed 42 | accepted (my choice) | assignment says "try one million if feasible"; 15 s per file; Bastian can add seeds in the script |
+| `tools/hash_generated.py --write / --check`: sha256 of the `.gz` and of the decompressed text, plus Python / zlib / platform, in `results/generated_data_checksums.json` | accepted | `.gz` hash depends on zlib (1.2.11 here), the decompressed hash does not; `--check` reports a changed `.gz` hash with equal content as a note, not as a problem |
+| `tests/test_generated_data.py`: regenerate every stream with at most 10,000 events in memory and compare with the record; the seed-42 10,000-event streams must equal the five supplied files; the record must list exactly the planned 55 names | accepted | 39 new tests, 384 in total pass, no big file needed on a fresh clone |
+| Claim that `crowded` is `buildup --levels 4` (so "4 vs 1,000 prices" can use one scenario) | corrected from assumption to test | read from the generator code, then checked: identical decompressed hash at 100,000 events, and `crowded` equals `buildup --levels 4` at 2,000 events |
+
 ## Accepted
 
 ## Corrected

@@ -23,8 +23,8 @@ in SPEC.md without asking Bastian.
 | 2 Version A (baseline): all `[A]` tests pass | done | 22b3da0 |
 | 3 Version B (revision) + REVISIONS.md: 333 tests pass; speed steps 1-8 measured (kept 1, 2, 4) | done | 2ef6e65 (correct), e519381 (last kept optimization), 1075e26 (REVISIONS final) |
 | 4 Own small generator `tools/gen_small.py` + A-vs-B equivalence after EVERY event: 345 tests pass | done | 45fbc2b |
-| 5 `bench/make_data.sh`: all data, outside timing, with gz + decompressed sha256 | next | |
-| 6 Benchmarks (time, latency, memory, counters, liquidation) → `results/` | | |
+| 5 `bench/make_data.sh`: all data, outside timing, with gz + decompressed sha256: 55 streams, 384 tests pass | done | 432a82d |
+| 6 Benchmarks (time, latency, memory, counters, liquidation) → `results/` | next | |
 | 7 Dashboard (Streamlit, like the lab) that only LOADS `results/` | | |
 | 8 REPORT.md, README, clean-venv run, commit id, push, PR | | |
 
