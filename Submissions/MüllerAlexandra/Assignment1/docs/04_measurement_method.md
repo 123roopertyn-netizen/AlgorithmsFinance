@@ -1,0 +1,165 @@
+# Measurement method
+
+This protocol is fixed before Version A performance results are inspected and
+before Version B is selected. Version A and Version B must use identical input
+bytes, settings, limits, measurement boundaries, and result definitions.
+
+## Symbols and scope
+
+- `M`: incoming events processed.
+- `B`: active individual orders.
+- `P`: occupied price levels across both sides.
+- `F`: maker fills returned by an incoming event.
+
+The measurements describe sequential Python processing of synthetic events on
+one machine. They are not exchange capacity, network latency, queueing latency,
+or evidence about historical market behavior. Sequential replay alone cannot
+establish the event rate at which a live venue would overload.
+
+## Inputs
+
+The five workload families are `buildup`, `crowded`, `mixed`, `sweep`, and
+`cancel_churn`. The core matrix uses event counts 1,000, 10,000, and 100,000
+with seeds 42, 43, and 44. The supplied 10,000-event seed-42 files are reused
+directly. Other inputs are generated before measurement and stored outside
+version control under `data/generated/`; commands, settings, metadata, and
+checksums are retained.
+
+One-million-event runs are attempted only after smaller pilots. A time and
+memory limit will be recorded before those attempts and applied identically to
+both versions. A stopped run remains in the results with its limit and reason;
+missing results are never invented or extrapolated.
+
+## Primary replay timing
+
+Events are parsed and held in memory before the engine timer starts. Each
+replay constructs a new empty book. Use `time.perf_counter` for construction
+and replay timing. Preserve empty-book construction/reset time separately;
+throughput uses replay time, while total engine time includes construction plus
+replay. The replay region includes event validation, matching or cancellation,
+state mutation, and construction of the current event result and fill list. It
+excludes input generation, JSON/gzip parsing, printing, test assertions,
+per-event inspection, AI calls, memory tracing, and dashboard work.
+
+For every configuration:
+
+1. Perform one untimed warm-up with a fresh book.
+2. Perform five timed repeats, each with a fresh book.
+3. Keep every raw elapsed time and throughput value.
+4. Report the median elapsed time and median throughput.
+
+Throughput is `M / replay_seconds`. Reading/parsing, input copying, and other
+preparation costs are measured separately rather than treated as free. Full
+application time additionally reports preparation, construction, and replay
+under an explicit boundary.
+
+## Processing-latency instrumentation
+
+Per-event processing latency is collected in a separate run because two clock
+calls per event add overhead. The event timer surrounds only `process_event`.
+Raw integer nanoseconds are retained. Report median, 95th percentile, and 99th
+percentile overall and by event type. For submission floods, also compare the
+first and last 10% of events.
+
+Percentiles use the nearest-rank convention. Sort `N` samples and select the
+one-based rank `ceil(p / 100 * N)`. The reciprocal of throughput is not reported
+as latency.
+
+## Memory instrumentation
+
+Memory is measured in runs separate from primary timing using `tracemalloc`.
+Inputs are preloaded before tracing, so their allocations are excluded. Report
+current and peak traced Python bytes and state that these are neither total
+process memory nor theoretical auxiliary space.
+
+Two modes are distinguished:
+
+- `memory_state`: do not retain the complete result history; include live book
+  state, temporary matching allocations, and the current returned result.
+- `memory_retained_output`: retain every returned result and fill list so output
+  history is explicitly included.
+
+For cancellation churn, report final active orders, final occupied levels,
+current bytes, and peak bytes. This reveals storage that grows with historical
+events even when active depth is tiny.
+
+For buildup, record memory as the book grows rather than only its final state.
+Any stale entries, delayed cleanup, or storage that grows with all submissions
+rather than active orders must be identified and explained.
+
+If preloading becomes impractical, stream the input and record parsing
+separately. The affected results must state the changed boundary and must not be
+compared as though they used the preloaded protocol.
+
+## Diagnostic and correctness run
+
+Heavy counters and correctness checks are separate from primary timing and use
+small diagnostic runs where appropriate. Record event-type counts, total fills,
+rejected events, peak active orders, and peak occupied price levels. After
+replay, require no rejection of supplied valid events and a positive, unique,
+uncrossed canonical book. Do not call `inspect_book` after every event inside
+primary timing because snapshot sorting and allocation would change the
+measured workload.
+
+Operation counts are interpreted together with `B`, `P`, `F`, and workload
+mix. A one-dimensional event-count curve is not extrapolated without
+controlling these other sources of work.
+
+## Controlled stresses
+
+### Submission flood
+
+Process long uninterrupted workloads and record construction/replay behavior as
+active depth grows. Compare early and late processing latency.
+
+### Queue concentration
+
+At a fixed initial order count, compare controlled books using approximately
+four versus 1,000 available prices. Hold seed, side/quantity generation, and all
+other settings as constant as the controlled generator permits. Record `B` and
+`P` so conclusions do not rely on submitted count alone.
+
+### Large liquidation
+
+Construct a deterministic fresh bid book with total available quantity `Q`.
+Independently test market sells requesting `ceil(0.10 * Q)` (at least one unit),
+`Q`, and `2 * Q`. Rebuild the identical book for every repeat. Report book
+construction/reset separately from the individual sale, and retain the sale's
+returned fills during its memory measurement. Record requested, executed, and
+unfilled quantity; makers touched; price levels visited; and fill count.
+
+## Saved records
+
+Raw JSON records distinguish `throughput`, `latency`, `memory_state`,
+`memory_retained_output`, and `diagnostic_counts`. As applicable, each record
+contains:
+
+- version, scenario, seed, event count, and price-level setting;
+- phase, repeat, completion status, and stopped-run reason;
+- preparation, construction/reset, replay, and total-application seconds;
+- throughput and latency summaries;
+- active-order and occupied-level peaks;
+- requested, executed, and unfilled quantity plus fill count;
+- current and peak traced bytes plus inclusion flags;
+- generator settings and input checksum;
+- Python, dependency, operating-system, machine, command, UTC, and code-version
+  metadata.
+
+Summaries are derived from raw records and never replace them. The dashboard
+loads saved raw/summary results and never reruns an experiment when a view
+changes.
+
+The dashboard compares construction, replay, and individual-sale scaling for
+both versions. It shows throughput, processing-latency distributions, memory
+including post-cancellation state, correctness outcomes, workload settings,
+raw repeats, units, and stopped or missing runs. At least one measured
+bottleneck is explained using code, operation counts, and complexity. Version B
+is not assumed to win every workload.
+
+## Fairness and interpretation
+
+Both versions receive the exact same inputs and use the same fresh-state rule,
+warm-up count, repeat count, timer, instrumentation mode, and stopping limits.
+Correctness failures invalidate the corresponding performance comparison. A
+revision may improve one workload while losing time or memory on another; all
+such trade-offs and stopped runs remain visible.

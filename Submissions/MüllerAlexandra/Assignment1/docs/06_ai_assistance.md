@@ -52,6 +52,14 @@ rejected with the reason and the verification performed.
   standard-library import: `AbstractSet` was imported from `collections.abc`
   instead of `typing`. AI corrected the import before behavioral tests could
   run; no expected result or test was changed.
+- The user requested that the proposed measurement procedure be checked
+  directly against the lecturer's Assignment 1 PDF and supplied README before
+  implementation. AI's source comparison found that the first draft did not
+  explicitly name `time.perf_counter`, preserve construction/reset and input
+  preparation costs, exclude AI calls, describe the streaming fallback, or
+  enumerate the required dashboard evidence. The method was corrected before
+  the measurement helpers or benchmark harness were implemented and before any
+  performance result was observed.
 - During the walkthrough, the user identified that the pre-implementation
   suite included the supplied worked example and hand-calculated contract
   cases but omitted the requested small generated streams. Four deterministic
