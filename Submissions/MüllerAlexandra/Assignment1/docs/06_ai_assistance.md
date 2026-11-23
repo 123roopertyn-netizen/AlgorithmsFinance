@@ -51,6 +51,11 @@ rejected with the reason and the verification performed.
   with that preregistered limit and the explicit phase allocation. Completed
   results are checksum-validated before promotion; stopped tasks retain their
   reason and environment without a fabricated result.
+- AI proposed a deterministic liquidation experiment with 1,000 makers over
+  100 prices and independent 10%, 100%, and 200% fresh-book sales. The user
+  authorized proceeding. The accepted contract separates construction and
+  sale timing, retains fill output during sale-memory tracing, and supplements
+  primary runs with five small correctness/count diagnostics.
 
 ## Pending suggestions
 

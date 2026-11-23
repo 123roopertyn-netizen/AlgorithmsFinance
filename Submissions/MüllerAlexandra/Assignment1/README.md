@@ -97,12 +97,13 @@ committed runner checkpoint.
 1. Specification and independent tests: strengthened by pre-revision critical review.
 2. Transparent baseline: implemented and passing its applicable contract tests.
 3. Revised implementation: not implemented.
-4. Throughput harness: smoke-verified; formal measurements not started.
-5. Per-event latency harness: smoke-verified; formal measurements not started.
-6. Memory harness: smoke-verified; formal measurements not started.
+4. Throughput: formal Version A matrix recorded.
+5. Per-event latency: formal Version A representative matrix recorded.
+6. Memory: formal Version A state and retained-output matrices recorded.
 7. Formal input matrix: generated and checksum-verified; measurements not started.
-8. Timeout-aware formal runner: implemented; no formal task run yet.
-9. Dashboard: not implemented.
+8. Timeout-aware formal runner: 114 Version A task statuses recorded.
+9. Liquidation and diagnostic harness: implemented; formal stress run not started.
+10. Dashboard: not implemented.
 
 Validate the baseline against all supplied 10,000-event streams:
 
@@ -182,4 +183,20 @@ $env:PYTHONPATH = "src"
 The additional buildup smoke record uses the same state-only command with
 `buildup_10000.jsonl.gz`. These 100-event records verify boundaries, growth
 samples, and persistence; their byte values are not formal A-versus-B results.
+
+The separate stress command rebuilds a deterministic 1,000-maker, 100-level
+bid book for every 10%, 100%, and 200% liquidation repeat. It also runs
+correctness diagnostics on the five 1,000-event seed-42 workloads:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python.exe scripts\08_run_stress.py `
+  --version baseline `
+  --order-count 1000 `
+  --price-levels 100 `
+  --warmups 1 `
+  --repeats 5 `
+  --diagnostic-events 1000 `
+  --out results\stress\baseline\10_stress_and_diagnostic.json.gz
+```
 

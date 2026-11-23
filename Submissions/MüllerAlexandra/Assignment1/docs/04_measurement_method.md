@@ -170,6 +170,18 @@ construction/reset separately from the individual sale, and retain the sale's
 returned fills during its memory measurement. Record requested, executed, and
 unfilled quantity; makers touched; price levels visited; and fill count.
 
+The fixed liquidation input has 1,000 individual bid makers distributed over
+100 prices with a deterministic positive quantity cycle. Perform one untimed
+warm-up and five measured repeats per sale size. The sale timer includes
+matching, mutation, and fill-list construction. Separate `tracemalloc` sale
+runs build the book before tracing, then retain the complete sale result while
+reading current and peak Python-traced bytes; prebuilt-book allocations are
+therefore explicitly excluded from those sale-memory numbers.
+
+Small diagnostic replays use the five 1,000-event seed-42 core inputs. They
+record event-type counts, fills, rejections, peak/final active orders and price
+levels, plus final uniqueness, positive-quantity, and uncrossed-book checks.
+
 ## Saved records
 
 Raw JSON records distinguish `throughput`, `latency`, `memory_state`,

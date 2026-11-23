@@ -57,3 +57,9 @@ configuration. Validated results are promoted atomically from pending paths as
 gzip-compressed JSON. Timeout and failure statuses remain visible with their
 environment and code version; they never contain an inferred result.
 
+The remaining Version A stress method was fixed before execution: a
+1,000-maker, 100-level deterministic bid book is rebuilt for every 10%, 100%,
+and 200% sale, with construction, sale, and sale-memory boundaries kept
+separate. Five 1,000-event diagnostic streams provide operation counts and
+final invariant checks outside primary timing.
+
