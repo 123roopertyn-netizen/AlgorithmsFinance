@@ -202,4 +202,3 @@ def main(arguments: Sequence[str] | None = None) -> int:
         )
     )
     return 0
-

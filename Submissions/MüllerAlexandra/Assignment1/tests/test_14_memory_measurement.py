@@ -229,4 +229,3 @@ def test_memory_cli_saves_state_mode_without_tracing_input_parsing(
     assert document["measurement"]["final"]["retained_output_count"] == 0
     assert document["measurement"]["inclusions"]["preloaded_input"] is False
     assert document["environment"]["python_version"]
-
