@@ -316,3 +316,56 @@ This history records meaningful changes without creating duplicate current-statu
 - Supplied source/destination checksum mismatches after generation: zero.
 - Paired verification: 100,000 events each; zero non-price mismatches; zero formula mismatches; quantity totals equal; monotonic and uncrossed; exactly four bid and four ask prices.
 - One-million-event workloads: zero.
+
+## Stage 4A baseline decisions and evidence
+
+### DEC-014 - Transparent Version A storage and matching
+
+- Status: ACCEPTED and VERIFIED for Version A.
+- Decision: keep every active order in one implementation-owned list. For each taker, select eligible opposite-side makers and sort them by price and original arrival sequence. Do not add indexes, heaps, retained history, or lazy deletion to the baseline.
+- Rationale: this makes state transitions directly auditable and creates a genuinely simple comparison point for the independently implemented Version B.
+- Consequence: with `B` active orders and `F` makers filled, matching costs `O(B log B + F)` time and up to `O(B)` temporary references; cancellation and duplicate-live-ID checks cost `O(B)` time; insertion is `O(1)` amortized; persistent active-book storage is `O(B)`.
+
+### DEC-015 - Validation and rejection atomicity in Version A
+
+- Status: ACCEPTED and VERIFIED for Version A.
+- Decision: shared validation remains stateless. Version A separately checks accepted-sequence monotonicity and duplicate live identifiers against its own list before any mutation. Only accepted operations update `last_accepted_seq`.
+- Evidence: the unchanged deterministic suite passed rejection-atomicity, exact-integer/boolean, duplicate-live-ID, nonincreasing-sequence, and direct-operation parity cases for Version A.
+- Boundary: Version B must implement and verify the same state-dependent rules independently; Version A evidence does not verify Version B.
+
+### DEC-016 - Fixed-seed randomized transition check
+
+- Status: ACCEPTED and VERIFIED for Version A.
+- Decision: use 10 fixed seeds with 40 events per seed. After every event, independently verify the public result, sequence transition, quantity conservation, maker price, eligible price-time ordering, residual rule, and canonical snapshot transition. The test is deterministic and is not a reference matching engine.
+- Evidence: the test participated in the 45-method baseline projection and passed. It remains RED for Version B until Version B is implemented.
+
+### DEC-017 - Focused mutation checks remain future isolated experiments
+
+- Status: APPROVED PLAN; NOT EXECUTED.
+- Primary proposed mutations and detectors:
+  1. reset FIFO priority after a partial maker fill — detected by `test_partial_fill_preserves_fifo_for_follow_up_taker`;
+  2. execute at taker price — detected by the multi-level crossing price assertions and worked-example result;
+  3. use strict rather than inclusive crossing — detected by the exact-price crossing boundary test;
+  4. retain a cancelled order as active — detected by cancellation cleanup, repeated cancellation, and follow-up matching tests;
+  5. mutate before validation completes — detected by rejected-event atomicity tests for duplicate live IDs and nonincreasing sequences;
+  6. accept booleans as integers — detected by exact-integer stateless-validation cases.
+- Secondary candidates, only if time permits: resting a market residual, stopping before all eligible levels are exhausted, reversing price traversal, and retaining empty price-level storage. No permanent mutation may be made to production files.
+
+### DEC-018 - Proposed benchmark stop and contamination policy
+
+- Status: PROPOSED; no benchmark evidence exists yet.
+- Per-repeat proposal: 30 seconds for 1,000/10,000 events and 120 seconds for 100,000 events. The first timeout stops that engine/workload configuration and skips remaining repeats.
+- Global proposal: 90 minutes primary replay, 45 minutes separate diagnostic modes, and 15 minutes verification, for a 150-minute wall-time ceiling.
+- Incomplete runs: record the engine, workload, threshold, observed elapsed time, completed and skipped repeats, and explicit stop reason; do not report a normal five-repeat median.
+- Contamination control: primary timing excludes parsing, output serialization/logging, canonical snapshots, transition checks, memory tracing, and diagnostic counters. Total application cost is measured and reported separately.
+- Scope: the same caps apply to both engines. One-million-event work remains excluded. Mandatory experiments are prioritized over optional stress work.
+
+## Stage 4A GREEN evidence
+
+- Syntax/import/CLI gates: passed for the approved implementation and test files; replay help exposed `baseline` and `optimized` choices.
+- Baseline projection: 46 methods discovered, 45 applicable methods run, exactly one two-engine comparison excluded, zero failures, zero errors, and zero skips.
+- Supplied worked example: six events replayed; exact market-sell result, remaining canonical orders, and gross proceeds `3,594,000,000,000,000` tick-units matched the supplied record.
+- Full unchanged suite: 46 methods run, zero assertion failures, 37 errors, and zero skips. All 37 errors came from explicit untouched `OptimizedOrderBook` `NotImplementedError` stubs; there were no other errors.
+- Randomized check: 10 seeds times 40 events passed for Version A through the baseline projection.
+- Mutation tests and benchmarks: not executed.
+- Remaining risks: Version B correctness and cleanup are unverified; the list baseline may be impractically slow on large/deep workloads; POSIX commands remain documented but unexecuted in this Windows environment; benchmark limits and measurement protocols still require approval and empirical validation.

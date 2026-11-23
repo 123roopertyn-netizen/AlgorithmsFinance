@@ -593,3 +593,65 @@ No supplied assignment file, generated workload, benchmark, dashboard, result fi
 - Result: matching, cancellation, state-dependent validation, replay, and stateless validation remain unimplemented by design.
 
 No randomized or mutation test, benchmark, dependency installation, network action, Git command, or GitHub operation occurred. Stage 4 has not begun.
+
+## 2026-11-23 - Stage 4A Version A baseline implementation
+
+### 59. Inspected the approved Stage 4A scope and requested narrow write access
+
+- Read the existing Version A/Version B stubs, shared contracts, validation stub, replay stub, Stage 3 tests, fixtures, root README, action history, and decision/risk record.
+- Confirmed the approved boundary: implement Version A, shared stateless validation, replay, one deterministic randomized transition test, and documentation only. Version B, existing Stage 3 tests, benchmarks, datasets, dashboard, and results remained out of scope.
+- Requested and received write permission only for the approved implementation/documentation files and the approved new test under `03_tests`.
+- One initial combined patch request was rejected before changing any file because it attempted multiple operations on the same target. The supported patch was then applied; no partial content from the rejected patch remained.
+
+### 60. Implemented the transparent baseline and shared stateless validation
+
+- Modified `04_implementation/orderbook/validation.py` to validate event mappings, exact integer fields (with booleans rejected), required fields, nonempty string identifiers, positive price/quantity, known event types, and valid sides. Rejections use the approved stable reason codes and include `event_id` when available.
+- Modified `04_implementation/orderbook/baseline.py` to use one list of active orders. It independently performs sequence and duplicate-live-ID checks, maker-price price-time matching, partial-fill updates, exhausted-order cleanup, cancellation, limit residual resting, market residual discard, and detached canonical snapshots.
+- Modified `04_implementation/orderbook/replay.py` to replay plain or gzip JSONL sequentially, fail with path and line information for blank/malformed records, and expose `python -m orderbook.replay PATH --engine baseline|optimized`.
+- Created `03_tests/test_randomized_transitions.py` with 10 fixed seeds and 40 events per seed. It invokes the independent Stage 3 transition verifier after every accepted or rejected event; it does not implement a reference engine.
+- Did not modify `optimized.py`, `contracts.py`, `__init__.py`, or any existing Stage 3 test.
+
+### 61. Ran syntax, import, and CLI gates
+
+- In-memory syntax compilation: 15 Python files passed.
+- Command-scoped import check: baseline, optimized stub, validation, and replay imported; both books constructed and returned detached empty snapshots.
+- `python -m orderbook.replay --help`: passed and showed required `PATH` plus `--engine {baseline,optimized}`.
+- `PYTHONDONTWRITEBYTECODE=1` was used for test/import commands to prevent cache artifacts.
+
+### 62. Ran the exact Version A projection
+
+- The exact portable PowerShell command is retained verbatim in `README.md`; it was executed from the project root with command-scoped `PYTHONPATH`.
+- The command discovered the entire suite, required the exact two-engine-only method ID once, injected only `BaselineOrderBook` into `support.ENGINE_CLASSES`, and excluded only `test_differential.TestDifferentialObservations.test_each_engine_matches_oracle_before_cross_engine_comparison`.
+- Observed result: `discovered=46 included=45 excluded=1`; `run=45 failures=0 errors=0 skipped=0 successful=True`.
+- Reason for the one exclusion: that method requires two observation entries for a cross-engine comparison. All Version A behavior within it is already checked against the independent oracle by the applicable engine tests; no Version A expectation was weakened or rewritten.
+
+### 63. Verified the supplied worked example and replay entry point
+
+- A first read-only verification script imported a nonexistent helper name, `replay_path`, and raised `ImportError`; the following CLI command still passed because the PowerShell command did not stop on the earlier native-process failure. No file was changed. Inspection showed the actual documented helper is `replay_file`.
+- Reran the direct check with `replay_file`. Observed: six events; exact final market-sell result matched; exact remaining canonical orders matched; gross proceeds equalled `3,594,000,000,000,000` tick-units.
+- The command-line replay of `02_data/supplied/data/worked_example.jsonl` with `--engine baseline` returned successfully.
+
+### 64. Audited the unchanged full suite
+
+- Ran all tests with the ordinary discovered two-engine matrix and captured results without changing tests.
+- Initial classifier intercepted ordinary errors but not subtest errors; a second classifier was too narrow because one optimized direct-operation stub has a different method-specific message. These were audit-script classification limitations only.
+- Final traceback classification accepted only explicit `NotImplementedError: Optimized ... intentionally absent in RED` messages.
+- Observed result: 46 methods run, zero assertion failures, 37 error entries, zero skips; all 37 errors were from untouched `OptimizedOrderBook` stubs and there were zero other errors.
+
+### 65. Recorded the Stage 4A evidence and future policies
+
+- Updated `README.md` with Version A architecture/complexity, the exact baseline projection command and result, portable replay commands, untouched-Version-B RED status, and the proposed stopped-run benchmark policy.
+- Updated `AI_DECISIONS.md` with accepted Version A design/validation/randomized-test decisions, the unexecuted mutation plan, proposed benchmark limits, actual GREEN evidence, and remaining risks.
+- Proposed benchmark ceiling only; no benchmark was executed: 90 minutes primary replay, 45 minutes separate diagnostic modes, and 15 minutes verification, with first-timeout termination per engine/workload configuration.
+
+No mutation experiment, benchmark, Version B implementation, dependency installation, environment change, network access, Git command, or GitHub operation occurred.
+
+### 66. Performed the final Stage 4A read-only integrity audit
+
+- Compiled all 15 implementation/test Python files in memory: passed.
+- README Markdown fence count: 28, an even and balanced count.
+- Canonical Risk Register: 25 rows and 25 unique IDs; no duplicate current-status entry.
+- Untouched Version B check: `optimized.py` SHA-256 `60617165c7aae2fe11a5252313ddddea4d9485e6f52d873e60bea759473d8fba`; all four processing-operation methods still contain explicit raises.
+- Supplied fixture preservation: `worked_example.jsonl` SHA-256 `831015ac71d56ada0898b0bf8f59f125900b4dc32134d6ef37bd3cec304798ec`; `worked_expected.json` SHA-256 `c715f52724df6bbfcedcad0e203ddb5a7752d38c809f4cf12b513ba809554d2c`.
+- Generated-manifest preservation: SHA-256 `5c408a6ac8aec13f0596f20ab974a526fe238a99f2f68ec32195a1a82ee16ca5`, unchanged from the Stage 2 migration record.
+- Cache artifacts: zero.

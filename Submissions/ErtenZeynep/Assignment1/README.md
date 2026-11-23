@@ -8,7 +8,7 @@ This project implements, tests, compares, and benchmarks two Python limit order 
 4. Implementation and benchmarking
 5. Documentation and reproducibility
 
-Stage 1 prepares the project structure and records the assignment specification. No matching engine, test suite, generated data, or benchmark has been implemented yet.
+Stages 1-3 and Stage 4A are complete. Version A (the transparent baseline) is implemented and passes every applicable deterministic and fixed-seed randomized correctness test. Version B and all benchmarks remain deliberately unimplemented.
 
 ## Environment
 
@@ -33,6 +33,14 @@ Shared code may define external contracts, state-independent validation, and sta
 Version A and Version B must independently implement their own order storage, accepted-sequence tracking, duplicate-live-identifier checks, best-price selection, FIFO matching, partial-fill updates, cancellation changes, cleanup, and state-dependent validation. They must not share mutable order state or matching logic.
 
 Canonical inspection must be tested against independently hand-calculated books. Agreement between the two implementations is additional evidence, not the sole source of correctness.
+
+### Version A baseline
+
+`BaselineOrderBook` uses a simple list containing every active order. It scans and sorts eligible makers by price-time priority for each incoming order. This is intentionally easy to inspect: there are no heaps, price indexes, lazy-deletion records, shared mutable registries, or retained trade history. Partial makers stay in place with their original arrival sequence; exhausted and cancelled makers are removed; only residual limit quantity rests.
+
+With `B` active orders and `F` makers filled by one event, validation and cancellation take `O(B)` time, matching takes `O(B log B + F)` time because eligible makers are sorted, and insertion is `O(1)` amortized. Active book storage is `O(B)` and one matching operation uses up to `O(B)` temporary references. This is the audit-friendly baseline, not the optimized design.
+
+Rejected events are fully validated before any state mutation. A rejected event leaves both the active book and `last_accepted_seq` unchanged. Accepted unknown cancellations advance the sequence and leave the book unchanged, as specified by the approved engineering contract.
 
 ## Repository structure
 
@@ -94,6 +102,65 @@ python3 -m unittest discover -s "03_tests" -p "test_*.py" -v
 ```
 
 The documented replay entry point will be `python -m orderbook.replay`. Benchmark and dashboard commands will use absolute paths under `05_benchmarks` and `06_dashboard`. Exact commands will be added only when those approved files exist.
+
+### Version A correctness commands
+
+The following PowerShell command is the exact Stage 4A baseline projection command that was executed from the project root. It discovers the complete suite, injects only `BaselineOrderBook` into the shared engine matrix, and excludes exactly one method whose purpose requires two engine observations. The command fails if that exclusion is absent or duplicated.
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE='1'; $env:PYTHONPATH=(Resolve-Path '04_implementation').Path; @'
+from pathlib import Path
+import io
+import sys
+import unittest
+sys.path.insert(0, str(Path('03_tests').resolve()))
+import support
+from orderbook import BaselineOrderBook
+support.ENGINE_CLASSES = (BaselineOrderBook,)
+excluded_id = 'test_differential.TestDifferentialObservations.test_each_engine_matches_oracle_before_cross_engine_comparison'
+
+def flatten(suite):
+    for item in suite:
+        if isinstance(item, unittest.TestSuite):
+            yield from flatten(item)
+        else:
+            yield item
+
+discovered = unittest.defaultTestLoader.discover('03_tests')
+all_tests = list(flatten(discovered))
+excluded = [test for test in all_tests if test.id() == excluded_id]
+included = [test for test in all_tests if test.id() != excluded_id]
+stream = io.StringIO()
+result = unittest.TextTestRunner(stream=stream, verbosity=1).run(unittest.TestSuite(included))
+print(f'discovered={len(all_tests)} included={len(included)} excluded={len(excluded)}')
+print(f'run={result.testsRun} failures={len(result.failures)} errors={len(result.errors)} skipped={len(result.skipped)} successful={result.wasSuccessful()}')
+if result.failures or result.errors:
+    print(stream.getvalue())
+    raise SystemExit(1)
+'@ | python -
+```
+
+Observed result: 46 methods discovered, 45 included, one excluded, and all 45 passed with no failure, error, or skip. The excluded method compares observations from both implementations; excluding it does not remove an engine-behavior oracle because each engine is tested against the independently calculated transition oracle first.
+
+Replay the supplied worked example with Version A from the project root:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path '04_implementation').Path
+python -m orderbook.replay '02_data/supplied/data/worked_example.jsonl' --engine baseline
+```
+
+```bash
+PYTHONPATH="$(pwd -P)/04_implementation${PYTHONPATH:+:$PYTHONPATH}" \
+python3 -m orderbook.replay "02_data/supplied/data/worked_example.jsonl" --engine baseline
+```
+
+The unchanged full suite intentionally remains RED until Version B exists. At the Stage 4A checkpoint it ran 46 methods with zero assertion failures and 37 errors, all explicitly raised by untouched `OptimizedOrderBook` stubs.
+
+### Future benchmark stop policy
+
+No benchmark has yet been run. The proposed Stage 4 resource policy is a 30-second per-repeat limit for 1,000- and 10,000-event workloads and 120 seconds for 100,000-event workloads. On the first timeout, stop that engine/workload configuration immediately, skip its remaining repeats, and record the threshold, elapsed time, completed repeats, skipped repeats, and reason. Never calculate an ordinary five-repeat median from an incomplete configuration.
+
+The proposed total benchmark wall-time budget is 150 minutes: 90 minutes for primary engine-only replay, 45 minutes for separate latency/memory/liquidation/diagnostic modes, and 15 minutes for integrity checks. A global cutoff wins over per-run limits, and incomplete mandatory observations must be reported rather than hidden. Primary timing excludes parsing, result logging, canonical snapshots, memory tracing, transition verification, and diagnostic counters. No one-million-event workload is planned.
 
 ## Decisions required before Stage 3
 
