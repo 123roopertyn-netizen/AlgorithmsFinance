@@ -55,12 +55,11 @@ each step in `REVISIONS.md`.
 | 7: `__slots__` records | rejected | +1.5% / +4.2% |
 | 8: tuple records | rejected | -1.1% / -2.4%, inside the ~2% noise |
 | Run the other three scenarios at 100,000 events before pushing | accepted (Bastian's request) | all between 0.12 and 0.21 s; A and B identical on `cancel_churn` 100,000 (same checksum) |
-
 | 9 (Bastian's candidate): `deque` of `[qty, seq, order_id]` per price level, lazy cancel (qty 0), live/dead counters, compaction when more than half is dead | accepted (kept), with a disclosed trade-off | buildup -15.9%, sweep -12.9%, crowded -12.5%; mixed +1.0%, cancel_churn +11.6% (interleaved runs, identical output). tracemalloc: no stale growth on cancel_churn; after 49,999 of 50,000 cancels 2.0 MB vs 4.9 MB. 388 tests pass |
 | Structure test `tests/test_version_b_structure.py` (private attributes: no empty level, live/dead counters, records <= 2·live, index == queues) after every event | accepted | A-vs-B results cannot see a dead record that is never removed. Two planted bugs (no compaction; `dead` not decremented) both fail the test |
 | First `scen.py` timing of cancel_churn (0.1377 s vs 0.1221 s) | corrected into a proper comparison | that run was not interleaved, so I re-measured with `tools/ab_timing.py` twice: +12.9% and +10.3%. The regression is real and is stated in REVISIONS.md |
 
-Cumulative speed-up of kept steps: mixed -19.0%, buildup -23.5% (0.1995 -> 0.1617 s and
+Cumulative speed-up of kept steps 1, 2, 4 (before step 9): mixed -19.0%, buildup -23.5% (0.1995 -> 0.1617 s and
 0.2285 -> 0.1748 s). Numbers depend on this machine and are repeated in `REVISIONS.md`.
 
 ## Phase 4: own generator and A-vs-B equivalence
