@@ -63,3 +63,23 @@ and 200% sale, with construction, sale, and sale-memory boundaries kept
 separate. Five 1,000-event diagnostic streams provide operation counts and
 final invariant checks outside primary timing.
 
+## Version B: indexed FIFO price levels
+
+Formal Version A results identified active-book size, rather than historical
+event count alone, as the relevant bottleneck. Buildup latency rose strongly
+from early to late windows and large active-book runs timed out, whereas the
+100,000-event cancellation-churn workload completed while retaining almost no
+active orders. This supports revising the repeated `O(B)` scans and list
+shifts.
+
+Version B therefore uses an active-order dictionary, one `OrderedDict` FIFO
+queue per occupied side and price, and sorted occupied-price lists maintained
+with `bisect`. An earlier heap proposal was not adopted: lazy heap deletion
+would permit stale price entries to accumulate during cancellation churn.
+
+After implementation, the complete unchanged suite plus the pre-revision
+contract tests passes: 214 tests. The five supplied 10,000-event streams also
+replay under Version B with zero rejected events and valid final books. No
+Version B speed or memory improvement is claimed at this checkpoint; the same
+preregistered formal tasks and stress settings must be rerun first.
+

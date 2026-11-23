@@ -2,8 +2,9 @@
 
 This project implements and measures two Python versions of a sequential,
 single-venue BTC limit order book. The transparent list-based Version A is
-implemented and verified. Version B remains a deliberate implementation stub
-until Version A is measured and the revision is justified.
+implemented and measured. The indexed FIFO-price-level Version B is implemented
+and passes the unchanged behavioral contract; its formal measurements remain
+to be run.
 
 ## Environment
 
@@ -96,13 +97,13 @@ committed runner checkpoint.
 
 1. Specification and independent tests: strengthened by pre-revision critical review.
 2. Transparent baseline: implemented and passing its applicable contract tests.
-3. Revised implementation: not implemented.
+3. Revised implementation: implemented; full 214-test suite passes.
 4. Throughput: formal Version A matrix recorded.
 5. Per-event latency: formal Version A representative matrix recorded.
 6. Memory: formal Version A state and retained-output matrices recorded.
-7. Formal input matrix: generated and checksum-verified; measurements not started.
+7. Formal input matrix: generated and checksum-verified; Version A recorded.
 8. Timeout-aware formal runner: 114 Version A task statuses recorded.
-9. Liquidation and diagnostic harness: implemented; formal stress run not started.
+9. Liquidation and diagnostic harness: Version A formal stress run recorded.
 10. Dashboard: not implemented.
 
 Validate the baseline against all supplied 10,000-event streams:
@@ -111,6 +112,9 @@ Validate the baseline against all supplied 10,000-event streams:
 $env:PYTHONPATH = "src"
 ..\.venv\Scripts\python.exe scripts\03_validate_supplied.py --version baseline
 ```
+
+Use `--version revised` to validate Version B against the same supplied
+streams.
 
 The baseline deliberately uses a list of individual resting orders. It scans
 and sorts that list during matching and scans it during cancellation. This is

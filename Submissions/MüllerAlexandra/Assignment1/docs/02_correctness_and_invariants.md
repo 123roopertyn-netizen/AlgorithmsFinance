@@ -95,3 +95,27 @@ otherwise:
 
 These arguments and passing tests provide evidence; they are not a formal
 proof for arbitrary Python objects outside the documented event contract.
+
+## Version B representation invariants
+
+Version B preserves the state invariants above and additionally maintains:
+
+1. `_orders` contains exactly the active order identifiers.
+2. Every active order is the same object in `_orders` and in exactly one
+   side-price FIFO queue.
+3. Every occupied price occurs exactly once in its side's strictly increasing
+   price list and has one nonempty queue; empty levels occur in neither view.
+4. Each `OrderedDict` iteration order is arrival order. A partial fill changes
+   only quantity, so it never moves a maker behind a later arrival.
+
+Insertion creates both price-level views together. Exhaustion and cancellation
+delete the order from both order indexes and delete both price-level views only
+when the queue becomes empty. Matching always reads an endpoint of a sorted
+price list and the first item of its FIFO queue. Therefore the revised
+representation implements the same best-price-then-arrival rule without a
+whole-book scan.
+
+The unchanged hand-calculated tests, reference-model generated tests,
+invariant checks, and Version-A/Version-B differential checks compare each
+event's ordered fills and canonical remaining book. Agreement is supporting
+evidence and does not replace the independent expectations or reasoning above.

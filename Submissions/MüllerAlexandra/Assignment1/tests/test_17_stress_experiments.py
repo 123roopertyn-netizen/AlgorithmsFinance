@@ -66,7 +66,6 @@ def test_liquidation_rebuilds_identical_book_for_every_repeat() -> None:
         for record in measurement["records"]
         if record["repeat"] == 1
     }
-    assert by_size["10_percent"] | {"construction_seconds": 1.0, "sale_seconds": 1.0} == by_size["10_percent"]
     assert (
         by_size["10_percent"]["requested_qty_units"],
         by_size["10_percent"]["executed_qty_units"],

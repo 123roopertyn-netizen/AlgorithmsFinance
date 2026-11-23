@@ -56,13 +56,14 @@ rejected with the reason and the verification performed.
   authorized proceeding. The accepted contract separates construction and
   sale timing, retains fill output during sale-memory tracing, and supplements
   primary runs with five small correctness/count diagnostics.
-
-## Pending suggestions
-
-- For Version B, consider an active-order dictionary, FIFO containers grouped
-  by price, and heaps for locating the best bid and ask. This remains pending:
-  it will be accepted, corrected, or rejected only after Version A is measured
-  and the data structures, invariants, and trade-offs are reviewed.
+- After reviewing the Version A measurements and walking through the data
+  structures, the user accepted an active-order dictionary, per-price
+  `OrderedDict` FIFO queues, and sorted occupied-price lists maintained with
+  `bisect` for Version B. The revision removes repeated active-book ID-set
+  construction, matching scans, and list removal by order position. It adds
+  persistent indexes and an `O(P)` list-shift cost when a price level is
+  created or removed. Its measured effect is intentionally left open until
+  the unchanged formal protocol is rerun.
 
 ## AI-assisted output corrected so far
 
@@ -119,5 +120,10 @@ rejected with the reason and the verification performed.
 
 ## Rejected so far
 
-- None.
+- AI's initial Version B suggestion included heaps for best-price lookup. That
+  part was rejected after the Version A cancellation-churn evidence was
+  reviewed: standard lazy deletion can leave stale heap entries whose memory
+  grows with level turnover rather than the live book. Sorted unique price
+  lists were selected instead. They keep no stale entries and make the
+  `O(P)` creation/removal trade-off explicit.
 
