@@ -67,7 +67,8 @@ files belong under `data/generated/` and are not committed.
 3. Revised implementation: not implemented.
 4. Throughput harness: smoke-verified; formal measurements not started.
 5. Per-event latency harness: smoke-verified; formal measurements not started.
-6. Memory, experiment matrix, and dashboard: not implemented.
+6. Memory harness: smoke-verified; formal measurements not started.
+7. Experiment matrix and dashboard: not implemented.
 
 Validate the baseline against all supplied 10,000-event streams:
 
@@ -121,4 +122,30 @@ Every measured repeat uses a new empty book, and raw records retain both repeat
 and event indices. Like the throughput smoke check, this verifies
 instrumentation and persistence; its 100-event timings are not formal
 performance evidence.
+
+Memory is measured separately with input parsing completed before
+`tracemalloc` starts. Run state-only and retained-output modes independently:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python.exe scripts\05_measure_memory.py `
+  --version baseline `
+  --mode memory_state `
+  --input data\supplied\cancel_churn_10000.jsonl.gz `
+  --max-events 100 `
+  --checkpoints 10 `
+  --out evidence\07_memory_smoke\07_baseline_cancel_churn_100_state.json
+
+..\.venv\Scripts\python.exe scripts\05_measure_memory.py `
+  --version baseline `
+  --mode memory_retained_output `
+  --input data\supplied\cancel_churn_10000.jsonl.gz `
+  --max-events 100 `
+  --checkpoints 10 `
+  --out evidence\07_memory_smoke\07_baseline_cancel_churn_100_retained_output.json
+```
+
+The additional buildup smoke record uses the same state-only command with
+`buildup_10000.jsonl.gz`. These 100-event records verify boundaries, growth
+samples, and persistence; their byte values are not formal A-versus-B results.
 

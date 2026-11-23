@@ -34,6 +34,12 @@ rejected with the reason and the verification performed.
   accepted separate throughput, per-event latency, memory, and diagnostic
   runs; fresh state; saved raw repeats; explicit inclusion boundaries; and a
   test-first helper module.
+- For memory measurement, AI proposed separate state-only and retained-output
+  runs instead of mixing output-history allocation with the live book. The
+  user accepted the test-first contract. Parsing remains outside tracing;
+  book construction, state, temporaries, the current result, and fixed
+  checkpoint bookkeeping are included; final inspection is outside tracing
+  and is identified as diagnostic counting rather than measured allocation.
 
 ## Pending suggestions
 

@@ -40,3 +40,14 @@ No Version B algorithmic revision has been made yet. The measured bottleneck,
 revision rationale, and tests added for discovered cases will be recorded
 without weakening earlier expected outcomes.
 
+## Measurement infrastructure before Version B
+
+Throughput, repeated per-event latency, and memory measurement were implemented
+test-first before formal Version A results were inspected. Memory uses separate
+state-only and retained-output modes. Its traced boundary excludes preloaded
+input but includes empty-book construction, live state, temporary allocations,
+the current result, and fixed checkpoint bookkeeping. Final book inspection is
+outside tracing. Non-formal 100-event smoke records exercise cancellation churn
+and buildup only to validate the harness; they are not used to justify Version
+B or claim a performance improvement.
+

@@ -90,6 +90,14 @@ Two modes are distinguished:
 - `memory_retained_output`: retain every returned result and fill list so output
   history is explicitly included.
 
+The traced region begins before empty-book construction and ends immediately
+after the last growth sample. It therefore includes book construction, live
+state, matching temporaries, the current result, and the fixed set of growth
+checkpoint records. Input parsing and the preloaded event tuple precede
+tracing. Final canonical book inspection follows tracing and supplies active
+order and occupied-level counts without inflating the recorded peak. Every
+saved record carries these inclusion flags.
+
 For cancellation churn, report final active orders, final occupied levels,
 current bytes, and peak bytes. This reveals storage that grows with historical
 events even when active depth is tiny.
