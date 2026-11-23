@@ -196,7 +196,25 @@ No benchmark has yet been run. The proposed Stage 4 resource policy is a 30-seco
 
 The proposed total benchmark wall-time budget is 150 minutes: 90 minutes for primary engine-only replay, 45 minutes for separate latency/memory/liquidation/diagnostic modes, and 15 minutes for integrity checks. A global cutoff wins over per-run limits, and incomplete mandatory observations must be reported rather than hidden. Primary timing excludes parsing, result logging, canonical snapshots, memory tracing, transition verification, and diagnostic counters. No one-million-event workload is planned.
 
-The full five-repeat matrix cannot be guaranteed within 90 primary minutes under worst-case near-timeout durations; its theoretical upper bound is 450 minutes. Before finalizing limits, the proposed pilot is one engine-only repeat for both engines on each supplied 10,000-event scenario, plus one repeat on the existing 100,000-event `buildup` and `cancel_churn` workloads. Events are parsed before timing, every run uses a fresh engine, and snapshots, tracing, counters, and logging stay outside the timed region. Per-repeat limits remain 30 seconds for 10,000 events and 120 seconds for 100,000 events, with a 12-minute global pilot cutoff. The pilot is only for runtime estimation and cannot replace the required five-repeat measurements. It has not been authorized or run.
+The full five-repeat matrix cannot be guaranteed within 90 primary minutes under worst-case near-timeout durations; its theoretical upper bound is 450 minutes. A controlled pilot was therefore run to estimate practical duration. It used both engines on all five supplied 10,000-event seed-42 streams and the generated 100,000-event seed-42 `buildup`, `cancel_churn`, and `sweep` streams. Events were parsed before timing, every run used a fresh engine, and snapshots, tracing, counters, logging, and result retention stayed outside the timed region. Processing limits were 30 seconds for 10,000 events and 120 seconds for 100,000 events; preparation limits were 15/45 seconds and the global ceiling was 20 minutes.
+
+Run the pilot only when the output path does not already exist:
+
+```powershell
+python '05_benchmarks/run_benchmarks.py' pilot `
+    --output '07_results/pilot/pilot_runs.jsonl' `
+    --global-timeout-seconds 1200
+```
+
+```bash
+python3 05_benchmarks/run_benchmarks.py pilot \
+    --output 07_results/pilot/pilot_runs.jsonl \
+    --global-timeout-seconds 1200
+```
+
+The controller refuses to overwrite an existing result. The completed pilot wrote 16 `phase: "pilot"` records: 14 completed and two processing timeouts, both Version A on 100,000-event `buildup` and `sweep`. Total controller wall time was 288.3100479003042 seconds. The result file SHA-256 is `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`. These observations estimate resources only and must never enter final five-repeat statistics, throughput summaries, plots, or speedups.
+
+The worker-controller protocol parses and constructs a fresh engine before `READY`, waits for a nonce-matched `START`, emits `STARTED`, then measures only sequential `process_event` calls with `time.perf_counter`. Garbage collection remains enabled after one pre-timing `gc.collect()`. The controller supervises only its exact `Popen` handle and reaps terminated workers.
 
 ## Decisions required before Stage 3
 

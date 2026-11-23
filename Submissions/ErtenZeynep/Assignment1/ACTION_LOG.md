@@ -799,3 +799,66 @@ No existing correctness test, baseline, validation, replay, contract, package ex
 - Canonical Risk Register: 25 rows, 25 unique IDs.
 - Mutation staging directories present: zero. Cache directories and `.pyc` files: zero.
 - Confirmed the six authorized changed/created documentation, implementation, and test files exist with nonzero content.
+
+## 2026-11-23 - Stage 4C benchmark pilot
+
+### 79. Reviewed and bounded the authorized pilot
+
+- Confirmed the three authorized output/script paths did not exist before work.
+- Rehashed all six production package files before implementation; hashes matched the Gate B checkpoint.
+- Pilot scope: five supplied 10,000-event scenarios plus generated 100,000-event `buildup`, `cancel_churn`, and `sweep`, seed 42, both engines, one repeat: 16 runs.
+- Limits: 30/120 seconds processing, 15/45 seconds preparation, and 1,200 seconds globally.
+
+### 80. Created the controller and worker
+
+- Created `05_benchmarks/run_benchmarks.py` and `05_benchmarks/_benchmark_worker.py` using only the Python standard library.
+- Implemented nonce-matched `READY`, `START`, `STARTED`, and `DONE` messages; preparation and processing deadlines; exact-handle terminate/kill/wait cleanup; fresh engines; pre-timing parsing and `gc.collect`; GC enabled during replay; and post-timing canonical snapshot hashing.
+- Implemented 16 incremental JSONL records, explicit statuses, portable workload identifiers, environment metadata, refusal to overwrite, and a hard maximum global limit.
+- No matching engine or correctness test changed.
+
+### 81. Ran non-benchmark preflight checks
+
+- Compiled both scripts and displayed controller/worker help successfully.
+- Audited plan: 16 runs, ten at 10,000 events and six at 100,000; processing caps totaled 1,020 seconds and preparation caps 420 seconds.
+- Confirmed alternating engine order and absence of name/pattern-based termination commands.
+
+### 82. Executed the single authorized pilot
+
+- Exact command: `python '05_benchmarks/run_benchmarks.py' pilot --output '07_results/pilot/pilot_runs.jsonl' --global-timeout-seconds 1200` with `PYTHONDONTWRITEBYTECODE=1`.
+- Controller summary: 16 planned and written records; 14 `completed`, two `timed_out`; total wall time 288.3100479003042 seconds; exit code zero.
+- Completed engine times in seconds:
+  - 10,000 buildup: Version A 11.660955300554633; Version B 0.04928850010037422.
+  - 10,000 crowded: Version A 11.593628799542785; Version B 0.042383600026369095.
+  - 10,000 mixed: Version A 0.7229573996737599; Version B 0.04173330031335354.
+  - 10,000 sweep: Version A 11.840532699599862; Version B 0.050656200386583805.
+  - 10,000 cancel_churn: Version A 0.04027129989117384; Version B 0.03128490038216114.
+  - 100,000 buildup: Version B 0.6360587999224663; Version A timed out at the 120-second processing limit.
+  - 100,000 cancel_churn: Version A 0.26394759956747293; Version B 0.31906820088624954.
+  - 100,000 sweep: Version B 0.6901657003909349; Version A timed out at the 120-second processing limit.
+- Both timeouts were censored observations: no engine time, throughput, or final snapshot digest was fabricated.
+
+### 83. Validated pilot integrity and cleanup
+
+- JSONL: 16 records, 17,726 bytes, all `phase: pilot`, sequential planned indexes 1–16, portable workload identifiers, SHA-256 `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`.
+- All eight engine pairs had equal event-stream digests. Six pairs completed on both engines and had equal final snapshot digests. The two timed-out pairs were correctly not compared.
+- Maximum preparation time was 0.8466493999585509 seconds, below every preparation limit.
+- Exact-PID inspection after the run found one reused PID belonging to Windows `conhost.exe`, not Python. The controller had already waited/reaped every worker; no benchmark worker remained.
+- Production package hashes remained unchanged. A constrained-PowerShell filename-formatting expression raised harmless method-invocation errors while still printing the correct hashes; a Python retry printed filenames and hashes correctly.
+
+### 84. Performed the authorized privacy audit
+
+- Searched README, ACTION_LOG, AI_DECISIONS, AGENTS, and `08_documentation` for Windows/macOS/Linux personal home paths.
+- Findings: ten occurrences, all in `ACTION_LOG.md` at lines 10, 17, 31, 46, 66, 77, 254, 395, 421, and 494 at scan time. They are historical command/environment evidence involving the Windows username. No finding occurred in README, AI_DECISIONS, AGENTS, or `08_documentation`.
+- No text was redacted or rewritten. Proposed correction requires user approval: if ACTION_LOG is public, replace the personal prefix with `<USERPROFILE>` and the Codex installation prefix with `<CODEX_HOME>`, label the changes as privacy redactions, and preserve the original log hash/private historical copy separately.
+
+No full benchmark, latency, memory, diagnostic, liquidation, dashboard, or report work occurred. No dependency installation, network access, Git command, or GitHub operation occurred.
+
+### 85. Performed final Stage 4C integrity and cleanup audit
+
+- Recompiled both benchmark scripts: passed.
+- Revalidated 16 pilot records, 14 completed/two timed out, and unchanged result SHA-256 `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`.
+- Confirmed only the two approved benchmark scripts and one approved pilot JSONL exist in their new locations.
+- Rehashed all production package files: unchanged from Gate B.
+- README fences: 38 and balanced; canonical Risk Register: 25 rows and 25 unique IDs.
+- Detected `03_tests/__pycache__` containing eleven `.pyc` files timestamped earlier on 23 November. Verified the exact project-contained path, exact count, and `.pyc` extensions; removed each exact file and then the empty directory. No test source was modified. Final cache count: zero.
+- Final privacy scan reproduced the same ten historical ACTION_LOG findings and no findings in README, AI_DECISIONS, AGENTS, or `08_documentation`.

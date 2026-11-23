@@ -491,3 +491,53 @@ This history records meaningful changes without creating duplicate current-statu
 - Canonical snapshots are intentionally expensive and must stay outside primary timing.
 - The provisional benchmark matrix cannot be guaranteed within 90 primary minutes under near-timeout durations; the pilot requires separate approval before limits are finalized.
 - POSIX commands remain documented but unexecuted in the current Windows environment.
+
+## Stage 4C pilot decisions and evidence
+
+### DEC-030 - Enforceable pilot supervision
+
+- Status: IMPLEMENTED and VERIFIED.
+- One standard-library controller owns every worker `Popen` handle. It enforces bounded preparation, nonce-matched READY/START/STARTED synchronization, engine-processing deadlines, and exact-handle terminate/kill/wait cleanup.
+- Official engine duration is worker `time.perf_counter` around only `process_event`; controller wall time is separate. Parsing, startup, GC collection, output, snapshot hashing, and logging are excluded.
+- GC policy: one `gc.collect()` after preparation, then ordinary enabled GC during timing for both engines.
+
+### DEC-031 - Pilot observations
+
+- Status: VERIFIED AS PILOT ONLY; not final benchmark evidence.
+- Planned/written: 16/16. Completed: 14. Processing timeouts: two. Failures, preparation timeouts, handshake failures, and global-budget skips: zero.
+- Total wall time: 288.3100479003042 seconds.
+- Verified timeouts: Version A, 100,000-event buildup and sweep. Each was stopped at 120 seconds, reaped, and recorded without engine duration or throughput.
+- All eight pairs used identical event-stream digests. Six completed pairs had identical final snapshot digests. Snapshot equality remains supplemental and does not prove fill equality.
+- Result isolation: `07_results/pilot/pilot_runs.jsonl`, all records explicitly `phase: pilot`; SHA-256 `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`.
+
+### DEC-032 - Full timing estimate and timeout expectations
+
+- Status: PROPOSED FROM ONE-REPEAT PILOT; uncertainty remains.
+- Direct extrapolation of 10,000-event seed-42 times to three seeds × five repeats gives about 537.88 seconds (8.97 minutes) Version A engine time and 3.23 seconds Version B engine time across the five scenarios, before process overhead.
+- Verified likely final timeouts: Version A 100,000-event buildup and sweep. Version A 100,000-event crowded and four-bucket concentration are plausible timeout risks because their 10,000-event behavior is similarly dominated by large active queues, but they must be attempted. Version A 100,000-event mixed is unresolved. Cancel-churn completed quickly for both engines.
+- Practical primary estimate under stop-on-first-timeout: approximately 30–50 minutes for the 45 core configurations, or roughly 40–60 minutes including concentration runs and supervision. Retain a 90-minute primary ceiling until final evidence exists.
+- Separate latency, memory, liquidation, and diagnostic work may require another 45–90 minutes, especially where Version A cannot finish. Total remaining experimental work should be planned as approximately two to three hours, not assumed to fit the earlier 45-minute diagnostic allowance.
+
+### DEC-033 - Proposed resumable final timing design
+
+- Status: PROPOSED; not implemented.
+- Append one fsynced JSONL record per repetition to `07_results/raw/timing.jsonl`; never overwrite completed evidence.
+- Resume key: phase, mode, engine, scenario, event count, seed, repetition, workload SHA-256, engine-source SHA-256, Python/environment fingerprint, GC policy, timeout policy, and controller protocol version.
+- Before skipping a completed repetition, require exact key/checksum/environment agreement and status `completed`. Duplicate or contradictory keys stop execution for review.
+- A timeout stops that engine/workload configuration; previously completed repetitions remain, and every remaining repetition receives an explicit `skipped_after_timeout` record. Global-budget omissions receive `skipped_global_budget`.
+- Alternate engine order by configuration/repetition and preserve fresh worker/engine state. Pilot records are never eligible resume records for `phase: final`.
+
+### DEC-034 - Public-path privacy findings
+
+- Status: OPEN, awaiting user decision.
+- Ten personal Windows-path occurrences were found only in ACTION_LOG historical evidence. No occurrence was found in README, AI_DECISIONS, AGENTS, or `08_documentation`.
+- Recommended public-submission treatment: privacy-redact only the personal prefixes using explicit placeholders, label the transformation, record the original log SHA-256, and preserve the unredacted historical evidence privately. Do not silently rewrite commands or imply the portable form was originally executed.
+
+### Stage 4C remaining risks
+
+- Pilot measurements are single observations and cannot support final medians, percentiles, or speedup claims.
+- Version A timeout censoring prevents ordinary throughput comparison on affected configurations.
+- Version A crowded, concentration, and mixed behavior at 100,000 events remains uncertain.
+- Process startup/preparation overhead is small in this pilot but becomes material across hundreds of final workers and must be budgeted separately.
+- OneDrive/background load and thermal variation remain uncontrolled environmental risks; final runs need alternating order and documented conditions.
+- Final latency, memory, diagnostics, liquidation protocols and their repetition counts still require approval.
