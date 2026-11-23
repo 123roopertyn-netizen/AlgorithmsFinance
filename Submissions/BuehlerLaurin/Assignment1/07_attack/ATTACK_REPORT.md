@@ -191,3 +191,41 @@ n.m. = not measured, n.a. = not applicable. Slopes describe the measured range o
 - A was measured only at small sizes (it is quadratic); its memory for `pinned_dead` at 2000+ levels hit the 60 s limit in the first run and is not reported.
 - The oracle and Phase 1 tests may share a reading of the spec; the fuzz oracle implements no rule that is not in SPEC.
 - Not tried: 1M live orders, multi-GB runs (> 2 GiB would need Laurin's OK), hash attacks on id strings (randomized per process), non-JSON Python objects.
+
+## Addendum 2026-11-23: final Version B
+
+Target: `Submissions/BuehlerLaurin/Assignment1` @ `87ed911f839877c197cd9458b2cd231537955a17` (branch `assignment1`; `01_code/`, `02_tests/`, `06_data/` unmodified against HEAD during the runs; unrelated uncommitted dashboard files were present in the tree)
+Attacker: Claude Code (Opus 5.5), same model as the original attack, new session; did not write B3r or B3r_fast.   Date: 2026-11-23
+Scope (Laurin's final-check prompt): **Step 1 spec-blind correctness only** on the final Version B = registry key `("lob","B")` = `lob.book_b3r.OrderBookB3r` (B3r, see `00_docs/FINAL_SELECTION.md`) and the documented variant `B3r_fast` (`lob.book_b3r_fast.OrderBookB3rFast`). **No complexity, latency or memory measurements.** The original report above attacked B3r only as models (`b3r_model.py`); this addendum attacks the real implementation. Rules kept: writes only in `07_attack/`, no git writes, `evidence.py` not used (writes to `05_evidence/`). The known injection (hidden text in the PDF asking for a specific word, logged in `AI_LOG.md`) was ignored; no new injection seen in the files read.
+
+Commands (PowerShell, from the exercise root; `$py = "$env:USERPROFILE\.venvs\aif-a1\Scripts\python.exe"`):
+```
+& $py -B 07_attack/campaign_final.py 150 400 4 3000                       # logs/final_b_campaign.txt
+& $py -B 07_attack/cli_probe_final.py                                      # logs/final_b_cli_probe.txt
+& $py -B -m pytest -p no:cacheprovider 07_attack -q --runxfail --tb=short  # logs/final_b_pytest_attack.txt
+```
+New files (own/attack): `campaign_final.py` (campaign.py restricted to B and B3r_fast, four modes), `campaign_mutants.py` (the five planted bugs of campaign.py, copied verbatim, plus two new ones), `cli_probe_final.py`. Oracle (`oracle.py`), generator and every-event comparison (`fuzz.py`) are unchanged from the original attack.
+
+### Result: no correctness break in the final Version B or B3r_fast
+
+| Check | Size | Result |
+|---|---|---|
+| Registry | `METHODS[("lob","B")] is METHODS[("lob","B3r")]` | True (same class, so B and B3r are one target) |
+| Planted-bug power check | 7 oracle mutants: Lifo, SeqOnReject, RestMarket, StrictCross, OneEntryCancelZero, **new** StaleTouchAfterCancel (lazy heap reports an emptied best bid), **new** RequeuePartialMaker (partial maker loses time priority) | 7/7 found, all at seed 0 |
+| Differential fuzz vs oracle, B | 4 regimes (narrow, wide, churn, drift) x (150 seeds x 400 events + 4 seeds x 3000 events) = 288,000 events; 4 modes each (every-event inspection; sparse inspection every 97 events; random direct-method mix incl. wrong method for type; aliasing scramble) = **1,152,000 event comparisons**. Compared after every event: result dict and value types, `snapshot()`, `best_bid()`, `best_ask()`, `last_seq`, input not mutated | **0 differences** |
+| Same, B3r_fast | same seeds and sizes, **1,152,000 event comparisons** | **0 differences** |
+| Campaign wall time | both versions + power check | 547 s, exit 0 |
+| Existing attack suite (`test_attack.py`, `--runxfail`) | 1,995 cases, 284 of them on B and 284 on B3r_fast | **1995 passed** in 99 s |
+| Replay CLI, SPEC D3 cases (expected = oracle on the same file) | 12 files x {B, B3r, B3r_fast}: control (plain, gz), UTF-8 BOM (plain, gz, with CRLF), qty with 4,301 / 100k / 1M digits (incl. fills and partial), price with 100k digits on both sides, seq with 100k digits then a smaller one (nonincreasing), negative 5,000-digit qty (bad_qty), BOM + huge ints in gz | **36/36 match the oracle line by line, exit 0**; `--version B` stdout byte-identical to `--version B3r` in 12/12 |
+
+ATK-01 (int > 4300 digits) is **fixed** for the final versions (also 1M digits); BOM input is accepted as SPEC D3 states.
+
+### Observations (no spec rule broken; for Laurin)
+- **`replay` default is A:** without `--version`, `lob.replay` runs Version A (`01_code/lob/replay.py:35`, `default="A"`). SPEC's replay command always passes `--version`, so this is not a violation, but a grader who omits the flag gets the quadratic baseline. Changing the default to `B` or making the flag required is Laurin's call.
+- **Unchanged CLI behaviour outside the spec** (SPEC is silent on file errors): UTF-16 file, a second BOM (start or mid-file), malformed JSON, invalid UTF-8 end with a traceback and exit 1; results printed before the bad line stay. Empty file and BOM-only file: exit 0, no output. Unknown/lowercase `--version` (`b`, `B4`): argparse error, exit 2.
+
+### Limits of this addendum
+- Correctness only; B3r's performance attacks (ATK-P8 models, spike at the threshold, hash collisions per SPEC D3) were not re-measured on the real implementation.
+- The oracle and the planted bugs come from the same model family as the Phase 1 tests; they share its reading of SPEC. Fuzzer power is shown only for the seven planted bug types.
+- Random streams, not exhaustive: books in the long streams reach at most a few thousand events of history; the 1M-event drift regime was not fuzzed against the oracle (the oracle is O(live) per event).
+- Code was read only to identify the registry classes and the replay default (`replay.py`); the fuzz and CLI expectations come from `oracle.py` and SPEC D3 only.
