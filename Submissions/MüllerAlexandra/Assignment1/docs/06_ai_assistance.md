@@ -40,6 +40,12 @@ rejected with the reason and the verification performed.
   book construction, state, temporaries, the current result, and fixed
   checkpoint bookkeeping are included; final inspection is outside tracing
   and is identified as diagnostic counting rather than measured allocation.
+- AI proposed encoding the lecturer's workload requirements as a verified
+  matrix before formal measurement. The user accepted 45 core inputs (five
+  scenarios, three sizes, and three seeds) plus one controlled four-level
+  buildup input. The copied generator was hash-checked against the lecturer's
+  source; every explicit generation setting, metadata file, byte count, and
+  checksum is verified before an input enters the saved plan.
 
 ## Pending suggestions
 

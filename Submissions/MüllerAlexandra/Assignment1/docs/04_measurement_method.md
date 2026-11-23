@@ -25,6 +25,14 @@ directly. Other inputs are generated before measurement and stored outside
 version control under `data/generated/`; commands, settings, metadata, and
 checksums are retained.
 
+The machine-readable input plan contains 45 core configurations: five workload
+families crossed with 1,000, 10,000, and 100,000 events and seeds 42, 43, and
+44. The five supplied 10,000-event seed-42 streams are reused byte-for-byte;
+the other 40 are generated. One additional 10,000-event, seed-42 `buildup`
+stream with four available levels supports the controlled comparison against
+the supplied 1,000-level buildup stream. All 46 inputs are verified against
+their settings, compressed byte counts, and SHA-256 checksums before timing.
+
 One-million-event runs are attempted only after smaller pilots. A time and
 memory limit will be recorded before those attempts and applied identically to
 both versions. A stopped run remains in the results with its limit and reason;

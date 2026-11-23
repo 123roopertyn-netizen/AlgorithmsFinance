@@ -60,6 +60,22 @@ The files under `data/supplied/` are byte-for-byte copies of the assignment
 package's worked example and five 10,000-event synthetic workloads. Larger
 files belong under `data/generated/` and are not committed.
 
+The formal input plan contains 45 core configurations (five scenarios, three
+event counts, and seeds 42, 43, and 44) plus one additional four-level buildup
+stream for the controlled queue-concentration comparison. Generate missing
+streams and verify all metadata and checksums outside timing with:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python.exe scripts\06_prepare_inputs.py `
+  --generate `
+  --plan-out experiments\08_input_plan.json
+```
+
+The command refuses to replace the saved plan. Generated compressed streams
+remain ignored; their small metadata files and the complete verified plan are
+committed for reproducibility.
+
 ## Development status
 
 1. Specification and independent tests: strengthened by pre-revision critical review.
@@ -68,7 +84,8 @@ files belong under `data/generated/` and are not committed.
 4. Throughput harness: smoke-verified; formal measurements not started.
 5. Per-event latency harness: smoke-verified; formal measurements not started.
 6. Memory harness: smoke-verified; formal measurements not started.
-7. Experiment matrix and dashboard: not implemented.
+7. Formal input matrix: generated and checksum-verified; measurements not started.
+8. Experiment runner and dashboard: not implemented.
 
 Validate the baseline against all supplied 10,000-event streams:
 
