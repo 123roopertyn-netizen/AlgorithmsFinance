@@ -353,4 +353,62 @@ My predictions (`PREDICTIONS.md`, committed before the full run):
 
 ## 11. Use of AI
 
-*To be written by Jiaxin.*
+I used Claude (Anthropic) as a coding assistant throughout this assignment.
+
+**What the AI did.** It drafted most of the code: both order book versions, the tests, the
+benchmark and instrumentation scripts, the dashboard, the Docker setup, and first drafts of
+the README and this report.
+
+**What I did myself.**
+* I wrote the predictions in `PREDICTIONS.md` myself and committed them before any full
+  results existed. I then asked the AI to check my reasoning. Its feedback helped me find my
+  own mistake: I first estimated 49 s for A at 100,000 events, then understood that a cost
+  growing with M² means about 100 times more time for 10 times more events, so about 700 s.
+* I practised hand traces of binary and linear search in the lab, then traced the worked
+  example through version B by hand (`TRACE.md`) and compared it with the code.
+* I ran every measurement on my own laptop in Docker and checked the dashboard against the
+  saved results.
+* After the core requirements were done, I asked the AI for possible extensions, chose three
+  of them (price impact, lazy cleanup versus compaction, Docker) and asked for the dashboard
+  myself.
+* Before writing my predictions, I asked the AI to explain dictionaries and hashing, Big O
+  notation and the data structures of both versions in plain terms, so that I could explain
+  the differences in speed and memory myself.
+
+**Accepted.** The design of version B (one FIFO queue per price level, heaps, an id index,
+lazy cancellation with compaction). I accepted it after the profile and the operation counts
+showed that version A spends almost all of its time scanning the list.
+
+**Corrected.** Checking the AI's output against the data found several mistakes:
+* the README gave the wrong number of tests failing on empty stubs (157 instead of 152);
+* a missing import in `bench/experiments.py`;
+* the dashboard's liquidation tab filtered for a status that never appears, so it would
+  have shown nothing;
+* several numbers in the first report draft did not match `results/` (construction time,
+  the speed-up range, the number of price levels), so they were recomputed from the CSV files;
+* a final review against a separate brute-force reference found that a malformed `type` or
+  `side` crashed validation (section 8).
+
+**Rejected.** The AI pointed out that the Docker image would be more reproducible in the long
+term if every dependency and the exact Python version were pinned. I kept only the direct
+dependencies pinned (`requirements.txt`) and the `python:3.12-slim` base image, because the
+project only needs to be reproducible while it is being graded. I had made the same decision
+in the lab.
+
+**What I learned.**
+1. **Estimating run time from complexity.** A scans the whole list for every order, and the
+   list grows with the number of events, so its total time grows with M². From 7 s at
+   10,000 events, I could estimate about 700 s at 100,000, far beyond the 30 s limit.
+2. **Price levels and memory.** Which version uses more memory depends on how orders are
+   spread over prices. With many short queues (buildup, about 2,000 levels), B's per-level
+   queues make it 41 % larger than A. With a few long queues (crowded, 8 levels), B is 43 %
+   smaller, because its slotted order objects are smaller than A's dictionaries.
+3. **How Python dictionaries use memory.** Deleting entries does not shrink a dictionary at
+   once; space is only given back when the table is resized later. It also grows in large
+   jumps, so measured memory rises in steps.
+4. **A better algorithm does not win everywhere.** With a tiny book (cancellation churn), A
+   was 30 % faster than B: scanning one order is almost free, while B updates a dictionary,
+   a deque and a heap every time. Complexity decides at scale; constant costs decide at
+   small sizes.
+5. **Agreement is not proof.** A and B always agreed, but a separate reference still found a
+   bug that both shared, because they use the same validation code.
