@@ -1,5 +1,6 @@
 """Tests for the benchmark code (bench/): rules from the README, percentile convention, limits."""
 import csv
+import gc
 import json
 import time
 from pathlib import Path
@@ -8,7 +9,7 @@ from typing import Any
 import pytest
 
 import generate_orders
-from bench import common, counters, latency, liquidation, timing
+from bench import bench_time, common, counters, latency, liquidation
 from bench.harness import run_limited
 from lob import VERSIONS
 from tools.gen_small import PROFILES, generate
@@ -56,15 +57,15 @@ def row(version="A", scenario="mixed", events="100000", status="ok", median="10.
 
 def test_rule_3_a_on_a_million_events():
     spec = {"scenario": "mixed"}
-    assert timing.a_million_decision(spec, []) is not None                      # no result yet
-    assert timing.a_million_decision(spec, [row(median="59.99")]) is None        # < 60 s: run
-    reason = timing.a_million_decision(spec, [row(median="60.0")])                # = 60 s: not run
+    assert bench_time.a_million_decision(spec, []) is not None                      # no result yet
+    assert bench_time.a_million_decision(spec, [row(median="59.99")]) is None        # < 60 s: run
+    reason = bench_time.a_million_decision(spec, [row(median="60.0")])                # = 60 s: not run
     assert reason is not None and "60.0 s" in reason
-    assert timing.a_million_decision(spec, [row(median="400")]) is not None
-    reason = timing.a_million_decision(spec, [row(status="stopped", median="")])
+    assert bench_time.a_million_decision(spec, [row(median="400")]) is not None
+    reason = bench_time.a_million_decision(spec, [row(status="stopped", median="")])
     assert reason is not None and "stopped" in reason
-    assert timing.a_million_decision(spec, [row(scenario="sweep", median="1")]) is not None
-    assert timing.a_million_decision(spec, [row(events="10000", median="1")]) is not None
+    assert bench_time.a_million_decision(spec, [row(scenario="sweep", median="1")]) is not None
+    assert bench_time.a_million_decision(spec, [row(events="10000", median="1")]) is not None
 
 
 # --- limit harness ------------------------------------------------------------------------------
@@ -110,8 +111,7 @@ def small_stream(tmp_path, monkeypatch):
     monkeypatch.setattr(common, "DATA", tmp_path)
     generate_orders.write_stream(common.stream_path(**spec),
                                  generate_orders.events("mixed", 1000, 42, 1000))
-    monkeypatch.setattr(timing, "RAW", tmp_path / "raw.csv")
-    monkeypatch.setattr(timing, "SUMMARY", tmp_path / "sum.csv")
+    monkeypatch.setattr(bench_time, "TIME_RAW", tmp_path / "time_raw.csv")
     return spec, tmp_path
 
 
@@ -122,35 +122,85 @@ def read(path):
 
 def test_timing_normal_run_has_warmup_and_five_repeats(small_stream):
     spec, tmp = small_stream
-    timing.run_one("B", spec, 600, 60, 5)
-    raw, summary = read(tmp / "raw.csv"), read(tmp / "sum.csv")
+    bench_time.run_one("B", spec, 600, 60, 5)
+    raw = read(tmp / "time_raw.csv")
     assert [r["phase"] for r in raw] == ["warmup"] + ["timed"] * 5
     assert [r["repeat"] for r in raw][1:] == ["0", "1", "2", "3", "4"]
-    assert summary[0]["status"] == "ok" and summary[0]["repeats"] == "5"
+    assert {r["status"] for r in raw} == {"ok"} and {r["repeats"] for r in raw} == {"5"}
     times = sorted(float(r["elapsed_seconds"]) for r in raw[1:])
-    assert float(summary[0]["median_seconds"]) == times[2]            # median of the 5 timed
-    assert float(summary[0]["throughput_events_per_second"]) == pytest.approx(1000 / times[2])
+    assert {float(r["median_seconds"]) for r in raw} == {times[2]}     # median of the 5 timed
+    assert float(raw[0]["parse_seconds"]) > 0
+    assert (raw[0]["version"], raw[0]["events"], raw[0]["limit_seconds"]) == ("B", "1000", "600")
 
 
 def test_timing_slow_first_replay_is_the_only_measurement(small_stream):
     spec, tmp = small_stream
-    timing.run_one("A", spec, 600, 0.0, 5)               # threshold 0 s: every first replay is "slow"
-    raw, summary = read(tmp / "raw.csv"), read(tmp / "sum.csv")
-    assert [r["phase"] for r in raw] == ["single"] and summary[0]["repeats"] == "1"
-    assert summary[0]["status"] == "ok"
+    bench_time.run_one("A", spec, 600, 0.0, 5)           # threshold 0 s: every first replay is "slow"
+    raw = read(tmp / "time_raw.csv")
+    assert [r["phase"] for r in raw] == ["single"] and raw[0]["repeats"] == "1"
+    assert raw[0]["status"] == "ok"
+    assert float(raw[0]["median_seconds"]) == float(raw[0]["elapsed_seconds"])
 
 
-def test_timing_stopped_run_skips_remaining_repeats(small_stream, tmp_path):
+def test_timing_stopped_run_skips_remaining_repeats(small_stream):
     spec, tmp = small_stream
     big: dict[str, Any] = dict(scenario="buildup", events=10000, seed=42, levels=1000)
     generate_orders.write_stream(common.stream_path(**big),
                                  generate_orders.events("buildup", 10000, 42, 1000))
-    timing.run_one("A", big, 1.0, 60, 5)                  # A needs several seconds here
-    raw, summary = read(tmp / "raw.csv"), read(tmp / "sum.csv")
-    assert [r["status"] for r in raw] == ["stopped"] and raw[0]["phase"] == "single"
-    assert summary[0]["status"] == "stopped" and summary[0]["repeats"] == "0"
-    assert summary[0]["median_seconds"] == "" and int(summary[0]["events_done_at_stop"]) > 100
+    bench_time.run_one("A", big, 1.0, 60, 5)             # A needs several seconds here
+    raw = read(tmp / "time_raw.csv")
+    assert len(raw) == 1 and raw[0]["phase"] == "single"
+    assert (raw[0]["status"], raw[0]["replay_status"], raw[0]["repeats"]) == ("stopped", "stopped", "0")
+    assert raw[0]["median_seconds"] == "" and int(raw[0]["events_done"]) > 100
     assert float(raw[0]["elapsed_seconds"]) >= 1.0
+
+
+class _CountingBook:
+    """Stands in for an engine: counts books created and records whether gc was enabled."""
+    created = 0
+    gc_enabled: list[bool] = []
+
+    def __init__(self):
+        type(self).created += 1
+
+    def process(self, event):
+        type(self).gc_enabled.append(gc.isenabled())
+
+
+class _Conn:
+    def __init__(self):
+        self.messages = []
+
+    def send(self, message):
+        self.messages.append(message)
+
+
+def test_replay_runs_with_gc_enabled_and_a_fresh_book_each_time(tmp_path, monkeypatch):
+    _CountingBook.created, _CountingBook.gc_enabled = 0, []
+    path = tmp_path / "s.jsonl"
+    path.write_text("".join(json.dumps({"seq": n}) + "\n" for n in range(1, 21)))
+    loads = []
+    real_load = bench_time.load_events
+    monkeypatch.setattr(bench_time, "load_events", lambda p: loads.append(p) or real_load(p))
+    monkeypatch.setitem(bench_time.VERSIONS, "X", _CountingBook)
+    conn = _Conn()
+    gc.enable()
+    bench_time.time_worker(conn, "X", str(path), 60, 5)
+    assert len(loads) == 1, "the file must be parsed once per run"
+    assert _CountingBook.created == 6, "warm-up + 5 repeats, each with a fresh book"
+    assert len(_CountingBook.gc_enabled) == 6 * 20 and all(_CountingBook.gc_enabled)
+    assert gc.isenabled()
+    done = [m for m in conn.messages if m[0] == "unit_done"]
+    assert [m[1] for m in done] == ["first"] + [f"timed{r}" for r in range(5)]
+
+
+def test_env_json_has_python_macos_machine_and_commit(tmp_path, monkeypatch):
+    monkeypatch.setattr(common, "RESULTS", tmp_path)
+    common.write_environment()
+    env = json.loads((tmp_path / "env.json").read_text())
+    assert env["python"].startswith("3.") and env["git_commit"] and len(env["git_commit"]) == 40
+    assert env["platform"].startswith("macOS") and env["macos"] and env["mac_model_id"]
+    assert "gc enabled" in env["timing"] and env["constants"]["limit_seconds"] == 600
 
 
 # --- counters: instrumentation must not change behaviour and must restore the engines ----------

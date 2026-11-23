@@ -112,10 +112,18 @@ Details of how the rules are applied (also fixed before the first run):
 - **Enforcement.** Every run is a child process. The parent measures wall-clock time and, at 600 s,
   stops the child. Events processed at the stop = the `seq` of the event being processed (the
   generator numbers events 1, 2, 3, ...). Stops during a liquidation sale have no event count.
-- **Timing.** `time.perf_counter` around the replay loop only; `gc.collect()` before and
-  `gc` disabled during each replay (like `timeit`); results are discarded, not stored; parsing
-  (gzip + JSON) is timed separately and saved as `parse_seconds`. Throughput = events divided by
-  the median replay seconds (the single measurement if `repeats=1`).
+- **Timing** (`bench/bench_time.py`, Phase 6a). `time.perf_counter` around the replay loop only;
+  the garbage collector stays **enabled** (default Python behaviour); `gc.collect()` runs before each
+  replay, outside the timed region, so that every replay starts from the same heap state. Each run
+  parses its file once (gzip + JSON, saved as `parse_seconds`, not part of the replay time). Every
+  replay (warm-up and the 5 timed ones) uses a fresh empty book; results are discarded, not stored.
+  Throughput = events divided by the median replay seconds (the single measurement if
+  `repeats=1`). Output: `results/time_raw.csv` (one row per replay; the median of the run is on every
+  row of that run) and `results/env.json` (Python, macOS, machine, git commit, constants).
+  *Change record:* the first draft of these rules disabled `gc` during replays. Bastian decided to
+  keep it enabled; a first benchmark run started with `gc` disabled was stopped after 33 runs
+  (the 1,000-event streams and the first 10,000-event run) and its files were discarded, so no
+  reported number comes from it.
 - **Instrumented runs** (latency, `tracemalloc` memory, operation counters) are separate runs and
   never part of the primary timing. They use seed 42 and 10,000 events (counters also 1,000) for A
   and B, and 100,000 events for B. A runs at 100,000 events only if its timing run at that size

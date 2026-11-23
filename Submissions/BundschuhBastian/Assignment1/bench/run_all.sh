@@ -7,11 +7,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PY="${PYTHON:-.venv/bin/python}"
 mkdir -p results
-"$PY" -c "from bench.common import write_environment; write_environment()"
 "$PY" -m bench.peaks
 "$PY" -m bench.correctness
 [[ "${1:-}" == "quick" ]] && exit 0
-"$PY" -m bench.timing                  # primary timing, rules 1-3
+"$PY" -m bench.bench_time              # Phase 6a: primary timing (writes results/env.json too)
 "$PY" -m bench.counters                # separate instrumented runs follow
 "$PY" -m bench.memory
 "$PY" -m bench.latency

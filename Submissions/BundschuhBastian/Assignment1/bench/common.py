@@ -71,6 +71,17 @@ def append_csv(path: Path, fields: list[str], row: dict) -> None:
         writer.writerow({k: row.get(k, "") for k in fields})
 
 
+def run_result(rows: list[dict], version: str, scenario: str, seed: int, events: int,
+               levels: int) -> dict | None:
+    """The first row of one run in time_raw.csv (run-level fields: status, median_seconds, ...),
+    or None if that run has no row yet."""
+    key = (version, scenario, str(seed), str(events), str(levels))
+    for row in rows:
+        if (row["version"], row["scenario"], row["seed"], row["events"], row["levels"]) == key:
+            return row
+    return None
+
+
 def _sh(*cmd: str) -> str:
     try:
         return subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout.strip()
@@ -84,7 +95,12 @@ def environment() -> dict:
         "python": platform.python_version(), "implementation": platform.python_implementation(),
         "zlib": zlib.ZLIB_VERSION, "platform": platform.platform(),
         "machine": platform.machine(), "processor": platform.processor(),
-        "mac_model": _sh("sysctl", "-n", "hw.model"),
+        "macos": _sh("sw_vers", "-productVersion"),
+        "mac_model_id": _sh("sysctl", "-n", "hw.model"),
+        "mac_hardware": [line.strip() for line in _sh("system_profiler", "SPHardwareDataType")
+                         .splitlines() if line.strip().startswith(("Model Name", "Chip",
+                                                                    "Total Number of Cores",
+                                                                    "Memory"))],
         "cpu_brand": _sh("sysctl", "-n", "machdep.cpu.brand_string"),
         "memory_bytes": _sh("sysctl", "-n", "hw.memsize"),
         "git_commit": _sh("git", "-C", str(ROOT), "rev-parse", "HEAD"),
@@ -92,11 +108,11 @@ def environment() -> dict:
         "dependencies": _sh(sys.executable, "-m", "pip", "freeze").splitlines(),
         "constants": {"limit_seconds": LIMIT_SECONDS, "slow_first_seconds": SLOW_FIRST_SECONDS,
                       "timed_repeats": TIMED_REPEATS, "a_million_threshold": A_MILLION_THRESHOLD},
-        "timing": "time.perf_counter; gc.collect() before and gc disabled during each replay",
+        "timing": "time.perf_counter around the replay loop; gc enabled (gc.collect() before each replay, outside the timed region)",
         "generator_settings": "results/generated_data_checksums.json",
     }
 
 
 def write_environment() -> None:
     RESULTS.mkdir(exist_ok=True)
-    (RESULTS / "environment.json").write_text(json.dumps(environment(), indent=2) + "\n")
+    (RESULTS / "env.json").write_text(json.dumps(environment(), indent=2) + "\n")

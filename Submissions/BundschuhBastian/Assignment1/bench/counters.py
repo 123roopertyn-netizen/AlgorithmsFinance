@@ -144,13 +144,12 @@ def allowed(version: str, scenario: str, events: int) -> str | None:
     """None if this instrumented run may start, else the reason it is not run."""
     if version == "B" or events <= 10000:
         return None
-    for row in read_csv(RESULTS / "timing_summary.csv"):
-        if (row["version"], row["scenario"], row["seed"], row["events"], row["levels"]) == (
-                "A", scenario, "42", str(events), "1000"):
-            if row["status"] == "ok" and float(row["median_seconds"]) < common.A_MILLION_THRESHOLD:
-                return None
-            return (f"A timing run at {events} events on {scenario}: status {row['status']}, "
-                    f"median {row['median_seconds'] or 'n/a'} s (needs < 60 s)")
+    row = common.run_result(read_csv(RESULTS / "time_raw.csv"), "A", scenario, 42, events, 1000)
+    if row is not None:
+        if row["status"] == "ok" and float(row["median_seconds"]) < common.A_MILLION_THRESHOLD:
+            return None
+        return (f"A timing run at {events} events on {scenario}: status {row['status']}, "
+                f"median {row['median_seconds'] or 'n/a'} s (needs < 60 s)")
     return f"A timing run at {events} events on {scenario} not recorded yet"
 
 
