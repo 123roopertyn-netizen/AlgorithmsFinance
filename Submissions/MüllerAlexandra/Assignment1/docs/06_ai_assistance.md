@@ -29,6 +29,11 @@ rejected with the reason and the verification performed.
   sequences, required-field validation, sell-side symmetry, partial ask FIFO,
   canonical ordering, and empty/reopened price-level behavior. No earlier
   expected result was changed.
+- Fix the measurement protocol before observing performance results. After a
+  guided review and direct comparison with the lecturer's sources, the user
+  accepted separate throughput, per-event latency, memory, and diagnostic
+  runs; fresh state; saved raw repeats; explicit inclusion boundaries; and a
+  test-first helper module.
 
 ## Pending suggestions
 
