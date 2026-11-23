@@ -80,6 +80,33 @@ MANIFEST.json         course checksum manifest (unchanged)
 AI_LOG.md             accepted / corrected / rejected AI suggestions
 ```
 
+## Benchmark limits and run rules (declared before any benchmark was run)
+
+These rules apply to Version A and Version B alike, to every scenario, seed and event count.
+They were fixed by Bastian before the first benchmark run (commit of this section: see
+`git log -- README.md`). No missing value is ever invented or extrapolated.
+
+1. **Time limit: 10 minutes (600 s) per single replay.** A replay is one pass of one event file
+   through one fresh, empty book. It applies to every kind of run (timing, latency, memory,
+   counters). A replay that reaches the limit is killed and recorded as `status=stopped`, with
+   the limit, the elapsed time at the kill and the number of events processed so far. Its
+   remaining repeats are skipped (not run, not estimated).
+2. **Repeats.** The first replay of a (version, file) pair is always timed.
+   - If it takes **60 s or less**, it counts as the warm-up and is followed by **5 timed
+     replays**. All 5 raw times and their median are saved.
+   - If it takes **more than 60 s**, it is used as the one and only measurement: no warm-up, no
+     further replays, `repeats=1` is recorded.
+   Every replay starts from a fresh empty book. Parsing the file is timed separately from the
+   replay.
+3. **Version A on 1,000,000-event files.** A runs on a 1,000,000-event file only if A on the
+   100,000-event file of the same scenario (seed 42) finished with a replay time **below 60 s**.
+   Otherwise the run is recorded as `status=not_run` with the reason (A at 100,000 events took
+   X s, or was stopped). Version B runs on all files.
+
+Result statuses in the saved tables: `ok`, `stopped` (rule 1), `not_run` (rule 3).
+A single replay of 60 s or less is "fast"; the exact numbers (60 s, 600 s) are the declared
+constants of `bench/`.
+
 ## Measured-data definitions
 
 TODO (Phase 6).
