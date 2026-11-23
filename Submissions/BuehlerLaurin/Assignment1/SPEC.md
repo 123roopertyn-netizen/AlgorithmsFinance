@@ -8,7 +8,7 @@
 | Decision | Choice | Why (requirement / scale / preference) |
 |---|---|---|
 | Task profile | Stateful engine | Event-by-event order book with live state, priorities and per-event outputs (R §Task, S7). |
-| Versions | A baseline/oracle + B1, B2, B3 variants | Phase 3b decision (2026-11-22): compare all four in Phase 4; choose final B from measurements; adaptive index only considered afterward. |
+| Versions | A baseline/oracle; final B = B3r; explicit B1/B2/B3/B3r/B3r_fast | FINAL_SELECTION.md records the measured decision; registry naming completed 2026-11-23. No adaptive index. |
 | Benchmarks | Full: time, throughput, latency percentiles, memory, operation counts | All five are explicitly required (R §Benchmark experiments, §Time and latency, §Memory; S16–S20). |
 | Dashboard | Full contract (`aif-bench` §8) | Dashboard from saved results is required (R §Results and dashboard, S22). |
 | Report artifacts | All: README, REPORT, TRACE, REQUIREMENTS_MAP, AI_LOG, LEARNING | README + report + AI record required (R §Submit, §Implement and revise); TRACE/MAP/LEARNING are Laurin's study and audit aids. |
@@ -23,17 +23,48 @@ chosen from the measurements. An adaptive variant (online switch of the price
 index with hysteresis and a measured threshold, no lookahead) is only considered
 after Phase 4.
 
-Registry naming: `("lob", "B")` continues to mean B1 for compatibility;
-`("lob", "B2")` and `("lob", "B3")` are additional implementations.
-Replay accepts `B1` as an alias for `B`, while reports label it B1. No adaptive
-algorithm or lookahead is implemented in Phase 3b.
+Registry naming now follows the final selection below. During Phases 3-4,
+the registry key `B` meant B1; that historical meaning applies to the saved
+results and dated phase records only. No adaptive algorithm is implemented.
 Build a sequential, single-venue BTC limit order book in Python with your own `FillMarketSell`, as a transparent Version A and a faster Version B with identical results, test it first, and benchmark time, latency and memory on synthetic event streams with a dashboard over saved results (R §Task, S2).
+
+## Final Version B
+
+**B = B3r**, selected by Laurin; see [FINAL_SELECTION.md](00_docs/FINAL_SELECTION.md)
+for the committed measurements, qualifications and binding rejection of
+B3r_fast. Registry/CLI naming updated 2026-11-23; no engine logic changed.
+
+| Registry / replay name | Implementation | Role |
+|---|---|---|
+| `A` | `OrderBookA` | Baseline |
+| `B`, `B3r` | `OrderBookB3r` | Final Version B: deque levels, heap prices, per-side heap rebuild |
+| `B1` | `OrderBookB` | Original sorted-price/deque variant, formerly named B |
+| `B2` | `OrderBookB2` | Sorted prices, OrderedDict levels |
+| `B3` | `OrderBookB3` | Heap prices without heap rebuild |
+| `B3r_fast` | `OrderBookB3rFast` | Tested optimisation, tried and rejected |
+
+Exact commands from the Assignment1 directory, with the README venv active:
+
+```powershell
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3r
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B1
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B2
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3r_fast
+python run.py lob.replay 06_data/supplied/mixed_10000.jsonl.gz --version B
+```
+
+Every explicit variant remains registered. Existing `03_results` version labels
+are immutable; an old recorded B still identifies the implementation used at
+that run's commit. No historical result is relabelled or remeasured.
 
 ## Model boundaries (state in README/REPORT, R §Task, S4)
 One venue, one event at a time, continuous matching at resting prices (no batch auction, S7). All orders eligible; no fees, balances, hidden orders, self-trade checks, network delays or simultaneous execution. Synthetic teaching data only, not calibrated to an exchange (R §Synthetic data, S15). Not a production trading system.
 
 ## Interface (proposal: signatures are our choice, but must be documented, R §Input files and interface)
-Package `lob` in `01_code/lob/`; registry `METHODS = {("lob", "A"): OrderBookA, ("lob", "B"): OrderBookB, ("lob", "B2"): OrderBookB2, ("lob", "B3"): OrderBookB3}` (factories: each call gives a fresh empty book).
+Package `lob` in `01_code/lob/`; registry `METHODS` maps each name in the Final Version B table to its class (factories: each call gives a fresh empty book).
 
 | Function (name required by R §Input files and interface, S6) | Proposed Python form | Returns |
 |---|---|---|
@@ -45,7 +76,7 @@ Package `lob` in `01_code/lob/`; registry `METHODS = {("lob", "A"): OrderBookA, 
 
 - All public entry points validate through **one shared module** `lob/validation.py`, so A and B cannot diverge on bad input (aif-tdd Layer 2). Validation rules get their own contract checks.
 - The engine never mutates the input event dict.
-- Replay command (implemented in Phase 2; both versions available in Phase 3): `python run.py lob.replay <file.jsonl[.gz]> --version A|B1|B2|B3` (legacy `B` = B1) → prints one result per event as JSON Lines (R §Input files and interface: "supply a command to replay a file").
+- Replay command: `python run.py lob.replay <file.jsonl[.gz]> --version <name>`, with `name` from the Final Version B table; prints one result per event as JSON Lines (R §Input files and interface: "supply a command to replay a file").
 - Trade history is **not** retained; each call returns only the current event's fills (R §Required results: history optional, must be declared as extra storage).
 
 ## Input domain
@@ -185,7 +216,7 @@ Symbols: B active orders, P occupied price levels (per side), F maker fills of o
 | B2 (Phase 3b variant) | OrderedDict FIFO per level; id index and signed sorted prices as B1 | O(1) existing level, O(P+1) new level, expected amortized | O(1) expected if level survives; O(P+1) when emptied | O(F+L+1) expected amortized, plus O(P+1) for new residual level | O(B+P+1) live objects; allocated hash capacity extra |
 | B3 (Phase 3b variant) | heap + in_heap; same compacted FIFO deques as B1 | O(1) existing level / reactivated key; O(log(K+1)) new key, expected amortized; pending heap cleanup extra | O(1) expected amortized with deque credits; no immediate heap removal | O(F+L+1+J log(K_max+1)) expected amortized before charging heap pops; deque credits as B1 | O(B+P+S_h+1) logical; stale heap prices can grow with M |
 
-B1 was chosen explicitly by Laurin in Phase 3; its complete bounds, hashing/resize qualifications and compaction argument appear below. The other B candidates remain alternatives only. Engine containers are standard library only (Q12).
+B1 was built first in Phase 3; its complete bounds, hashing/resize qualifications and compaction argument appear below. Final B3r bounds and the other variants' arguments follow in their dated sections. Engine containers are standard library only (Q12).
 
 ## Own edge-case datasets (`06_data/own/`, labelled own)
 Written by `python run.py datagen.own_cases` (stdlib only, deterministic, seed 42 for the `long_queue` ids). Each `<case>.jsonl` has a hand-calculated `<case>.expected.json` (one result per event, final canonical book, best bid/ask); the contract check `check_own_<case>` replays it through every version, compares every result, and runs the invariant/conservation step checker after each event. `06_data/own/INDEX.md` lists what each case covers. Cases: `empty_book`, `one_order`, `fifo_one_price`, `sweep_levels`, `sell_sizes`, `market_larger_than_book`, `market_sell_empty_bid_side`, `partial_then_another_sale`, `cancel_cases`, `interleaved_cancel_fill`, `crossing_limit_buy`, `crossing_limit_sell`, `limit_at_touch`, `noncrossing_residuals`, `id_reuse`, `huge_values`, `long_queue`, `invalid_fields` (all 81 rows of the shared invalid-event table `INVALID_EVENTS`).
@@ -370,19 +401,19 @@ cancelled-id reuse and counter/plain/A parity without modifying `02_tests/`.
 
 ### Phase 4 prediction (written before the Phase 3 sanity timing)
 
-B should gain most on `crowded` (LIMIT-only growth over four prices): after the
+B1 should gain most on `crowded` (LIMIT-only growth over four prices): after the
 few level creations, submissions use indexed lookup and deque append while A
 scans growing live state for duplicates and opposite prices. `buildup` should
 also gain once repeated levels dominate its at-most-1000-price sides. `sweep`
-should gain when sells touch many makers: B walks FIFO heads while A rescans
+should gain when sells touch many makers: B1 walks FIFO heads while A rescans
 per fill. `mixed` should gain when it retains substantial depth. `cancel_churn`
 may show the smallest gain or even lose on very small live books: A's short
-scans compete with B's record/level bookkeeping, lazy cleanup and price shifts.
+scans compete with B1's record/level bookkeeping, lazy cleanup and price shifts.
 Large P with frequent new/empty levels also exposes B1's O(P) sorted-list
 updates. These are predictions, not claims from one timing observation.
 
 Phase 3 sanity protocol, explicitly authorized by Laurin: **sanity, not a
-benchmark**. One timed A replay and one timed B replay per supplied 10k stream,
+benchmark**. One timed A replay and one timed B1 replay per supplied 10k stream,
 no warm-up/repeats/medians; counters off. Read/parse outside replay timing, use
 fresh books, report setup and replay separately, compare every result and final
 snapshot outside timing. Use the existing harness with warmup=0/repeats=1 as

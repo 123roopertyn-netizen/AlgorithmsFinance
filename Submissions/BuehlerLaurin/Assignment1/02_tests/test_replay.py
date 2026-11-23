@@ -9,7 +9,7 @@ import pytest
 import contract
 from lob import METHODS
 
-VERSIONS = [key[1] for key in sorted(METHODS)] + ["B1"]
+VERSIONS = [key[1] for key in sorted(METHODS)]
 
 
 @pytest.mark.parametrize("compressed", [False, True], ids=["jsonl", "jsonl-gzip"])

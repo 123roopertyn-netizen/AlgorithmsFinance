@@ -82,7 +82,7 @@ class CountingA(OrderBookA):
 def make_book(version, counted=False):
     if counted and version == "A":
         return CountingA()
-    cls = METHODS[("lob", "B" if version == "B1" else version)]
+    cls = METHODS[("lob", version)]
     return cls(count_operations=True) if counted else cls()
 
 

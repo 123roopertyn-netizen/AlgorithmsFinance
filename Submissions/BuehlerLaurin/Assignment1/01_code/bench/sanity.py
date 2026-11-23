@@ -17,7 +17,7 @@ from lob.replay import read_events
 ROOT = Path(__file__).resolve().parents[2]
 SCENARIOS = ("buildup", "crowded", "mixed", "sweep", "cancel_churn")
 LABEL = "sanity, not a benchmark"
-VERSIONS = (("A", "A"), ("B1", "B"), ("B2", "B2"), ("B3", "B3"))
+VERSIONS = (("A", "A"), ("B1", "B1"), ("B2", "B2"), ("B3", "B3"))
 
 
 def main():

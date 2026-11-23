@@ -1,5 +1,9 @@
 # Revision log
 
+Naming note (2026-11-23): final registry B = B3r. The Phase 3 implementation
+and original B-labelled measurements below are B1; saved result labels and
+values remain unchanged. See FINAL_SELECTION.md for the final decision.
+
 ## Phase 3, 2026-11-21: A -> B1 (base `efee8d4`, uncommitted)
 
 Laurin selected candidate B1. A stays unchanged as the oracle; Claude (chat)'s
@@ -21,11 +25,11 @@ timing is **sanity, not a benchmark**: one observation per version/scenario,
 no warm-up or repeated medians; official speed/memory claims wait for Phase 4.
 
 Verification: `05_evidence/20261121T224926Z_efee8d4-dirty_phase3-all-tests-green.txt`
-reports 340 passed. No B/A disagreement occurred; tests and A were unchanged.
+reports 340 passed. No B1/A disagreement occurred; tests and A were unchanged.
 The new internal diagnostic passed both cancellation- and fill-driven compaction
 and counter/plain parity. Sanity observations (replay only, seconds):
 
-| Scenario (10k events) | A replay seconds | B replay seconds |
+| Scenario (10k events) | A replay seconds | B1 replay seconds |
 |---|---|---|
 | `buildup` | 7.937737 | 0.052302 |
 | `crowded` | 8.133971 | 0.046093 |
@@ -35,7 +39,7 @@ and counter/plain parity. Sanity observations (replay only, seconds):
 
 These one-shot values are **sanity, not a benchmark**; raw parse/setup/replay and
 environment metadata are in `03_results/runs/20261121T224807Z_efee8d4-dirty_phase3_sanity_not_benchmark/`.
-B was observed slower on cancel_churn, where live books are small. Official
+B1 was observed slower on cancel_churn, where live books are small. Official
 measurements, profiling and any further optimization remain future phases.
 
 ## Phase 3b, 2026-11-22: preserve A/B1; add B2 and B3 (base `b5411d4`)

@@ -20,7 +20,7 @@ from fuzz import REGIMES, compare, gen, shrink  # noqa: E402
 from lob import METHODS  # noqa: E402
 from oracle import Oracle  # noqa: E402
 
-VERSIONS = {k[1]: f for k, f in METHODS.items()}          # A, B (=B1), B2, B3
+VERSIONS = {k[1]: f for k, f in METHODS.items()}  # B is final B3r; B1 stays explicit.
 
 
 @pytest.fixture(params=list(VERSIONS))
@@ -48,7 +48,13 @@ def check(factory, events, **kw):
 
 
 def test_versions_present():
-    assert set(VERSIONS) >= {"A", "B", "B2", "B3"}
+    assert set(VERSIONS) >= {"A", "B", "B1", "B2", "B3", "B3r", "B3r_fast"}
+
+
+@pytest.mark.parametrize('version', list(VERSIONS))
+def test_measure_factory_preserves_explicit_versions(version):
+    from measure import make
+    assert type(make(version)) is VERSIONS[version]
 
 
 # ---------------------------------------------------------------- input domain
@@ -256,7 +262,7 @@ def test_fuzz(factory, regime, mode):
 
 
 # ------------------------------------------------------------------- replay CLI
-def replay(tmp_path, raw, version="B", name="x.jsonl"):
+def replay(tmp_path, raw, version="B1", name="x.jsonl"):
     f = tmp_path / name
     f.write_bytes(gzip.compress(raw) if name.endswith(".gz") else raw)
     return subprocess.run([sys.executable, "-B", str(ROOT / "run.py"), "lob.replay", str(f),
@@ -269,7 +275,7 @@ def want_lines(lines):
     return [o.process(json.loads(x)) for x in lines]
 
 
-@pytest.mark.parametrize("version", ["A", "B", "B1", "B2", "B3"])
+@pytest.mark.parametrize("version", list(VERSIONS))
 @pytest.mark.parametrize("name", ["x.jsonl", "x.jsonl.gz"])
 def test_replay_cli_matches_oracle(tmp_path, version, name):
     lines = [json.dumps(e) for e in gen(3, 200, "narrow")]
@@ -278,7 +284,7 @@ def test_replay_cli_matches_oracle(tmp_path, version, name):
     assert [json.loads(x) for x in p.stdout.splitlines()] == want_lines(lines)
 
 
-@pytest.mark.parametrize("version", ["A", "B", "B2", "B3"])
+@pytest.mark.parametrize("version", list(VERSIONS))
 def test_replay_cli_non_objects_unicode_crlf_no_final_newline(tmp_path, version):
     lines = ["[1, 2]", "null", "3", '"x"',
              json.dumps(L(1, "é\U0001f642", "BUY", 5, 5), ensure_ascii=False),
@@ -288,7 +294,7 @@ def test_replay_cli_non_objects_unicode_crlf_no_final_newline(tmp_path, version)
     assert [json.loads(x) for x in p.stdout.splitlines()] == want_lines(lines)
 
 
-@pytest.mark.parametrize("version", ["A", "B", "B2", "B3"])
+@pytest.mark.parametrize("version", list(VERSIONS))
 def test_replay_cli_empty_file(tmp_path, version):
     p = replay(tmp_path, b"", version)
     assert p.returncode == 0 and p.stdout.strip() == ""
@@ -296,7 +302,7 @@ def test_replay_cli_empty_file(tmp_path, version):
 
 # ------------------------------------------------------------ reproduced breaks
 @pytest.mark.xfail(strict=True, reason="ATK-01: json.loads int limit (4300 digits) aborts replay")
-@pytest.mark.parametrize("version", ["A", "B", "B2", "B3"])
+@pytest.mark.parametrize("version", list(VERSIONS))
 def test_atk01_replay_cli_accepts_unbounded_positive_int(tmp_path, version):
     """SPEC 'Input domain': qty_units is a positive int, no upper bound (rule 12); replay prints
     one result per event. Expected: 3 results, all resting. Actual: ValueError after event 1."""
@@ -318,7 +324,7 @@ def test_atkp1_b1_shifts_two_references_per_live_level_per_flicker():
     import gen_attack
     n = 500
     pre, out = gen_attack.far_end_flicker(n)
-    b = feed(VERSIONS["B"](count_operations=True), pre)
+    b = feed(VERSIONS["B1"](count_operations=True), pre)
     before = b.counters.price_list_shifts
     feed(b, out)
     assert b.counters.price_list_shifts - before == 2 * n * n
@@ -357,6 +363,6 @@ def test_atkp5_b2_level_with_one_order_keeps_burst_capacity():
 
 def test_atkp6_b1_b3_keep_32_dead_records_per_live_order():
     import gen_attack
-    for v in ("B", "B3"):
+    for v in ("B1", "B3"):
         b = feed(VERSIONS[v](), gen_attack.mem_pinned_dead(20))
         assert len(b.orders) == 20 and sum(len(x.queue) for x in b.bids.levels.values()) == 33 * 20

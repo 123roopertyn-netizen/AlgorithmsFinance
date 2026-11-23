@@ -61,4 +61,6 @@ B3r is about 13 % slower than B3r_fast on the official grid, and still 139x to m
 - B3r_fast, binding same-session rematch: `20261122T210801Z_e4fd928_phase4_b3r_fast_rematch_20261122/` (`fast_rematch_acceptance.md`)
 - Attack evidence: `07_attack/ATTACK_REPORT.md`; rules and decisions D1-D4: `SPEC.md`, `00_docs/AI_LOG.md`
 
-Open follow-up: the registry alias "B" still points to B1; it must point to B3r before submission.
+Registry follow-up completed 2026-11-23: "B" points to B3r; B1 remains an explicit
+registry/CLI name. SPEC.md and README.md document the final map. Historical
+results and the selection decision above are unchanged.

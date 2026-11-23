@@ -1,15 +1,52 @@
 # Assignment 1, limit order book: Laurin Bühler
 
-> Status (2026-11-22): binding B3r/fast rematch pipeline ready for review; 848 standard and 1,697 attack tests pass.
-> B is the compatibility registry key for B1; B1 is also accepted by replay.
-> B3r remains final pending the single authorized same-session rematch; adaptive switching is deferred.
+> Status (2026-11-23): final Version B is B3r. The binding rematch rejected B3r_fast.
+> B1/B2/B3/B3r/B3r_fast remain available under explicit names. No adaptive switching.
+
+## Final Version B
+
+**`B` = `B3r`**. [FINAL_SELECTION.md](00_docs/FINAL_SELECTION.md) records the
+decision, measurements and qualifications, including both rejected fast
+comparisons. B3r uses deque FIFO levels, lazy cancellation, heap prices and
+per-side heap rebuilds. This registry update changes no engine logic.
+
+| Replay / registry name | Implementation |
+|---|---|
+| `B`, `B3r` | Final Version B, `OrderBookB3r` |
+| `A` | Baseline, `OrderBookA` |
+| `B1` | Original sorted prices + deque, `OrderBookB` (formerly B) |
+| `B2` | Sorted prices + OrderedDict levels, `OrderBookB2` |
+| `B3` | Heap prices without rebuild, `OrderBookB3` |
+| `B3r_fast` | Tested optimisation, tried and rejected, `OrderBookB3rFast` |
+
+From Assignment1 with the venv below active:
+
+```powershell
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3r
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B1
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B2
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3
+python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3r_fast
+python run.py lob.replay 06_data/supplied/mixed_10000.jsonl.gz --version B
+```
+
+Saved result labels keep their meaning at the recorded commit: historical B
+means B1. Nothing under `03_results` is renamed or remeasured by this update.
+
+Verification (2026-11-23): [983 standard tests](05_evidence/20261123T162212Z_dd88f22-dirty_final-b-all-tests.txt)
+passed in 909.96 s; [1,995 attack tests](05_evidence/20261123T162213Z_dd88f22-dirty_final-b-attack-suite.txt)
+passed in 125.90 s. Both suites have zero failures/skips, including all 17 mutant
+kills and all seven registered names. [Registry/source verification](05_evidence/final-b-registry-verification.json)
+records source and XML hashes; no engine logic or historical result changed.
 
 ## Clean-environment run path (PowerShell, from this folder)
 ```powershell
 python -m venv "$env:USERPROFILE\.venvs\aif-a1"
 & "$env:USERPROFILE\.venvs\aif-a1\Scripts\Activate.ps1"
 python -m pip install -r requirements.txt
-python -m pytest -q                                   # latest checkpoint: 848 passed
+python -m pytest -q                                   # latest checkpoint: 983 passed
 python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
 python run.py bench.run_all                           # (planned) writes 03_results/runs/<run>/
 python -m streamlit run 04_dashboard/app.py           # (planned) http://localhost:8501, reads 03_results/ only
@@ -37,7 +74,7 @@ Final book (via `snapshot()`, not printed as an extra replay line): b4 retains
 6010000 ticks, arrival_seq 5. Integer gross proceeds = 3594000000000000 tick-units
 = 359400.00 USD. Hand trace: `00_docs/TRACE.md`.
 
-Replay also accepts `.jsonl.gz` and `--version B1`, `B2` or `B3` (`B` remains the B1 alias). Events stream in file order; the shared validator rejects
+Replay also accepts `.jsonl.gz` and every name in the Final Version B table. Events stream in file order; the shared validator rejects
 nonincreasing seq without advancing the last accepted seq. Each book starts empty;
 neither inputs nor result history are retained by the replay command.
 
@@ -153,21 +190,22 @@ Direct methods retain the inherited reference validator. No speedup is claimed
 from correctness tests. The completed optional B-only session and its original
 cross-session rejection remain historical. The corrected comparison follows.
 
-Rematch decision (2026-11-22, before new measurement): the completed
+Historical rematch protocol (2026-11-22, fixed before that measurement): the completed
 cross-session trial stays **tried and rejected**. Session noise confounded its
 per-cell 5% bound, so Laurin permits ONE binding same-session timing-only attempt.
 Both versions alternate order by case on official + post_attack, warm-up+5.
 Require current correctness proof, 15-cell official 100k geometric mean <= 0.90,
 and median(seed ratios) <= 1.05 for every workload x size scenario. Otherwise
-B3r stays final; no further re-measurement. The current command is
-`& .\01_code\bench\rematch_fast.ps1 -PlanOnly` (or -AllowLong after review/commit).
+B3r stays final; no further re-measurement. The historical entry point was
+`01_code/bench/rematch_fast.ps1`; its single measurement attempt is consumed.
 The old cross-session wrapper/result remain historical; do not rerun them.
 BENCHMARK_PLAN.md records the corrected method, one-attempt guard and report
-that preserves both comparisons. No rematch measurement starts here.
-Fresh [standard tests](05_evidence/20261122T205138Z_ddbc434-dirty_rematch-all-tests.txt)
+that preserves both comparisons. The attempt is now complete and rejected;
+FINAL_SELECTION.md is authoritative. Do not restart the rematch.
+Historical rematch [standard tests](05_evidence/20261122T205138Z_ddbc434-dirty_rematch-all-tests.txt)
 passed (848 in 713.71 s), as did the [attack suite](05_evidence/20261122T205139Z_ddbc434-dirty_rematch-attack-suite.txt)
-(1,697 in 80.63 s). The [new proof](05_evidence/b3r_fast_rematch_correctness.json)
-binds both to the current source; the previous proof remains historical.
+(1,697 in 80.63 s). The [rematch proof](05_evidence/b3r_fast_rematch_correctness.json)
+binds those tests to the rematch source, before the final registry update.
 
 Independent runs measure nearest-rank latency p50/p95/p99 in ns, traced memory
 including book/current fills but excluding parsed input/history, and operation

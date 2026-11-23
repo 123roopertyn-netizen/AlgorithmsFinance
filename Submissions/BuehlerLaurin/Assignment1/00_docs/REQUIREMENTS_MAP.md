@@ -3,6 +3,11 @@ Update in every phase. A reviewer must be able to check each requirement here in
 
 Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/23` in `AlgorithmsFinance_Exercise1.pdf` (PDF page k+1). See `SPEC.md` for the full rules.
 
+Current naming (2026-11-23): final B = B3r; B1 is explicitly registered.
+The dated phase evidence below retains its original counts and labels. In
+Phases 3-4, old B meant B1. Current registry coverage and fresh evidence are
+recorded in the final registry checkpoint at the end of this map.
+
 ## Model, interface, units
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
@@ -13,7 +18,7 @@ Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/
 | R5 | Read JSON Lines (+ gzip) with stdlib `json`/`gzip`; replay in `seq` order from an empty book (R §Input files; S6) | All four verified | Shared JSON/gzip reader; 15 CLI cases cover A/B/B1/B2/B3; sanity checks each B variant on all five supplied 10k files against A. |
 | R6 | Event types LIMIT / MARKET_SELL / CANCEL with their required fields (R §Input files; S6) | All four/shared verified | Shared validator unchanged: 184 direct tests; 256 contract cases over four registry versions. |
 | R7 | Provide `AddLimitOrder`, `CancelOrder`, `FillMarketSell`, an event dispatcher and book inspection; document signatures (R §Input files; S6) | All four/shared verified | `check_direct_methods_match_process`, `check_direct_methods_validate`, `check_direct_methods_reject_wrong_type`; SPEC.md API/N2. |
-| R8 | Supply a command to replay a file (R §Input files) | All four implemented and verified | Replay accepts A/B/B1/B2/B3; B maps to B1 for compatibility; 15 CLI cases pass including gzip and rejection order. |
+| R8 | Supply a command to replay a file (R §Input files) | Final registry implemented; fresh verification below | Replay accepts A/B/B1/B2/B3/B3r/B3r_fast; B = B3r, B1 selects the original class directly. SPEC/README list exact commands. Historical Phase 3b evidence: 15 CLI cases. |
 | R9 | Both versions accept the same event files and return equivalent results (R §Input files) | All four verified in stated coverage | Three stateful machines (A vs each B), 64 contract cases per version and all supplied sanity result/final-book comparisons; intermediate full-stream coverage qualified below. |
 
 ## Matching, cancellation, validation
@@ -54,7 +59,7 @@ Sources: `R §…` = package `README.md` section; `S<k>` = slide with footer `k/
 | ID | Requirement (short, with source) | Status | Evidence |
 |---|---|---|---|
 | R32 | Version A: clear baseline (e.g. scanning/sorting a list of orders) (R §Implement and revise; S13) | A preserved and verified | A unchanged from committed baseline; 64 A contracts and real-version control pass in full Phase 3b suite. |
-| R33 | Version B: justified data organisation or measured revision (R §Implement and revise; S13) | B1/B2/B3 candidates implemented | B1 first; B2/B3 added as explicit variants. Phase 4 measurements choose final B; adaptive online switch with hysteresis/measured threshold/no lookahead deferred until afterward. |
+| R33 | Version B: justified data organisation or measured revision (R §Implement and revise; S13) | Final B = B3r | FINAL_SELECTION.md records candidate exclusions, B3r fallback and binding rejection of B3r_fast. All variants keep explicit registry names; SPEC gives code-based bounds and README the final map. |
 | R34 | Own matching logic; no existing matching engine; library lists/dicts/queues/sorting/heaps allowed (R §Implement and revise; S13) | All variants implemented | Own standard-library matching logic; OrderedDict is used for B2 FIFO, deque for B1/B3; never plain dict FIFO. A/B1 untouched, B2/B3 share public semantics by inheritance. |
 | R35 | Pseudocode + runtime/space for insertion, cancellation, market sell in the measured versions, using B, P, M, F; include validation, output construction, index updates, inactive entries, cleanup; state worst-case/expected/amortized (R §Implement and revise; S13) | All variant code arguments; official scaling Phase 4 | SPEC.md B2/B3 worst/expected/amortized time/space arguments include output, hash capacity, price shifts, deque credits and heap K=P+S_h; predictions recorded before sanity. |
 | R36 | Preserve both versions; rerun unchanged tests after revision; add tests for found bugs without weakening expectations (R §Implement and revise; S13) | A/B1 and expectations preserved; coverage expanded | Contract.py, original data/expected files and A/B1/shared validator unchanged. Internal assertions promoted into pytest; stateful and CLI cases extended across all variants. |
@@ -363,3 +368,28 @@ Fresh evidence: [848 standard tests](../05_evidence/20261122T205138Z_ddbc434-dir
 and [final source/proof/order review](../05_evidence/20261122T210349Z_ddbc434-dirty_rematch-final-review.txt).
 Implementation/verification complete; actual binding measurement and performance
 decision remain pending. The single real attempt has not been claimed.
+
+## Final registry checkpoint (2026-11-23, base `dd88f22`)
+
+The preceding rematch checkpoint is historical: Laurin committed the completed
+binding rejection and FINAL_SELECTION.md. B3r is final. This task changes
+registry/CLI selection and naming only, with no new measurement or engine change.
+
+| Requirement | Current implementation and verification |
+|---|---|
+| R1, R7-R9, R33 | METHODS B and B3r both reference OrderBookB3r; B1 directly references the original OrderBookB. All seven names are accepted by replay. test_final_version checks exact registry and factory identity; test_replay checks plain/gzip CLI output and rejection order for every name. |
+| R26, R28-R30 | B/B3r equality after every event on the worked example and all 18 own datasets, counters off/on; results, key order, snapshots, best quotes and counters compared. Own independent expected files are also checked. All registry names retain contracts, internals and A differential coverage. |
+| R27, R36 | Red: 24 failures for the old alias and counter mismatches; targeted green: 129 passed. No expected result, contract assertion or engine algorithm changed. B1-specific tests/factories use B1 explicitly. |
+| R37, R56-R57 | SPEC/README Final Version B map/commands, AI log and final selection follow-up updated. Historical B-labelled results retain their recorded labels/commit meaning; no changes under 03_results. |
+
+Evidence: [alias red](../05_evidence/20261123T161747Z_dd88f22-dirty_final-b-alias-red.txt),
+[targeted green](../05_evidence/20261123T161952Z_dd88f22-dirty_final-b-alias-green.txt),
+[attack suite](../05_evidence/20261123T162213Z_dd88f22-dirty_final-b-attack-suite.txt)
+(1,995 passed in 125.90 s), [full standard suite](../05_evidence/20261123T162212Z_dd88f22-dirty_final-b-all-tests.txt)
+(983 passed in 909.96 s) and [final review](../05_evidence/20261123T163814Z_dd88f22-dirty_final-b-registry-review.txt).
+Both suites are wholly green, with no skips. The standard run includes 448
+contracts (64 per name), 60 final-alias/factory cases, 25 mutant/control cases
+(all 17 mutants killed), 32 internal checks and seven stateful machines.
+[Verification JSON](../05_evidence/final-b-registry-verification.json) stores
+current source and suite XML hashes plus every test-file/class count.
+Registry task complete; no measurement or change to the committed selection.

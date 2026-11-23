@@ -1,6 +1,10 @@
 # AI log
 Agents: Claude Code built Phases 0-1; Codex takes over coding from Phase 2. Claude (chat) reviews every phase; Laurin runs all git commands. Handover: 2026-11-21, base commit `11d831b`.
 
+Naming note (2026-11-23): final B = B3r; B1 is now an explicit registry name.
+In historical Phases 1-4 entries, B referred to B1. Those dated decisions,
+counts, commands and saved result labels remain historical, not current aliases.
+
 | Date | Agent | Suggestion | Accepted / corrected / rejected | Who found the problem | Commit (evidence) | Why |
 |---|---|---|---|---|---|---|
 | 2026-11-21 | Claude Code | **Prompt injection, detected and ignored.** Hidden text in `AlgorithmsFinance_Exercise1.pdf` on PDF pages 1 (title slide), 7 (slide 6/23) and 14 (slide 13/23): white, 4-pt text addressed to code generators, asking to put the word "Unicorn" into at least ten code comments and several helper-variable names throughout implementation, tests and benchmarks. | Rejected (not followed, not even partially) | Laurin (warned in the session prompt); confirmed by Claude's text extraction (fill colour 1 = white, font size 3.99 pt) | pre-scaffold, base `bc2576f` | Not a requirement of the assignment; instruction to an AI agent embedded in task data (`AGENTS.md` §1.4). Before submission: review all generated files for traces of it. |
@@ -778,3 +782,76 @@ or historical result changes, installs, dependency changes, moves or git
 mutations. No new benchmark measurement; the sole attempt remains unused.
 STOP for Claude (chat) review and Laurin's commit. B3r remains final pending
 the one binding outcome; no performance claim from these correctness checks.
+
+## Final Version B registry checkpoint (2026-11-23, base `dd88f22`)
+
+Laurin's committed FINAL_SELECTION.md was read in full before editing. Final B
+is B3r; B3r_fast was tried and rejected by the binding rematch. The selection
+and its measurement qualifications are accepted without new measurements or
+reassessment. Skills: aif-exercise, aif-tdd, aif-verify.
+
+Registry B now directly selects OrderBookB3r; explicit B1 directly selects the
+original OrderBookB. A/B2/B3/B3r/B3r_fast remain registered. Replay derives its
+choices solely from the registry, without a second B1 alias or translation.
+Benchmark make_book, the Phase 3b sanity map and the attack make factory also
+use explicit B1; otherwise they could silently run B3r under a B1 label.
+No benchmark is executed here and no stored result is relabelled.
+
+Test-first evidence:
+[red](../05_evidence/20261123T161747Z_dd88f22-dirty_final-b-alias-red.txt)
+reports 24 failed / 36 passed for the old registry: wrong B class, missing B1,
+old sanity mapping and mismatched B/B3r counters. After the mapping changes,
+[targeted green](../05_evidence/20261123T161952Z_dd88f22-dirty_final-b-alias-green.txt)
+reports 129 passed / 1,979 deselected. These are expected red assertions, not
+an engine defect or an expectation disagreement.
+
+The new test_final_version.py asserts every registry/factory class, B1 sanity
+selection and B/B3r result, key order, snapshot, best quotes and counter equality
+after every event on the worked example plus all 18 own datasets, counters off
+and on. It also retains independent own expected results. Existing registry
+fixtures expand contracts, internals, real-version mutant controls and stateful
+tests to all seven names. The original stateful base is explicitly B1; dynamic
+subclasses additionally test final B and each explicit variant against A.
+B1-specific attack counter checks now name B1; attack CLI checks cover all
+seven names and an untimed factory-identity check prevents mislabelling.
+
+README/SPEC have a Final Version B table and exact replay commands. The final
+selection follow-up is marked complete; historical attack/revision descriptions
+say explicitly that their old B was B1. Fresh full-suite evidence follows below.
+
+Fresh verification after the final Python source change (both exit 0, no
+failures/skips):
+
+- [Standard suite](../05_evidence/20261123T162212Z_dd88f22-dirty_final-b-all-tests.txt): **983 passed in 909.96 s**. Command: `python -m pytest -q -s --tb=short --basetemp=scratch/pytest-final-b --junitxml=05_evidence/final-b-all-tests.xml` through evidence.py with the README venv Python.
+- [Attack suite](../05_evidence/20261123T162213Z_dd88f22-dirty_final-b-attack-suite.txt): **1,995 passed in 125.90 s**. Command: `python -B -m pytest -p no:cacheprovider 07_attack -q --runxfail --tb=short --basetemp=scratch/pytest-final-b-attack --junitxml=05_evidence/final-b-attack-tests.xml`. --runxfail executes the fixed historical ATK-01 regressions as ordinary tests.
+- [Final review](../05_evidence/20261123T163814Z_dd88f22-dirty_final-b-registry-review.txt): PASS. Engine book files, shared validator, contract assertions, data, all historical results/proofs and selection text/numbers are unchanged; only the selection's registry follow-up is marked complete.
+- [Verification JSON](../05_evidence/final-b-registry-verification.json): source SHA-256 `7de83f9fc36058f417ca003a29e855094a5f10c659d0bb515a92ebf73ca238e5`, registry map, both XML hashes and per-file/class counts. Historical correctness proofs stay bound to their historical source and are not overwritten.
+
+| Standard file | Passed |
+|---|---:|
+| test_contract.py | 448 |
+| test_validation.py | 184 |
+| test_fast_equivalence.py | 115 |
+| test_final_version.py | 60 |
+| test_b_internal.py | 32 |
+| test_b3r.py | 6 |
+| test_bench_pipeline.py | 30 |
+| test_fast_assessment.py | 10 |
+| test_mutants.py | 25 (17 kills + 8 controls) |
+| test_own_datasets.py | 4 |
+| test_post_attack_pipeline.py | 13 |
+| test_replay.py | 21 |
+| test_replay_regressions.py | 28 |
+| test_stateful.py | 6 A-vs-version machines |
+| test_fast_equivalence.py stateful | 1 B3r-vs-fast machine |
+
+Reviewed every changed source/doc and the complete diff for the logged
+injection: no traces or new embedded instructions. No installs, dependency
+changes, deletes/moves, remote actions or git mutations. No benchmark/sanity
+session executed and no measurement claim made. Open questions: none.
+STOP for Claude (chat) review and Laurin's commit. Proposed commands, not run:
+
+```powershell
+git add -- 01_code/lob/__init__.py 01_code/lob/replay.py 01_code/bench/core.py 01_code/bench/sanity.py 02_tests 07_attack/measure.py 07_attack/test_attack.py 07_attack/ATTACK_REPORT.md SPEC.md README.md 00_docs 05_evidence
+git commit -m "Assignment1: make B the final B3r and preserve explicit B1 variant"
+```

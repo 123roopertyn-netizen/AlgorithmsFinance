@@ -31,7 +31,7 @@ def make(version, **kw):
     from b3r_model import B3rF, B3rL, B3rT
     from lob import METHODS
     table = {k[1]: f for k, f in METHODS.items()}
-    table.update(B1=table["B"], B3rL=B3rL, B3rF=B3rF, B3rT=B3rT)
+    table.update(B3rL=B3rL, B3rF=B3rF, B3rT=B3rT)
     return table[version](**kw)
 
 

@@ -35,7 +35,7 @@ REUSE_POOL = st.sampled_from(["r1", "r2", "r3"])     # small pool: live duplicat
 
 
 class DifferentialMachine(RuleBasedStateMachine):
-    B_CLS = METHODS[("lob", "B")]
+    B_CLS = METHODS[("lob", "B1")]
 
     def __init__(self):
         super().__init__()

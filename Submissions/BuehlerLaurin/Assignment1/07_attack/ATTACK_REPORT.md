@@ -6,7 +6,7 @@ Machine: Windows 11, AMD Ryzen AI 7 350, Python 3.13.15 (`aif-a1` venv), GC on u
 
 **Independence.** The attacker did not write the current engine: Codex built Phases 2–3b. Claude Code only built the Phase 1 tests (earlier session). Two limits follow: the Phase 1 tests and this oracle come from the same model family and could share a reading of the spec, and `SPEC.md` itself describes the engine internals (e.g. the threshold 32), so Step 1 was code-blind but not design-blind. `01_code` was opened only after the oracle and the Step 1 tests had run; `02_tests` was not opened.
 
-**Versions.** A, B (registry name; = B1), B2, B3. B3r does not exist yet: `B3rL`, `B3rF`, `B3rT` in `b3r_model.py` are **attack models** of plausible readings of the plan, not an implementation.
+**Versions at the original attack commit.** A, B1 (then registry name B), B2, B3. B3r did not exist yet: `B3rL`, `B3rF`, `B3rT` in `b3r_model.py` are **attack models** of plausible readings of the plan, not an implementation. Naming update 2026-11-23: current B means final B3r; rerun B1-specific checks with explicit B1. Historical measurements/log labels are unchanged.
 
 **Rules kept.** Nothing written outside `07_attack/`, no git writes, no benchmark changes. For that reason `evidence.py` (writes to `05_evidence/`) was not used; logs are in `07_attack/logs/`. The known injection was ignored; no new one was seen in the files read.
 
