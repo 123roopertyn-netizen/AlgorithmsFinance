@@ -941,3 +941,41 @@ No final benchmark, result-digest replay, liquidation, concentration generation,
 - Final controller SHA-256: `8f44e4204354d042c58f410e0d7f85b40e80189cb38388002b71add78351fd8f`.
 - `07_results/raw/timing.jsonl` remained absent. The self-cleaning fixture directory left no artifact. No Python/PythonW process remained.
 - No pilot, final benchmark, performance experiment, dataset generation, dependency installation, network access, Git operation, or GitHub operation occurred.
+
+## 2026-11-23 - Stage 4D final-primary execution and checkpoint
+
+### 95. Performed final execution preflight
+
+- The user confirmed that the laptop would be connected to power, automatic sleep prevented, and other heavy applications closed. OneDrive remained enabled and is retained as an environmental limitation.
+- A read-only preflight recalculated all 45 workload hashes and current source fingerprints, confirmed 450 planned repetitions and 90 configurations, verified `final-primary-v2`, matched the pilot checksum, found `07_results/raw/timing.jsonl` absent, and found zero Python/PythonW processes.
+- Observed environment: Windows 11 platform `Windows-11-10.0.26200-SP0`, CPython 3.13.17, AMD64 Family 26 Model 104 CPU description, 12 logical CPUs, 16,268,513,280 RAM bytes, and Windows Balanced power scheme. The battery/AC query was unavailable because Windows denied access; power connection is therefore user-confirmed rather than independently observed.
+
+### 96. Recorded two failed Codex launch attempts without measurements
+
+- First attempted command: `python '05_benchmarks/run_benchmarks.py' final --output '07_results/raw/timing.jsonl' --global-budget-seconds 5400`, with `PYTHONDONTWRITEBYTECODE=1`, in a managed foreground execution session.
+- The execution sandbox rejected process creation because an individual-file permission did not provide a writable-root capability. Verification found the output absent and zero Python processes.
+- After explicit user approval for one retry and project-local result-directory permission, the exact command reached the controller but exited one with `PermissionError` while opening `07_results/raw/timing.jsonl`. The failure occurred before the repetition loop, so no worker or engine replay started. No further automatic retry occurred.
+
+### 97. Preserved the successful user-executed final benchmark
+
+- The user subsequently reported executing the approved final command in a local foreground PowerShell terminal: `python '05_benchmarks/run_benchmarks.py' final --output '07_results/raw/timing.jsonl' --global-budget-seconds 5400`.
+- The user-reported controller summary was 450 planned/total records: 390 `completed`, 12 `timed_out`, and 48 `skipped_after_timeout`; charged wall time 1,765.189204200171 seconds; phase `final`; measurement mode `primary_timing`.
+- This log does not treat the local terminal report alone as file-integrity proof. The following independent read-only audit recalculated the retained evidence.
+
+### 98. Audited the final result read-only
+
+- Parsed all 450 newline-terminated JSON objects and ran the controller's strict current-template validator. Found 450 unique repetition keys, exact plan order and indices 1-450, all 90 configurations, all 45 workloads, and no duplicate, contradictory, malformed, truncated, unexpected, failed, or nonterminal evidence.
+- Recalculated `07_results/raw/timing.jsonl`: 1,155,659 bytes, SHA-256 `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f`, statuses 390 completed/12 timed out/48 skipped after timeout, and charged wall time 1,765.189204200171 seconds.
+- All workload, implementation, harness, environment, GC, timeout-policy, and protocol identities matched. The pilot was absent from final evidence. Every completed duration was finite and positive; timed-out/skipped records had no engine duration or throughput.
+- The 12 timeouts were Version A at 100,000 events for seeds 42, 43, and 44 in each of `buildup`, `crowded`, `mixed`, and `sweep`. Every timeout occurred on repetition 1 and was followed by exactly four skips. Version A `cancel_churn` and every Version B configuration completed.
+- One controller session contained all 450 records. Session elapsed values were monotonic, the 5,400-second allowance was not exhausted, and no `skipped_global_budget` record occurred. No engine replay, benchmark, chart, report, or result modification occurred during the audit.
+
+### 99. Completed Stage 4D documentation and artifact metadata
+
+- Before documentation edits, recalculated both retained artifacts: pilot 17,726 bytes/SHA-256 `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`; final 1,155,659 bytes/SHA-256 `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f`. Counts and charged wall time matched the approved evidence.
+- Recorded a preservation fingerprint over 129 non-approved project files: SHA-256 `d9ebadf9023b4837d7b9372a823c8efe4a75068418300deeb68935521077e75d`.
+- Updated only `README.md`, `AI_DECISIONS.md`, and `01_environment/environment.json`; created `07_results/results_manifest.json`; and appended this section to `ACTION_LOG.md`.
+- The first multi-file patch updated `environment.json` but reported failure when its later manifest-creation context was not applied. Inspection confirmed only the authorized environment update had occurred and the manifest remained absent; the manifest was then created in a separate authorized patch.
+- Preliminary verification parsed both JSON metadata files, matched the manifest against both raw JSONL files, confirmed 46 balanced README fences and all dry-run/start/resume arguments, found 26 unique canonical risk rows, and reproduced the unchanged 129-file preservation fingerprint.
+- Privacy scan of the newly updated README, AI decisions, environment metadata, and results manifest found no personal home-directory paths. Historical privacy findings remain: 10 lines in `ACTION_LOG.md`, 285 in `02_data/generated_manifest.json`, and nine in `02_data/supplied_verification.json`; no redaction was authorized or performed.
+- No raw result, engine, shared contract/validation file, benchmark script, test, supplied/generated dataset or manifest, `AGENTS.md`, `.gitignore`, dependency, network state, Git state, or GitHub state was changed.

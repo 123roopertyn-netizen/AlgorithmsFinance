@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "purpose": "Integrity and interpretation metadata for retained raw benchmark evidence; not an analytical summary.",
+  "artifacts": {
+    "pilot": {
+      "path": "07_results/pilot/pilot_runs.jsonl",
+      "role": "resource-estimation pilot only; excluded from final statistics",
+      "bytes": 17726,
+      "sha256": "c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1",
+      "record_count": 16,
+      "status_counts": {
+        "completed": 14,
+        "timed_out": 2
+      },
+      "recorded_phase": "pilot",
+      "recorded_measurement_mode": null,
+      "recorded_protocol_version": null,
+      "source_fingerprints": null,
+      "environment_fingerprint": null,
+      "interpretation": "The pilot predates final-primary-v2 fingerprint fields and must never be mixed into final five-repeat measurements."
+    },
+    "final_primary": {
+      "path": "07_results/raw/timing.jsonl",
+      "role": "authoritative final primary engine-replay timing evidence",
+      "bytes": 1155659,
+      "sha256": "fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f",
+      "record_count": 450,
+      "status_counts": {
+        "completed": 390,
+        "timed_out": 12,
+        "skipped_after_timeout": 48
+      },
+      "configuration_count": 90,
+      "workload_count": 45,
+      "recorded_phase": "final",
+      "recorded_measurement_mode": "primary_timing",
+      "recorded_protocol_version": "final-primary-v2",
+      "charged_controller_wall_seconds": 1765.189204200171,
+      "source_fingerprints": {
+        "baseline_implementation_sha256": "afa06981e3b1d79b8c10903bd6f8d0cc9d648373b7fc9b20e8e14f431a5770fc",
+        "optimized_implementation_sha256": "06e5ebb794e11852f4b6b6c49df54134a2dd3d3e2e489a4ef269afc35aef9490",
+        "benchmark_harness_sha256": "484913af7e980803308968794bc9c7b4f1d722974fff12c98b818754b5448925"
+      },
+      "environment_fingerprint": "aab6f20672ff1af72c4f79ed2c2f31827f8d522aedae4e7b6239937659236853",
+      "timeout_censoring": {
+        "rule": "The first processing timeout is terminal for the same engine, scenario, event count, and seed configuration.",
+        "remaining_repetition_status": "skipped_after_timeout",
+        "engine_seconds_for_timed_out_or_skipped_records": null,
+        "interpretation": "Timed-out configurations are incomplete and must not receive ordinary five-repeat medians, throughput, or speedup values."
+      }
+    }
+  }
+}

@@ -218,7 +218,7 @@ The worker-controller protocol parses and constructs a fresh engine before `READ
 
 ### Final primary timing commands
 
-Stage 4D added a resumable final-primary plan but did not execute it. Verify all 450 repetitions, 90 engine/workload configurations, 45 input files, manifests, hashes, and current resume state without creating a result file:
+Stage 4D completed the resumable final-primary plan. In a clean reproduction or before a deliberate resume, verify all 450 repetitions, 90 engine/workload configurations, 45 input files, manifests, hashes, and current resume state without creating or changing a result file:
 
 ```powershell
 python '05_benchmarks/run_benchmarks.py' final `
@@ -234,7 +234,7 @@ python3 05_benchmarks/run_benchmarks.py final \
     --dry-run
 ```
 
-Start final primary timing only after explicit approval and only when the output is absent:
+Start final primary timing only when the output is absent. The controller refuses to overwrite an existing result:
 
 ```powershell
 python '05_benchmarks/run_benchmarks.py' final --output '07_results/raw/timing.jsonl' --global-budget-seconds 5400
@@ -247,6 +247,22 @@ python '05_benchmarks/run_benchmarks.py' final --output '07_results/raw/timing.j
 ```
 
 Use `python3` with the same arguments on macOS/Linux. Resume validates every retained identity, hash, environment fingerprint, policy, protocol version, status, and JSONL boundary before skipping a completed repetition. A processing timeout is terminal for that engine/workload configuration; later repetitions are recorded `skipped_after_timeout`. Session elapsed time is retained and charged across resumes, so the cumulative 5,400-second budget cannot reset silently. Pilot records never qualify as final records.
+
+#### Verified final-primary evidence
+
+The authoritative result is `07_results/raw/timing.jsonl`: 1,155,659 bytes with SHA-256 `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f`. Its 450 records cover all 90 engine/workload configurations and all 45 workloads. There are 390 `completed`, 12 `timed_out`, and 48 `skipped_after_timeout` records. Charged controller wall time is 1,765.189204200171 seconds. The separate pilot remains resource-estimation evidence only and is excluded from final statistics.
+
+All 1,000- and 10,000-event configurations completed five repeats. At 100,000 events, Version A timed out on repetition 1 for every seed (42, 43, 44) of `buildup`, `crowded`, `mixed`, and `sweep`; repetitions 2-5 were then recorded as skipped. Version A `cancel_churn` and every Version B configuration completed. These 12 configurations are right-censored at the 120-second processing limit. They must not receive ordinary five-repeat medians, throughput values, or speedups, and missing measurements must never be synthesized from the timeout limit.
+
+Primary-result fields have these meanings:
+
+- `engine_seconds`: worker `time.perf_counter` duration around sequential `process_event` calls only. It includes validation, matching, state mutation, fill construction, and implementation cleanup, but excludes input loading, worker startup, snapshots, hashing, logging, diagnostics, and tracing.
+- `preparation_seconds`: workload reading/parsing, fresh engine construction, and the pre-timing `gc.collect()` inside the worker.
+- `controller_wall_seconds`: controller-observed lifetime of the individual worker attempt, including preparation, protocol communication, processing, and cleanup.
+- `session_elapsed_seconds` and `cumulative_controller_wall_seconds`: controller-session and resume-budget accounting. The last record's fsync and controller shutdown occur after its timestamp and may be slightly undercounted.
+- `completed`: a positive engine duration and post-run state digest were received. `timed_out`: processing exceeded its approved limit and has no engine duration. `skipped_after_timeout`: a later repetition was deliberately not attempted after the same configuration timed out. `skipped_global_budget` is defined by the controller but did not occur in this result.
+
+Reproduction requires CPython with the standard library, the retained workload files and manifests, unchanged measured source/harness files, and execution from the project root using the commands above. The final run used CPython 3.13.17 on Windows 11 with 12 logical CPUs and 16,268,513,280 bytes of RAM. The user confirmed external power, sleep prevention, and closure of other heavy applications. The observed Windows power scheme was Balanced. OneDrive remained enabled, so background synchronization or scheduling noise is an explicit limitation; AC status could not be independently queried. Full machine, protocol, fingerprint, and result metadata are retained in `01_environment/environment.json` and `07_results/results_manifest.json`.
 
 Final protocol `final-primary-v2` records two source fingerprints in every repetition. The implementation fingerprint uses this fixed order: the selected engine module (`baseline.py` or `optimized.py`), `validation.py`, `contracts.py`, then `__init__.py`. The harness fingerprint uses `05_benchmarks/run_benchmarks.py` followed by `05_benchmarks/_benchmark_worker.py`. Each component is represented by its normalized project-relative POSIX path and SHA-256 content hash. The aggregate is SHA-256 over UTF-8 JSON serialized with sorted object keys, compact separators, ASCII escaping, and preserved list order. Both aggregate hashes and their ordered component records belong to the resume identity; a mismatch stops execution instead of combining incompatible measurements.
 

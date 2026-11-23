@@ -14,5 +14,54 @@
     "csv": "available",
     "statistics": "available",
     "tracemalloc": "available"
+  },
+  "final_primary_benchmark": {
+    "execution_date": "2026-11-23",
+    "execution_origin": "user-operated local foreground PowerShell session",
+    "independently_observed_machine": {
+      "cpu_description": "AMD64 Family 26 Model 104 Stepping 0, AuthenticAMD",
+      "logical_cpu_count": 12,
+      "machine": "AMD64",
+      "total_ram_bytes": 16268513280,
+      "operating_system_platform": "Windows-11-10.0.26200-SP0",
+      "python_implementation": "CPython",
+      "python_version": "3.13.17",
+      "active_power_scheme": "Balanced",
+      "battery_or_ac_query": "unavailable: Windows access denied"
+    },
+    "user_confirmed_conditions": {
+      "laptop_connected_to_power": true,
+      "automatic_sleep_prevented": true,
+      "other_heavy_applications_closed": true,
+      "onedrive_synchronization_enabled": true
+    },
+    "environmental_limitations": [
+      "OneDrive remained enabled and may have introduced background CPU, storage, or scheduling noise.",
+      "Connection to power was user-confirmed but could not be independently verified.",
+      "The observed Balanced power scheme permits dynamic frequency and power-management behavior."
+    ],
+    "protocol": "final-primary-v2",
+    "measurement_mode": "primary_timing",
+    "limits_seconds": {
+      "cumulative_controller_wall": 5400,
+      "processing_1000_and_10000_events": 30,
+      "processing_100000_events": 120
+    },
+    "source_fingerprints": {
+      "baseline_implementation_sha256": "afa06981e3b1d79b8c10903bd6f8d0cc9d648373b7fc9b20e8e14f431a5770fc",
+      "optimized_implementation_sha256": "06e5ebb794e11852f4b6b6c49df54134a2dd3d3e2e489a4ef269afc35aef9490",
+      "benchmark_harness_sha256": "484913af7e980803308968794bc9c7b4f1d722974fff12c98b818754b5448925",
+      "environment_sha256": "aab6f20672ff1af72c4f79ed2c2f31827f8d522aedae4e7b6239937659236853"
+    },
+    "result": {
+      "path": "07_results/raw/timing.jsonl",
+      "bytes": 1155659,
+      "sha256": "fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f",
+      "records": 450,
+      "completed": 390,
+      "timed_out": 12,
+      "skipped_after_timeout": 48,
+      "charged_controller_wall_seconds": 1765.189204200171
+    }
   }
 }

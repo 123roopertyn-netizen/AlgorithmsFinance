@@ -255,21 +255,21 @@ Each Risk ID appears exactly once in this canonical table. The table contains on
 | RR-005 | Python booleans or other invalid numeric values pass integer validation. | High | Medium | Stage 3/contracts | Require exact integer type and positivity in shared stateless validation. | Boolean, float, string, `None`, zero, and negative input tests. | OPEN |
 | RR-006 | Both engines share matching/state bugs and falsely agree. | High | Medium | Stage 3-4/architecture | Share only stateless contracts; calculate expectations independently. | Hand-calculated cases plus differential comparison. | MITIGATED |
 | RR-007 | Optimized indexes retain stale orders, empty levels, or history under churn. | High | High if lazy cleanup is used | Stage 4/Version B | Define cleanup invariants and avoid unbounded retained history. | Cancellation-churn state, operation-count, and separate memory runs. | OPEN |
-| RR-008 | Parsing, copying, tracing, counters, or output contaminates primary timing. | High | High without separation | Stage 4/benchmarks | Separate engine replay, total application, latency, memory, and diagnostics modes. | Review measurement boundaries and compare instrumented versus primary commands. | OPEN |
+| RR-008 | Parsing, copying, tracing, counters, or output contaminates primary timing. | High | High without separation | Stage 4/benchmarks | Separate engine replay, total application, latency, memory, and diagnostics modes. | Final-primary worker timed only sequential `process_event` calls; parsing, startup, snapshots, hashing, logging, tracing, and counters remained outside. | MITIGATED |
 | RR-009 | Liquidation trials reuse depleted state or size sales from submitted rather than active bids. | Critical | Medium | Stage 4/liquidation | Reconstruct the same book and compute quantities from actual active bid depth before each trial. | Record pre-trial bid depth and confirm independent fresh-state hashes/snapshots. | OPEN |
 | RR-010 | Event count is mistaken for active orders, occupied levels, or fill work. | High | High | Stage 4/analysis | Record `M`, active-order peak `B`, occupied-level peak `P`, and maker fills `F` separately. | Schema checks and dashboard labels. | OPEN |
 | RR-011 | Throughput is used as latency or percentile/window conventions distort results. | High | Medium | Stage 4/latency | Separate per-event instrumentation; approve percentile and early/late rules. | Known-vector percentile tests and saved per-event observations. | DEFERRED |
 | RR-012 | `tracemalloc` is misreported as total or auxiliary memory. | Medium | High | Stage 4/memory | State inclusions and exclusions; retain output during required measurement. | Separate memory protocol and metadata review. | OPEN |
 | RR-013 | Supplied assignment files are corrupted or altered during preservation. | High | Low | Stage 2/data integrity | Preserve originals and compare size/SHA-256 before and after copying. | Sixteen source/destination files matched; manifest reconciliation saved. | VERIFIED |
 | RR-014 | Python 3.13 generation differs from reference Python 3.11.9. | Medium | Medium | Stage 2B/environment | Preserve supplied files; record Python version and checksums for generated files. | Determinism/metadata checks within the approved environment; no cross-version identity claim. | MITIGATED |
-| RR-015 | Generation or benchmarks exceed time, memory, or storage budgets. | Medium | Medium | Stage 2B and 4/resources | Approve explicit caps, preflight estimates, refuse overwrite, report stopped work. | Stage 2B used 22,735,805 bytes and 76.58 seconds; Stage 4 limits remain separate. | OPEN |
+| RR-015 | Generation or benchmarks exceed time, memory, or storage budgets. | Medium | Medium | Stage 2B and 4/resources | Approve explicit caps, preflight estimates, refuse overwrite, report stopped work. | Stage 2B stayed within limits; final primary used 1,765.189204200171 of 5,400 seconds and censored 12 timed-out configurations. Later experiment budgets remain unresolved. | OPEN |
 | RR-016 | Numbered paths or working-directory assumptions break imports cross-platform. | High | Medium | Stage 3-5/execution | Use command-scoped `PYTHONPATH`, `pathlib`, absolute documented roots, and explicit CLI resolution. | Run commands from multiple directories on Windows; document unverified POSIX portability. | MITIGATED |
 | RR-017 | Unknown cancellation sequence advancement is interpreted incorrectly. | High | Medium | Stage 3/contract | Treat valid `not_found` as sequence-advancing while preserving the book; encode the decision for both engines. | Approved contract plus explicit `not_found` cancellation and subsequent-sequence tests. | MITIGATED |
 | RR-018 | `crowded` metadata `levels: 1000` is mistaken for effective price availability. | Medium | High | Stage 2-5/data/reporting | Report CLI argument and effective four-price behavior separately. | Structural validation observed four bid and four ask prices. | VERIFIED |
 | RR-019 | Generator cumulative `bid_units` is used as live liquidation depth. | Critical | Medium | Stage 4/liquidation | Query reconstructed engine state for actual active bid quantity. | Compare requested quantities with canonical pre-trial bid snapshot. | OPEN |
 | RR-020 | Supplied expected output is treated as the only correctness evidence. | High | Medium | Stage 3/tests | Independently calculate additional expected fills and books. | Deterministic hand-calculated cases are transition-verified before either engine is called; the supplied fixture also has a separate exact arithmetic check. | MITIGATED |
 | RR-021 | Retained trade history or result lists dominate memory and invalidate book-space claims. | High | Medium | Stage 4/engines and memory | Return current-event fills only unless extra history is explicitly measured. | Churn and growth tests with storage-component accounting. | OPEN |
-| RR-022 | Large optional data or missing results are silently omitted or committed unintentionally. | Medium | Medium | Stage 2B-5/reproducibility | Prioritize mandatory matrix, use generation manifests and ignore rules, label stopped/missing runs. | Stage 2B produced all 45 core combinations, generated no million-event files, and retained a complete manifest; Stage 4-5 reporting remains open. | OPEN |
+| RR-022 | Large optional data or missing results are silently omitted or committed unintentionally. | Medium | Medium | Stage 2B-5/reproducibility | Prioritize mandatory matrix, use generation/results manifests and ignore rules, label stopped/missing runs. | All 45 core workloads and 450 final records are retained; 12 timeouts and 48 deliberate skips are explicit. Final Git inclusion and later result packaging remain user-controlled and open. | OPEN |
 | RR-023 | Four-bucket pairing merges strict price priority into FIFO queues and may be misinterpreted as changing lookup cost alone. | Medium | Certain | Stage 2B-4/concentration experiment | Preserve all non-price fields, verify monotonic mapping, and describe the experiment as the combined effect of fewer levels and longer queues. | Pair comparison recorded zero non-price/formula mismatches, four prices per side, equal quantities, monotonicity, and uncrossed books. | MITIGATED |
 | RR-024 | A correct canonical snapshot conceals stale auxiliary entries or future cleanup failures. | High | Medium | Stage 4/optimized storage | Probe removed identifiers with follow-up operations and separately inspect memory/storage cleanup under churn. | Stage 3 follow-up matching tests plus Stage 4 internal-storage and memory-growth verification. | DEFERRED |
 | RR-025 | A hand-calculated test oracle contains an internally inconsistent fill, residual, sequence, or book. | High | Medium | Stage 3/tests | Verify each deterministic transition before calling an engine and self-test the verifier with valid and corrupted transitions. | Nine verifier self-tests passed; complete RED audit contained no assertion failure. | MITIGATED |
@@ -286,6 +286,7 @@ This history records meaningful changes without creating duplicate current-statu
 | RR-022 | MITIGATED for Stage 2B data production | OPEN | Stage 2B retained all required core outputs and a manifest, but Stage 4-5 result retention, omission labeling, and submission packaging remain unresolved. |
 | RR-017 | DEFERRED | MITIGATED | The user approved `not_found` cancellation as valid and sequence-advancing, and both-engine tests now encode unchanged book state plus sequence advancement. |
 | RR-020 | OPEN | MITIGATED | Stage 3 added independently calculated deterministic cases and validates their transitions before either engine is invoked; the supplied example is no longer the sole oracle. |
+| RR-008 | OPEN | MITIGATED | Final-primary code inspection and 450 retained records verified a separate engine-only timing boundary with no tracing, counters, parsing, snapshots, or output inside `engine_seconds`. |
 
 ## Stage 3 RED evidence
 
@@ -547,27 +548,29 @@ This history records meaningful changes without creating duplicate current-statu
 
 ### DEC-035 - Final matrix and dry-run contract
 
-- Status: IMPLEMENTED AND DRY-RUN VERIFIED; final benchmark not executed.
+- Status: IMPLEMENTED, EXECUTED, AND POST-RUN VERIFIED.
 - Coverage: 450 repetitions, 90 engine/workload configurations, 45 manifest-verified workloads, 225 repetitions per engine, and 150 repetitions at each of 1,000/10,000/100,000 events.
 - Ordering: increasing event size, scenario and seed grouping, and alternating engine order by configuration/repetition.
-- Dry-run lists every repetition and exact input/output while performing no engine import, worker launch, replay, or result write.
+- The dry-run listed every repetition without execution. The final artifact contains 450 unique records in exact plan order: 390 completed, 12 timed out, and 48 skipped after timeout.
 
 ### DEC-036 - Resume identity and evidence rules
 
-- Status: IMPLEMENTED AND SYNTHETICALLY VERIFIED.
+- Status: IMPLEMENTED, SYNTHETICALLY VERIFIED, AND CONFIRMED AGAINST FINAL EVIDENCE.
 - Resume identity includes phase/mode, engine, scenario, count, seed, repetition, workload hash, complete implementation and harness fingerprints, environment fingerprint, GC/timeout policy, and protocol version.
 - The implementation fingerprint records the selected engine, `validation.py`, `contracts.py`, and `__init__.py` in that fixed order. The harness fingerprint records `run_benchmarks.py` and `_benchmark_worker.py` in that fixed order. Each aggregate is stable SHA-256 over ordered normalized relative paths and per-file SHA-256 values.
 - Only verified `completed` records are reused as measurements. `timed_out`, `skipped_after_timeout`, and `skipped_global_budget` are validated terminal decisions, not completed observations.
 - Malformed, truncated, duplicate, contradictory, unexpected, failed, or incomplete completed records stop execution for investigation. Existing evidence is append-only and never overwritten.
 - Synthetic fixtures verified all required rejection paths without touching the real final output.
+- The post-run strict validator accepted all 450 records with no duplicate, contradictory, malformed, truncated, unexpected, or nonterminal evidence. All workload, implementation, harness, environment, policy, and protocol identities matched current retained sources.
 
 ### DEC-037 - Cumulative budget and timeout behavior
 
-- Status: IMPLEMENTED AND SYNTHETICALLY VERIFIED.
+- Status: IMPLEMENTED AND VERIFIED IN THE FINAL PRIMARY RUN.
 - Fixed cumulative allowance: 5,400 seconds. Every written record carries a controller-session ID and elapsed session time; resume charges the maximum elapsed time for each prior session.
 - A processing timeout is recorded once and makes later repetitions of the same engine/workload configuration `skipped_after_timeout`. A post-timeout completion is contradictory and rejected.
 - Global exhaustion records every unstarted repetition as `skipped_global_budget`. Completed repetitions remain durable, but incomplete configurations receive no ordinary five-repeat median or speedup.
 - Limitation: an abrupt external process kill between durable records cannot reconstruct unrecorded elapsed time. Normal controller completion/resume is cumulative; abnormal termination must be disclosed before resume.
+- Final evidence charged 1,765.189204200171 seconds against the 5,400-second allowance. Twelve Version A 100,000-event configurations timed out on repetition 1; each has exactly four `skipped_after_timeout` records. No global-budget skip occurred.
 
 ### DEC-038 - Proposed untimed ordered-result digest verification
 
@@ -592,7 +595,7 @@ This history records meaningful changes without creating duplicate current-statu
 
 ### DEC-041 - Complete source fingerprints for final resume
 
-- Status: IMPLEMENTED AND SYNTHETICALLY VERIFIED; final benchmark not executed.
+- Status: IMPLEMENTED, SYNTHETICALLY VERIFIED, AND RETAINED IN ALL FINAL RECORDS.
 - Protocol version is `final-primary-v2`. The former engine-module-only field was replaced by `implementation_fingerprint_sha256` plus its ordered component records, and `harness_fingerprint_sha256` plus its ordered component records.
 - Stable serialization is UTF-8 JSON with sorted object keys, compact separators, ASCII escaping, and preserved component-list order. Paths are project-relative POSIX strings and every component carries its own SHA-256.
 - Verified current aggregate fingerprints: baseline implementation `afa06981e3b1d79b8c10903bd6f8d0cc9d648373b7fc9b20e8e14f431a5770fc`, optimized implementation `06e5ebb794e11852f4b6b6c49df54134a2dd3d3e2e489a4ef269afc35aef9490`, and harness `484913af7e980803308968794bc9c7b4f1d722974fff12c98b818754b5448925`.
@@ -600,9 +603,20 @@ This history records meaningful changes without creating duplicate current-statu
 - Fingerprint mismatch is a stop condition, never permission to merge measurements. The current normal cumulative-budget mechanism remains intact.
 - Remaining limitations: the last record's fsync and controller shutdown can be slightly undercounted; abrupt external termination can bypass normal worker cleanup and leave elapsed time unrecorded. Any abnormal interruption requires manual result-boundary and process inspection before resume.
 
+### DEC-042 - Final-primary observations and censoring
+
+- Status: VERIFIED FROM THE IMMUTABLE 450-RECORD RESULT.
+- Authoritative artifact: `07_results/raw/timing.jsonl`, 1,155,659 bytes, SHA-256 `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f`.
+- Completed configurations: all engines/scenarios/seeds at 1,000 and 10,000 events; all Version B configurations at 100,000 events; Version A `cancel_churn` at 100,000 events for seeds 42, 43, and 44.
+- Censored configurations: Version A at 100,000 events for `buildup`, `crowded`, `mixed`, and `sweep`, each at seeds 42, 43, and 44. Each timed out on repetition 1 at the 120-second processing limit and has repetitions 2-5 marked `skipped_after_timeout`.
+- Decision: do not calculate an ordinary five-repeat median, throughput, or speedup for any censored configuration. Do not substitute the timeout limit for missing engine durations.
+- Environmental limitation: the user confirmed external power, sleep prevention, and closure of other heavy applications, but OneDrive remained enabled. The active Windows power scheme was independently observed as Balanced; battery/AC status could not be independently queried.
+- Pilot evidence remains isolated and excluded from final statistics. Later latency, memory, liquidation, concentration, diagnostic, dashboard, and reporting work requires separate approval.
+
 ### Stage 4D remaining risks
 
-- Final mode is dry-run tested but has not yet executed a real repetition; the first authorized session should be monitored closely and stopped on protocol anomalies.
-- Hard external termination between durable records can undercount unrecorded session time; disclose it and obtain direction before resuming.
+- The final-primary benchmark executed all 450 planned record slots and was independently audited; 12 Version A configurations are censored and cannot support ordinary paired medians or speedups.
+- OneDrive and the Balanced power scheme may have introduced uncontrolled background or frequency-scaling variation; report this limitation and do not silently exclude otherwise valid observations.
+- Hard external termination between durable records can undercount unrecorded session time in any future resume; disclose it and obtain direction before resuming.
 - Environment fingerprints intentionally prevent resume across changed environments, which may require restarting rather than mixing incomparable observations.
 - Primary timing still excludes concentration, latency, memory, diagnostics, liquidation, and result-digest verification; each requires separate authorization and measurement boundaries.
