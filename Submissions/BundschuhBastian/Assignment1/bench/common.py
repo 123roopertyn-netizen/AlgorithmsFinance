@@ -1,0 +1,102 @@
+"""Shared constants and helpers for the Phase 6 benchmarks (see README: "Benchmark limits")."""
+from __future__ import annotations
+
+import csv
+import json
+import math
+import platform
+import subprocess
+import sys
+import zlib
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / "data" / "generated"
+RESULTS = ROOT / "results"
+
+# Declared before any benchmark was run (README, commit 4ada71e).
+LIMIT_SECONDS = 600          # per single replay, same for A and B
+SLOW_FIRST_SECONDS = 60      # first replay slower than this -> one measurement only
+TIMED_REPEATS = 5            # timed replays after the warm-up
+A_MILLION_THRESHOLD = 60     # A needs a 100,000-event replay below this to run 1,000,000 events
+
+SCENARIOS = ("buildup", "crowded", "mixed", "sweep", "cancel_churn")
+GRID_SIZES = (1000, 10000, 100000)
+GRID_SEEDS = (42, 43, 44)
+CONCENTRATION_LEVELS = (4, 16, 64, 256, 1000, 4000)      # buildup, 100,000 events, seed 42
+
+
+def stream_name(scenario: str, events: int, seed: int, levels: int = 1000) -> str:
+    suffix = f"_L{levels}" if levels != 1000 else ""
+    return f"{scenario}_{events}_s{seed}{suffix}.jsonl.gz"
+
+
+def stream_path(scenario: str, events: int, seed: int, levels: int = 1000) -> Path:
+    return DATA / stream_name(scenario, events, seed, levels)
+
+
+def all_streams() -> list[dict]:
+    """Every stream made by bench/make_data.sh, smallest first."""
+    specs = [dict(scenario=s, events=m, seed=seed, levels=1000)
+             for s in SCENARIOS for m in GRID_SIZES for seed in GRID_SEEDS]
+    specs += [dict(scenario=s, events=1_000_000, seed=42, levels=1000) for s in SCENARIOS]
+    specs += [dict(scenario="buildup", events=100000, seed=42, levels=n)
+              for n in CONCENTRATION_LEVELS if n != 1000]
+    return sorted(specs, key=lambda d: (d["events"], d["scenario"], d["seed"], d["levels"]))
+
+
+def percentile_nearest_rank(sorted_values: list, p: float):
+    """Nearest-rank percentile: the value at rank ceil(p/100 * n) of the sorted list (1-based)."""
+    n = len(sorted_values)
+    if n == 0:
+        raise ValueError("no values")
+    rank = max(1, math.ceil(p / 100 * n))
+    return sorted_values[rank - 1]
+
+
+def read_csv(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    with path.open(newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def append_csv(path: Path, fields: list[str], row: dict) -> None:
+    path.parent.mkdir(exist_ok=True)
+    new = not path.exists()
+    with path.open("a", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        if new:
+            writer.writeheader()
+        writer.writerow({k: row.get(k, "") for k in fields})
+
+
+def _sh(*cmd: str) -> str:
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout.strip()
+    except Exception:           # environment facts are best effort
+        return ""
+
+
+def environment() -> dict:
+    """Python, OS, machine, code version (git), dependencies, generator settings reference."""
+    return {
+        "python": platform.python_version(), "implementation": platform.python_implementation(),
+        "zlib": zlib.ZLIB_VERSION, "platform": platform.platform(),
+        "machine": platform.machine(), "processor": platform.processor(),
+        "mac_model": _sh("sysctl", "-n", "hw.model"),
+        "cpu_brand": _sh("sysctl", "-n", "machdep.cpu.brand_string"),
+        "memory_bytes": _sh("sysctl", "-n", "hw.memsize"),
+        "git_commit": _sh("git", "-C", str(ROOT), "rev-parse", "HEAD"),
+        "git_dirty": bool(_sh("git", "-C", str(ROOT), "status", "--porcelain", "--", ".")),
+        "dependencies": _sh(sys.executable, "-m", "pip", "freeze").splitlines(),
+        "constants": {"limit_seconds": LIMIT_SECONDS, "slow_first_seconds": SLOW_FIRST_SECONDS,
+                      "timed_repeats": TIMED_REPEATS, "a_million_threshold": A_MILLION_THRESHOLD},
+        "timing": "time.perf_counter; gc.collect() before and gc disabled during each replay",
+        "generator_settings": "results/generated_data_checksums.json",
+    }
+
+
+def write_environment() -> None:
+    RESULTS.mkdir(exist_ok=True)
+    (RESULTS / "environment.json").write_text(json.dumps(environment(), indent=2) + "\n")

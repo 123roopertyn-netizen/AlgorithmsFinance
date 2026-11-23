@@ -39,7 +39,7 @@ python3 -m venv .venv
 | Tests | `.venv/bin/python -m pytest -q` | nothing |
 | Replay a file | `.venv/bin/python -m lob.replay data/worked_example.jsonl --version A` | stdout |
 | Generate data | TODO (Phase 5: `bench/make_data.sh`) | `data/generated/` (not committed) |
-| Benchmarks | TODO (Phase 6) | `results/` |
+| Benchmarks | `bash bench/run_all.sh` (Phase 6; several hours, see below) | `results/` |
 | Dashboard | TODO (Phase 7) | loads `results/` only |
 
 ## Tests
@@ -103,9 +103,40 @@ They were fixed by Bastian before the first benchmark run (commit of this sectio
    Otherwise the run is recorded as `status=not_run` with the reason (A at 100,000 events took
    X s, or was stopped). Version B runs on all files.
 
-Result statuses in the saved tables: `ok`, `stopped` (rule 1), `not_run` (rule 3).
-A single replay of 60 s or less is "fast"; the exact numbers (60 s, 600 s) are the declared
-constants of `bench/`.
+Result statuses in the saved tables: `ok`, `stopped` (rule 1), `not_run` (rule 3 and the
+instrumented-run rule below), `error` (the run crashed; the error text is saved, nothing is
+estimated). The numbers 60 s and 600 s are the declared constants in `bench/common.py`.
+
+Details of how the rules are applied (also fixed before the first run):
+
+- **Enforcement.** Every run is a child process. The parent measures wall-clock time and, at 600 s,
+  stops the child. Events processed at the stop = the `seq` of the event being processed (the
+  generator numbers events 1, 2, 3, ...). Stops during a liquidation sale have no event count.
+- **Timing.** `time.perf_counter` around the replay loop only; `gc.collect()` before and
+  `gc` disabled during each replay (like `timeit`); results are discarded, not stored; parsing
+  (gzip + JSON) is timed separately and saved as `parse_seconds`. Throughput = events divided by
+  the median replay seconds (the single measurement if `repeats=1`).
+- **Instrumented runs** (latency, `tracemalloc` memory, operation counters) are separate runs and
+  never part of the primary timing. They use seed 42 and 10,000 events (counters also 1,000) for A
+  and B, and 100,000 events for B. A runs at 100,000 events only if its timing run at that size
+  and scenario finished with a median below 60 s (same threshold as rule 3); otherwise `not_run`.
+  No instrumented run uses the 1,000,000-event files.
+- **Latency.** `perf_counter_ns` before and after every `process` call; the cost of the timer pair
+  is measured and reported, not subtracted. Percentiles by the nearest-rank rule: for n sorted
+  values, the p-th percentile is the value at rank ceil(p/100 * n), 1-based (p50, p95, p99).
+  Early versus late: first 5% and last 5% of the events, and 20 equal chunks in order.
+- **Memory.** `tracemalloc`, events loaded before tracing starts (so the input is not counted);
+  counted are the book, the result dicts and fill lists while alive, and temporary objects. No
+  trade history is kept. Not counted: interpreter, native memory, allocator slack.
+- **Liquidation.** Book = first N BUY limits of the generator stream, N in {1,000; 10,000;
+  100,000}, with 1,000 price levels (`buildup`) or 4 (`crowded`); sells of ceil(10%), 100% and
+  200% of the bid quantity; fresh book per trial; only the sell is timed (build time saved
+  separately). If a trial is stopped at the limit, the remaining sale sizes of the same book are
+  `not_run`, because they would repeat the same construction. Rule 2 applies per (version, book,
+  sale size), with one trial (build + sell) as the "replay".
+- **Queue concentration.** `buildup`, 100,000 events, seed 42, 4 / 16 / 64 / 256 / 1,000 / 4,000
+  price levels; price-time correctness by A-vs-B comparison on 5,000-event versions of the same.
+
 
 ## Measured-data definitions
 

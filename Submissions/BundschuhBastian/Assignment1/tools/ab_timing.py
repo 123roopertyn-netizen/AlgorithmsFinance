@@ -7,6 +7,7 @@ from lob.common import load_events
 
 def load(path, tag):
     spec = importlib.util.spec_from_file_location(tag, path)
+    assert spec is not None and spec.loader is not None
     m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); return m.OrderBookB
 
 variants = {"before": load(sys.argv[1], "vb"), "after": load(sys.argv[2], "va")}
