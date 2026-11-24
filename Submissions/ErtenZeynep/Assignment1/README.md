@@ -340,6 +340,56 @@ python '05_benchmarks/run_warmed_primary.py' --output '07_results/stage4e/warmed
 
 Use `python3` with the same arguments on macOS/Linux. Protocol `warmed-primary-v1` fingerprints the selected engine and shared dependencies, the new wrapper/worker and retained Stage 4D controller dependency, the environment, and the 1,000-event mixed warm-up workload. The worker verifies warm-up hash `8c3455dc8370f2e006eda834f5bfeb47abdb7dc3766775cf12cdc8444f974d9d`, processes it on a disposable same-class engine, releases that engine, calls `gc.collect()`, and verifies that a newly constructed measured engine is empty before READY. Warm-up and preparation are excluded from `engine_seconds`. Interpreter first-call specialization is partially warmed; scenario-specific branches, CPU thermal state, and operating-system scheduling are not guaranteed to be stabilized.
 
+### Deterministic aggregation and dashboard
+
+`05_benchmarks/aggregate_results.py` validates the retained source sizes, SHA-256 values, record/status counts, protocols, the parsing-only evidence, and all 50 compressed latency files against `07_results/results_manifest.json` before calculating anything. It never imports an order-book engine or executes a benchmark. Pilot records are validated for integrity but excluded from every final statistic. The deterministic output is `07_results/processed/aggregated_results.json` (350,185 bytes; SHA-256 `0f8c7a88f7360900c5c385496222ae6da4b4dbe7a8724edeeff1de8099a231d5`).
+
+The processed schema contains 90 warmed-primary configurations: 78 complete five-repeat configurations and 12 timeout-censored configurations. It contains 33 valid paired speedups, 45 parsing-only configurations, ten latency scenario/engine groups derived from 500,000 per-event observations, four memory observations, six five-repeat liquidation groups, 24 concentration configurations with nine valid original/four-level comparisons, eight diagnostic observations, and five retained correctness outcomes. A primary median is `statistics.median` over exactly five completed `engine_seconds` values. Throughput is event count divided by that median. Speedup is Version A median divided by Version B median and exists only when both configurations have five completed repetitions. Censored configurations retain all five raw statuses and have null median, throughput, and speedup fields. The separately labelled controller invocation wall cost includes worker preparation, disposable-engine warm-up, process startup, communication and cleanup; it is not pure parsing-plus-engine time. Latency uses an ordinary median and nearest-rank P95/P99; early/late means the first/last 10% by stream position.
+
+### Parsing-only evidence
+
+`05_benchmarks/measure_parsing.py` imports no matching engine. For each of the 45 core workloads (five families, three sizes, three seeds), it warms up once and retains five raw measurements. `read_decompress_seconds` covers filesystem reading, gzip validation/decompression and decompressed-byte allocation. `json_decode_seconds` starts from preloaded decompressed bytes and covers JSONL splitting, `json.loads`, and a mapping check. Their sum is reported as `combined_seconds`; the operating-system file cache is not flushed, so this is warmed-cache evidence. The 300-second controller budget was enforced; the actual experiment wall time was 17.92946740053594 seconds.
+
+Dry-run, execute, and verify from the project root:
+
+```powershell
+python '05_benchmarks/measure_parsing.py' --dry-run --budget-seconds 300
+python '05_benchmarks/measure_parsing.py' --output '07_results/parsing/parsing_runs.jsonl' --budget-seconds 300
+python '05_benchmarks/measure_parsing.py' --output '07_results/parsing/parsing_runs.jsonl' --verify-only --budget-seconds 300
+```
+
+```bash
+python3 05_benchmarks/measure_parsing.py --dry-run --budget-seconds 300
+python3 05_benchmarks/measure_parsing.py --output 07_results/parsing/parsing_runs.jsonl --budget-seconds 300
+python3 05_benchmarks/measure_parsing.py --output 07_results/parsing/parsing_runs.jsonl --verify-only --budget-seconds 300
+```
+
+The raw artifact has 225 completed records, size 410,030 bytes and SHA-256 `7973ab2822f2707edbc1e7ddcb68bdcddd3529e0e5c24239be952361fb68d146`. It records workload and environment fingerprints, Python details, seconds as the timing unit, boundaries and raw repeats. It must not be interpreted as matching-engine replay time.
+
+Generate or verify the processed table from the project root:
+
+```powershell
+python '05_benchmarks/aggregate_results.py'
+python '05_benchmarks/aggregate_results.py' --verify-only
+```
+
+```bash
+python3 05_benchmarks/aggregate_results.py
+python3 05_benchmarks/aggregate_results.py --verify-only
+```
+
+The dashboard is a dependency-free static application at `06_dashboard/index.html`. It loads the saved processed JSON and never reruns an experiment. From the project root, start a local server:
+
+```powershell
+python -m http.server 8000 --bind 127.0.0.1
+```
+
+```bash
+python3 -m http.server 8000 --bind 127.0.0.1
+```
+
+Open `http://127.0.0.1:8000/06_dashboard/`. Stop the server with Ctrl+C. Opening the HTML directly with `file://` is unsupported because browsers commonly block its JSON fetch. The dashboard defaults to warmed-primary evidence and shows every planned raw repeat for a selected workload, including explicit timeout/skip labels and the workload SHA-256. It visibly labels censored configurations, distinguishes engine time from controller invocation wall cost, shows parsing-only evidence, distinguishes traced current from traced peak memory at 10%, 50%, 100% and post-stream/post-cancellation state, and keeps instrumented latency/memory/diagnostics separate from primary timing. It also shows throughput, valid speedups, latency distributions, fresh-book liquidation, concentration, code-grounded diagnostic complexity, correctness outcomes, and limitations. Stage 4D cold-primary remains supplementary and pilot results never enter its displayed statistics.
+
 ## Decisions required before Stage 3
 
 | Topic | Assignment requirement | Recommended default | Deadline |

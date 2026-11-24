@@ -1144,3 +1144,70 @@ No experiment, analytical summary, dashboard, technical report, dependency insta
 
 - Reparsed both updated JSON files successfully, searched README and AI decisions for five obsolete pre-execution phrases, and found none as current text.
 - Recalculated the pilot, cold-primary, warmed-primary, results-manifest, and environment-metadata hashes once more. The retained evidence hashes remained unchanged; the documentation hashes matched the values recorded above.
+
+## 2026-11-24 - Results aggregation and dashboard
+
+### 119. Re-verified instructor requirements and selected the lean implementation
+
+- Read the user-provided stage request, the persistent project rules, the visualization and PDF inspection instructions, the supplied instructor README, and the decompressed text of PDF slides 16-23. The unrelated embedded AI naming instruction remained rejected and had no effect.
+- Confirmed mandatory saved-result/dashboard coverage: warmed five-repeat medians, throughput, latency distributions and percentiles, memory and post-cancellation state, construction/replay/liquidation scaling, correctness outcomes, raw-repeat/stopped labels, units, and at least one operation-count/complexity bottleneck explanation. One-million-event testing and Docker remain optional.
+- Inspected the existing results/dashboard directories, dependency availability, Stage 4E schemas, per-event latency CSV schema, and Gate B correctness evidence. Chose a standard-library aggregator plus dependency-free static HTML dashboard; no dependency was installed.
+
+### 120. Implemented and ran deterministic aggregation
+
+- Created `05_benchmarks/aggregate_results.py`. It derives its project root from its own path, validates schema-2 manifest evidence, refuses escaping output paths, reopens all JSONL/gzip inputs, and does not import either engine.
+- Its first execution passed syntax/help and source validation but was denied while creating the new `07_results/processed` directory. No output was created. Requested and received the minimal parent-directory write permission, then reran the unchanged command.
+- Created `07_results/processed/aggregated_results.json`: 206,127 bytes, SHA-256 `0b08c398bb5321ab3e98ea82345da8fddd256886d0dcb3aa9b5b07ff7699dce7`. A subsequent `--verify-only` regeneration was byte-identical.
+- Verified output coverage: 90 primary configurations, 78 complete, 12 censored, 33 valid paired speedups, ten latency groups/500,000 events, four memory observations, six liquidation groups, 24 concentration configurations/nine valid comparisons, eight diagnostics, and zero pilot records used in statistics.
+
+### 121. Implemented and validated the saved-result dashboard
+
+- Created `06_dashboard/index.html`, a single dependency-free page that fetches only the processed JSON. It presents warmed-primary runtime/throughput/speedups, censored states, latency percentiles/distributions and event/window breakdowns, memory growth/cleanup, construction versus liquidation time/outcomes, concentration comparisons, diagnostic counts/provenance, correctness evidence, and limitations.
+- Static HTML parsing passed with 31 unique IDs and one script. One PowerShell capability-report expression failed under constrained language while the independent HTML parser in the same command passed; it changed nothing. A corrected capability check found Edge available and Node absent.
+- Started one managed project-root HTTP server for browser validation. Headless Edge failed before rendering because its GPU process was unusable; no successful visual-browser render is claimed. The exact project-local `.edge_validation` profile was resolved, verified inside `06_dashboard`, and removed. The validation Python server initially survived the rejected session-control request; its exact start time identified PID 67320 as the assistant-created server, and it was stopped. Final Python/PythonW count and port-8765 listener count are zero.
+- A separate short-lived in-process HTTP server successfully served both dashboard HTML and processed JSON, then shut down. Dashboard checks found 31 DOM IDs, 23 JavaScript element references, zero missing targets, correct 90/33 data counts, and zero pilot contamination. Cross-working-directory `--verify-only` also passed.
+- A final supervised Chrome attempt used an exact hidden local-server process, isolated project-local profile, and `finally` cleanup. Chrome returned `ERR_CONNECTION_REFUSED` inside its sandbox and created no screenshot. PowerShell constrained language also rejected `WaitForExit`; the exact server was nevertheless already stopped, and both the profile and screenshot paths were absent afterward. No browser-render success is claimed.
+
+### 122. Updated documentation and performed preservation checks
+
+- Updated `README.md` with schemas, calculation definitions, exact Windows/macOS/Linux commands, local-server launch instructions, evidence boundaries, and the processed-output hash.
+- Updated `AI_DECISIONS.md` with DEC-051, changed RR-021 from OPEN to MITIGATED with measurement evidence, and added its status history without duplicating the canonical row.
+- Verified 26 canonical risk IDs with no duplicate; README code fences are balanced; all new output paths are project-relative and contain no personal absolute path.
+- Preservation inventory hashes remained exact for engines/shared source `5c6fd47c...62c`, tests `294998a2...cd2`, datasets `804739b7...57`, raw measurements `67b05a1c...70d`, and the six pre-existing benchmark scripts `1b8bfa2f...03d`. `results_manifest.json` remained byte-identical at SHA-256 `d74d1216e22a5a963cd85020adcebe3e7c949ad98dadb80749f7cfd5900f2e0b`.
+- New file hashes: aggregator `b1e11bbc6eb68de786480d0fd2f78659f1d3ee73704070cc4b0b620ab14772c9`; dashboard `1b4f39164ab7f22b1cf16de1fd27260375b779cb82d87d2a94b34fdb4e385da3`; processed JSON `0b08c398bb5321ab3e98ea82345da8fddd256886d0dcb3aa9b5b07ff7699dce7`.
+
+No matching engine, test, existing benchmark controller/worker, workload, raw measurement, results manifest, dashboard experiment, dependency, external network resource, Git state, or GitHub state was modified.
+
+## 2026-11-24 - Dashboard compliance closure and parsing-only evidence
+
+### 123. Designed and dry-ran the parsing-only protocol
+
+- Re-read the instructor requirements, persistent project rules, actual engine implementations, warmed-primary evidence and current dashboard artifacts. Confirmed that the remaining mandatory gaps were raw-repeat visibility, parsing-only timing, explicit memory checkpoints, controller invocation cost and code-grounded complexity notation.
+- Created `05_benchmarks/measure_parsing.py` with no order-book import. Syntax/help checks passed. The non-executing command `python 05_benchmarks/measure_parsing.py --dry-run --budget-seconds 300` planned 45 workloads and 225 repeats: five scenarios, sizes 1,000/10,000/100,000, seeds 42/43/44, and five repeats. It planned 8,325,000 JSON decodes and 100,046,355 compressed input bytes across repeats without creating output.
+- The first execution preflight refused to start because it observed an unexpected Python process left from the command environment. No parsing result existed. A narrowly targeted `Stop-Process` request for that exact PID was denied by the operating system and changed nothing. Inspection found no network connection or benchmark-worker command line; the unchanged parsing command was then run in the managed foreground.
+
+### 124. Executed and verified parsing-only measurements
+
+- Ran `python 05_benchmarks/measure_parsing.py --output 07_results/parsing/parsing_runs.jsonl --budget-seconds 300`. It completed all 225 records across 45 configurations with zero failures in 17.92946740053594 seconds.
+- Ran the matching `--verify-only` command. It revalidated the protocol, complete matrix, session/environment/workload identities, positive component durations, input hashes and five repeats per workload.
+- Created `07_results/parsing/parsing_runs.jsonl`: 410,030 bytes, SHA-256 `7973ab2822f2707edbc1e7ddcb68bdcddd3529e0e5c24239be952361fb68d146`. The script SHA-256 was `8ad3130aa7f3947d3d86c4cf6d7d507c2ea0a9d6567f0c157355689cc017d384`.
+- Extended `07_results/results_manifest.json` with project-relative parsing evidence, measurement boundaries, protocol, budget, actual wall time and hashes. No prior manifest entry or raw measurement was rewritten.
+
+### 125. Extended aggregation and dashboard presentation
+
+- Updated `05_benchmarks/aggregate_results.py` to validate and aggregate the parsing artifact, preserve warmed-primary raw repetition fields, and calculate a controller invocation wall median only for configurations with five completed repetitions.
+- Regenerated `07_results/processed/aggregated_results.json`: 350,185 bytes, SHA-256 `0f8c7a88f7360900c5c385496222ae6da4b4dbe7a8724edeeff1de8099a231d5`. `--verify-only` reproduced identical bytes. Coverage remained 90 warmed-primary configurations, 78 complete, 12 censored and 33 valid speedups, plus 45 parsing configurations; pilot contribution remained zero.
+- Updated `06_dashboard/index.html` with workload-level raw repetition/status/hash details, parsing controls and raw repeats, traced-current/peak checkpoint presentation, controller invocation wall cost and code-grounded complexity notation. Updated README and AI decisions with exact boundaries, portable commands, results and limitations.
+- Two attempted patch hunks intended only to replace encoding-damaged decorative symbols did not match the existing byte sequence and therefore made no change. Functional dashboard wiring was applied separately.
+
+### 126. Completed integrity, loading and preservation verification
+
+- A `py_compile` check was denied because the environment did not permit writing `05_benchmarks/__pycache__`; both scripts were subsequently parsed successfully with `ast.parse`, which performs the same syntax parse without writing bytecode. Parsing `--verify-only` and aggregation `--verify-only` both passed.
+- The first combined validation script used an outdated processed-JSON key name and stopped with `KeyError` after already passing syntax and manifest checks. A corrected read-only run passed: 90 primary configurations, 45 parsing configurations, exactly five retained repeats in each, null timing aggregates for censored primary configurations, workload hashes present, 10%/50%/100% memory checkpoints present, and pilot evidence excluded.
+- Verified all machine-readable manifest entries reachable through path/size/hash triples, 41 unique dashboard element IDs, 32 JavaScript element references with no missing target, balanced README fences, and 26 unique canonical Risk Register IDs.
+- Started a short-lived in-process loopback HTTP server. Requests for `/06_dashboard/` and `/07_results/processed/aggregated_results.json` both returned HTTP 200; the served JSON contained 45 parsing configurations. The server was shut down in `finally`.
+- Final hashes: results manifest `3a0da3ff377860b2e6d1c72820d91dfa80e33ddef6930831945f6c621bf79e67`; processed JSON `0f8c7a88f7360900c5c385496222ae6da4b4dbe7a8724edeeff1de8099a231d5`; parsing script `8ad3130aa7f3947d3d86c4cf6d7d507c2ea0a9d6567f0c157355689cc017d384`; aggregator `068d6010184ef9d7a44cd4da6c363deb40784da6a8b4cfb07a7523445f165644`; dashboard `85f1d5eb013f624522825d61c32aa06b1af85a70e26a5e02f9b0252b556a69bd`.
+- Protected inventory digests remained byte-identical: engines/shared `5c6fd47cbaadc018a397435394344785c9abbe3264ea1d42031b289ce1b0062c`; correctness tests `294998a21fd061ab4f83371ffc77c2fd8bc11b2a2031c9f62214d45187812cd2`; datasets `804739b7aaab3577b185779fe2d043de763539aa4487cc9a13296ee8b0bf0e57`; six retained benchmark harness scripts `1b8bfa2fc61d2b4f7e5221a88da386b3b66ca7ac1a4231d8894da8419dd7c03d`; prior raw evidence `67b05a1cec977cba583edeca0e714620a7895470c075de2d0740de902a46f70d`.
+- A privacy scan found no personal absolute path in the new scripts, parsing result, processed result, manifest, dashboard, README or AI decisions. Existing machine-specific paths remain only in the historical action evidence, where they were intentionally preserved.
+
+No matching benchmark was rerun. No engine, correctness test, dataset, existing benchmark controller/worker, or prior raw evidence was modified. No dependency, network, Git or GitHub operation occurred.

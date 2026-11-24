@@ -139,6 +139,30 @@
         "benchmark_harness_sha256": "ce1fd6b5ccf517e35e783e176dc7c2cfce333f41423d85c73d1cd0d66a6fe493",
         "environment_fingerprint": "aab6f20672ff1af72c4f79ed2c2f31827f8d522aedae4e7b6239937659236853"
       }
+    },
+    "parsing": {
+      "path": "07_results/parsing/parsing_runs.jsonl",
+      "role": "standalone warmed-cache filesystem/gzip-decompression and JSONL-decoding evidence; no engine import or replay",
+      "bytes": 410030,
+      "sha256": "7973ab2822f2707edbc1e7ddcb68bdcddd3529e0e5c24239be952361fb68d146",
+      "record_count": 225,
+      "status_counts": {"completed": 225},
+      "configuration_count": 45,
+      "workload_count": 45,
+      "recorded_phase": "parsing",
+      "recorded_measurement_mode": "reading_decompression_and_json_decode",
+      "recorded_protocol_version": "parsing-only-v1",
+      "actual_session_wall_seconds": 17.92946740053594,
+      "budget_seconds": 300.0,
+      "script_sha256": "8ad3130aa7f3947d3d86c4cf6d7d507c2ea0a9d6567f0c157355689cc017d384",
+      "environment_fingerprint": "dec8eb13ed809973943a03f07a7fc5158e155c3d8aa22b035eda345aeaf0d2f7",
+      "measurement_boundary": {
+        "read_decompress_seconds": "filesystem read + gzip validation/decompression + decompressed-byte allocation",
+        "json_decode_seconds": "preloaded decompressed bytes; JSONL split + json.loads + mapping check",
+        "combined_seconds": "sum of the two separately timed phases",
+        "os_file_cache_flushed": false,
+        "engine_import_or_replay": false
+      }
     }
   },
   "timeout_censoring": {
