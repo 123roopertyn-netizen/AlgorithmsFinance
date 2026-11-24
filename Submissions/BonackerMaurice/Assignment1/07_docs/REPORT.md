@@ -1,92 +1,280 @@
-# Assignment 1: Limit order book, report (draft)
+# Assignment 1: Limit order book, report
 
-Maurice Bonacker, Frankfurt School, Algorithms in Finance.
-Status: **draft skeleton**. Notes collected on 22 Nov 2026 during the work.
-Each section still has to be written out in my own words.
+Maurice Bonacker, Frankfurt School of Finance & Management, Algorithms in Finance.
+Submission folder: `Submissions/BonackerMaurice/Assignment1/`. Benchmark measured at commit `4b9df5f`; see the README for run commands and the submitted commit.
 
 ---
 
-## 1. Specification and model limits
+## 1. Specification and model
 
-**To write:** what the engine does and what it deliberately does not model.
+The project implements a sequential, single-venue limit order book for Bitcoin in
+Python, in two versions that return identical results: a transparent baseline
+(Version A) and a revised version (Version B, in two variants).
 
-Notes:
-- Sequential, single-venue BTC limit order book. Events: `LIMIT`, `MARKET_SELL`, `CANCEL`, processed strictly one at a time in `seq` order.
-- Price-time priority: best price first, then earliest `seq` (FIFO). Trades execute at the **resting (maker) order's price**. Continuous matching, not a batch auction.
-- Integers only: `price_ticks` = cents per BTC (6,000,000 = $60,000), `qty_units` = 1e-8 BTC (100,000,000 = 1 BTC). Proceeds in dollars = sum(price × qty) / 10^10.
-- Limit residual rests on the book until it is filled by a later order or cancelled. Market-sell residual is discarded immediately and never rests.
-- There is no separate "BTC price" to compute. Best bid, best ask and last trade are read off the book and the fills. Example: in the worked example the best bid moves 60,000 → 59,700 purely through matching.
-- Out of scope: fees, balances, hidden orders, self-trade checks, network delays, simultaneous execution, market buys. Data are synthetic teaching data, not calibrated to an exchange. Not a production trading system.
+**Events.** Each event has a strictly increasing `seq`, a unique `event_id` and a
+`type`: `LIMIT` (buy or sell with a limit price), `MARKET_SELL` and `CANCEL`. Events
+are processed one at a time in file order. Nothing is reordered or batched; an
+event whose `seq` is not larger than the last accepted one is rejected.
+
+**Matching rules.**
+- A limit buy crosses when its price is at least the best ask; a limit sell when
+  its price is at most the best bid.
+- The best opposite price executes first; at the same price, the earliest
+  resting order executes first (price-time priority, FIFO).
+- Each trade is `min(incoming remaining, resting remaining)` at the **resting
+  order's price**. A partially filled maker keeps its queue position.
+- A limit order's residual rests on the book. A market sell's residual is
+  discarded and never rests (status `filled`, `partial` or `unfilled`).
+- A cancel removes only the remaining quantity of a live order; an unknown,
+  filled or already cancelled target returns `not_found`.
+- Invalid events (unknown type or side, non-integer or non-positive price or
+  quantity, duplicate live id, non-increasing `seq`, malformed input lines) are
+  rejected with a reason and change neither the book nor the last accepted `seq`.
+
+**Units.** All matching uses integers: `price_ticks` are cents per BTC
+(6,000,000 = $60,000) and `qty_units` are 10⁻⁸ BTC (100,000,000 = 1 BTC). Proceeds
+in dollars are Σ(price × quantity) / 10¹⁰; rounding happens only for display.
+
+**Interface.** `AddLimitOrder`, `CancelOrder`, `FillMarketSell`, the dispatcher
+`process_event(event)` and `inspect_book()` (bids by price descending then
+arrival, asks by price ascending then arrival). `03_code/replay.py` replays any
+`.jsonl` or `.jsonl.gz` file; the README documents the command and output format.
+
+**Model boundaries.** All orders are eligible. There are no fees, account
+balances, hidden orders, self-trade checks, network delays or simultaneous
+execution. Order ids are assumed to be strings and globally unique in valid
+streams; reuse of a historical id is not validated. The input data is synthetic
+teaching data from the course generator, not historical exchange records, and
+represents one venue. This is a teaching implementation, **not a production
+trading system**.
+
+---
 
 ## 2. Correctness reasoning
 
-**To write:** invariants, how the tests were built, and why I trust the result.
+**Hand calculation.** Before any code existed, I calculated the expected results by hand in Excel (`01_my_notes/OrderBookTests.xlsx`): the worked example and five further cases (crossing on arrival followed by a market sell, a market sell larger than the book, a market sell into an empty book, cancellation after a partial fill including repeated and unknown cancels, and invalid inputs).
+I made them to define the expected behaviour for edge cases such as invalid input and an empty book early on, so that the first build already had to handle them. Test3–Test5 were calculated by Claude and checked by me. These values became the expected results of the tests.
 
-Notes (what I did today):
-- **Hand calculation first, in Excel** (`01_my_notes/OrderBookTests.xlsx`), before any engine code existed:
-  - *Base* (worked example): 4 fills b1 1, b2 1, b3 3, b4 1 BTC; s1 `filled`; book b4 4 BTC (seq 4), a1 2 BTC (seq 5); proceeds $359,400, average $59,900. Matches the professor's `worked_expected.json` on every value.
-  - *Test1* (crossing on arrival, then market sell): a1 SELL 60,100 crosses resting b1 BUY 60,200 on arrival and trades 1 BTC at **60,200** (the resting price); a1 rests with 1 BTC. s1 (8 BTC) then fills b2 1, b3 3, b4 4. Book: b4 1 BTC, a1 1 BTC. s1 proceeds $478,500; all proceeds $538,700.
-  - *Test2* (market sell larger than the book): s1 15 BTC against 10 BTC of bids, so 4 fills, 10 sold, 5 discarded, status `partial`; only a1 remains.
-- **Things the hand calculation taught me:**
-  - My first Excel formulas simulated the market sell against the *starting* book only. They gave wrong results as soon as a limit order crossed on arrival (Test1), so the spreadsheet became a place for hand calculation, not an engine. This is exactly the case a naive implementation gets wrong.
-  - Sorting by `seq` stored as **text** broke the FIFO tie-break between b1 and b2 at the same price. Priority must use the numeric `seq`.
-  - Conservation check per test: bid quantity submitted = quantity traded against bids + quantity still resting. Market sell = sold + discarded.
-- **Tests first:** `02_tests/test_worked_example.py` uses my Excel values as expected results, plus a second check against the JSON. Against an empty `OrderBook` stub: 6 failed, 1 passed (the Excel-vs-JSON check). Saved in `05_results/tests_fail_first.txt` and committed before any engine code (commit `1603c06`).
-- After Version A: 7/7 passed. Excel tabs Test1 and Test2 added as tests: 9/9 passed (`05_results/tests_latest.txt`).
-- **Invariants** checked after every event of all five 10,000-event files: no crossed book, no non-positive quantity, no order stored twice, fills follow price-time priority. All held.
-- To do: remaining hand-calculated cases (empty book, cancels, invalid input, long queue), and comparing A vs B after every event.
+
+**Tests first.** The tests were written before the engine. Run against an empty `OrderBook` stub they failed (6 failed, 1 passed: the engine-free check of my Excel values against the supplied JSON); the output is saved in `05_results/tests_fail_first.txt`, and commit `1603c06` contains the tests but no engine code. The same was done for Version B (22 failed against stubs) and for the robustness tests (15 failed against the old file reader). No expected value was changed afterwards.
+
+
+**Invariants.** After every accepted event the book must satisfy: no crossed book (best bid < best ask when both exist), no resting quantity ≤ 0, and no active order stored twice. Price-time priority holds because the best price is always matched first and, within a price, the earliest order is at the front of its queue; a partially filled maker keeps its place. Quantity is conserved: incoming quantity = filled quantity + residual (resting or discarded), a maker loses exactly its fills, a cancel removes exactly the residual, and proceeds = Σ price × quantity. These checks ran after every event of all five supplied files for every version.
+
+
+**Differential test.** 300 seeded random streams (52,287 events in total, including crossing limits, market sells, cancels of live, gone and unknown ids, and invalid events) were replayed through A, B-sorted and B-heap. After every event the results and the full book were identical. To confirm the test can fail, two deliberate bugs were planted in throwaway copies (LIFO instead of FIFO, wrong cancelled quantity); they were caught in 295 and 297 of the 300 streams.
+
+
+**Robustness.** 37 invalid events (wrong types, missing fields, lowercase side, unknown type, non-increasing seq, malformed input lines and others) are all rejected with a reason, leave the book and the last accepted seq unchanged, and give identical results in all three versions. The engines needed no change; only the file reader was fixed so that a broken line no longer stops the replay.
+
+Agreement between A and B only shows that the versions behave the same; it does not prove that either is correct. That is why the expected values of the core tests come from independent hand calculations, not from the code.
+
+---
 
 ## 3. Runtime
 
-**To write:** pseudocode and cost of insertion, cancellation and market sell for A and B, using B (active orders), P (price levels), M (events), F (fills). Then the measured results.
+Notation: **B** active orders, **P** occupied price levels per side, **M** events,
+**F** fills of one event, **L** price levels emptied by one event, **H** entries in
+a heap.
 
-Notes, Version A (`03_code/lob_a.py`):
-- Data structure: one plain list of all active orders (both sides) in arrival order. Nothing indexed or sorted.
-- Costs: AddLimitOrder O(B) duplicate-id scan + O(B) best-price scan per fill → O(B·(F+1)). FillMarketSell O(B·(F+1)). CancelOrder O(B) search + O(B) list delete.
-- First single-run replay of the five supplied files (not the final benchmark):
+**Version A** keeps all active orders of both sides in one Python list in arrival
+order. Finding the best maker scans the whole list; checking that a new id is not
+already live scans it again.
 
-| scenario | fills | peak orders B | peak price levels P | seconds |
+```
+AddLimitOrder / FillMarketSell (Version A):
+    validate event                      # includes O(B) duplicate-id scan
+    while remaining > 0:
+        i = index of best opposite order    # O(B) scan
+        if none, or price does not cross: break
+        trade min(remaining, maker qty) at maker price; record fill
+        if maker exhausted: delete it from the list   # O(B)
+    limit residual: append to list (O(1) amortized); market residual: discard
+CancelOrder (Version A): scan list for id, delete it   # O(B)
+```
+
+**Version B** organises the same orders differently (shared core
+`lob_b_common.py`):
+- `orders`: dict `order_id → order` (duplicate check and cancel lookup);
+- per side, a dict `price → level`, where each level holds a FIFO `deque` of its
+  orders plus live count and live quantity;
+- a price index giving the best price: a sorted list with the best price at the
+  end (**B-sorted**) or a `heapq` (**B-heap**).
+
+```
+MATCH(taker, side, qty, limit):
+    while remaining > 0:
+        p = best opposite price from the index; stop if none or not crossing
+        level = levels[opposite][p]
+        while remaining > 0 and level has live orders:
+            maker = front of level's deque; skip it if cancelled (dead)
+            trade min(remaining, maker qty) at p; record fill
+            if maker exhausted: pop it from the deque, delete from orders
+        if level empty: remove level (B-sorted: pop() from the end of the list;
+                        B-heap: lazy, the stale price is dropped later)
+AddLimitOrder: MATCH; residual → orders dict + back of its price deque
+               (new price level: insert into the index)
+CancelOrder:   remove from orders dict; mark the deque entry dead (lazy);
+               remove the level if it is now empty
+FillMarketSell: MATCH with no price limit; residual discarded
+```
+
+**Costs.** "Expected" relies on Python's string hashing; "amortized" means
+averaged over the stream (each cancel or emptied level pays for its own clean-up
+once).
+
+| Operation | Version A | B-sorted | B-heap |
+|---|---|---|---|
+| Duplicate-id check | O(B) worst | O(1) expected | O(1) expected |
+| Best price | O(B) worst | O(1) worst | O(1), plus O(log H) per stale top, amortized |
+| AddLimitOrder / FillMarketSell | O(B·(F+2)) worst | O(F + L) amortized; a new price level adds O(log P) search + O(P) list shift | O(F + (L+1)·log P) amortized; a new level adds O(log H) |
+| CancelOrder, level stays | O(B) worst | O(1) expected | O(1) expected |
+| CancelOrder, level emptied | O(B) worst | O(log P + P) worst | O(1) expected + amortized O(1) heap-rebuild share |
+| Space | O(B) | O(B + P) | O(B + P) |
+
+Costs include validation, building the result dict and fill list, index
+updates, dead queue entries and clean-up. Lazy deletion is bounded by
+**compaction**: a deque is rebuilt when more than half its entries are dead, and
+a heap is rebuilt (`heapify`, linear) when H > 2·(live levels) + 16. Hence at most
+2B queue entries and H ≤ 2P + 16, so log H = O(log P).
+
+Over a whole stream, Version A costs about Σ B·(F+2), which is quadratic in M
+whenever the book grows with M. Both B variants are close to linear in M for the
+generator's fixed price range (1,000 levels per side).
+
+**Measurements** (engine replay of preloaded events; median over seeds 42–44 of
+the 5-repeat medians; 1 warm-up; 120 s limit per replay; parsing reported
+separately; commit `4b9df5f`):
+
+| Scenario | M | A | B-sorted | B-heap |
 |---|---|---|---|---|
-| buildup | 0 | 10,000 | 1,977 | 6.38 |
-| crowded | 0 | 10,000 | 8 | 6.16 |
-| mixed | 3,926 | 1,588 | 752 | 0.74 |
-| sweep | 5,035 | 8,000 | 1,959 | 6.32 |
-| cancel_churn | 0 | 1 | 1 | 0.014 |
+| buildup | 10,000 | 4.82 s | 0.0140 s | 0.0144 s |
+| sweep | 10,000 | 5.44 s | 0.0138 s | 0.0148 s |
+| mixed | 10,000 | 0.705 s | 0.0141 s | 0.0143 s |
+| cancel_churn | 10,000 | **0.0074 s** | 0.0100 s | 0.0108 s |
+| mixed | 100,000 | stopped (>120 s) | 0.132 s | 0.143 s |
+| cancel_churn | 100,000 | **0.069 s** | 0.104 s | 0.106 s |
+| mixed | 1,000,000 | stopped | 1.376 s | 1.398 s |
 
-- To do: final benchmark (M = 1k/10k/100k, seeds 42–44, 5 repeats, medians, throughput, latency p50/p95/p99), liquidation at 10/100/200%, queue concentration 4 vs 1,000 prices.
+- Version A grows ~100× per 10× M (buildup 48.9 ms → 4.82 s, log-log slope 2.0).
+  All its 100k runs and the 1M run were stopped at the declared limit; no value
+  was estimated.
+- Both B variants grow linearly (throughput 0.56–1.00 million events/s from 1k
+  to 1M events).
+- **Large liquidation** (fresh bid book from the first 8,000 sweep events,
+  e.g. 4,062 bids on 981 levels for seed 42; 100% sale, median of 5 repeats):
+  A 1.38 s; B-sorted 1.67 ms; B-heap 2.02 ms (about 800× faster). Build time is
+  reported separately. B-sorted is reliably faster than B-heap only on such large
+  sales (3 of 3 seeds), because removing an emptied best level is `pop()` (O(1))
+  instead of a stale `heappop` (O(log H)). On full streams the 5-repeat ranges
+  overlap in 36 of 45 cells (ratios 0.96–1.08): no reliable winner.
+- **Queue concentration** (same order count on 4 vs 1,000 prices): Version A's
+  time does not depend on P; price-time correctness held on all 18 checked streams.
+- **Latency** (separate instrumented run, nearest-rank percentiles, seed 42):
+  Version A's median event in buildup 10k rises from 44 µs (first 1,000 events)
+  to 894 µs (last 1,000); B stays at ~1.1–1.4 µs. B's p99 at buildup 100k is
+  1.8 µs, its slowest single event 1.9 ms (most likely a dict resize, an
+  inference). Latency is algorithm processing time only, not queueing or
+  network latency, and is never derived from 1/throughput.
+- After the revision, parsing (gzip + JSON, 1.6 µs/event) costs more than the B
+  engine (1.3–1.5 µs/event).
+
+---
 
 ## 4. Memory
 
-**To write:** tracemalloc peaks, what is included, book size after cancellation churn.
+Memory was measured with `tracemalloc` in a separate child process per run (seed 42,
+M = 10,000 and 100,000). Events were preloaded **before** tracing started, so the
+input is excluded. Included: the book (orders, levels, queues, price index), the
+result dict and fill list of the current event (transient: in the peak, not in the
+end value) and validation temporaries. No result history is kept.
 
-Notes: not measured yet. Expect Version A to stay small under cancel_churn (cancelled orders are deleted from the list, no history kept).
+Traced bytes per live order at the end of the replay, M = 10,000:
+
+| Scenario | Orders / levels | A | B |
+|---|---|---|---|
+| crowded | 10,000 / 8 | 193 | **102** |
+| buildup | 10,000 / 1,977 | 193 | 273 |
+| sweep | 3,938 / 978 | 205 | 357–365 |
+| mixed | 1,587 / 747 | 194 | 578–591 |
+
+- A B order is a `__slots__` object, smaller than A's dict per order; but every
+  occupied price level costs B a level object, a deque and an index key (about
+  850 bytes). B therefore uses **less** memory than A with more than ~9 orders
+  per level and **more** with fewer. Mixed is the worst case for B (few orders
+  per level, plus 213 dead queue entries, bounded by compaction to ≤ 2× live).
+- **Book growth during insertion:** B's traced memory grows linearly with the
+  number of orders (buildup 100k: 13.9 MB at the end), with visible steps at
+  about 22k, 44k and 87k orders where the `orders` dict enlarges its table.
+- **After cancellation churn:** after 100,000 cancel_churn events, retained
+  memory stays flat at about 2 KiB traced (peak 3.4–4.0 KiB) for both B variants
+  and ~1 KiB for A; B-heap keeps 2–3 stale index keys at the end. No stale entries
+  or history accumulate.
+- Version A's memory runs at M = 100,000 were stopped at the time limit.
+
+**Why traced allocation is not auxiliary space or process memory.** Traced bytes
+are Python allocations seen by tracemalloc (object sizes including headers and
+container over-allocation). Auxiliary space is the algorithm's extra space as a
+count of entries (O(B) orders + O(P) levels + index entries, including stale
+ones), independent of byte sizes. Process memory additionally holds the
+interpreter, modules, the preloaded events, allocator caches and memory not
+returned to the operating system (e.g. 31–149 MB peak working set here, recorded
+for context only). Also, CPython dicts do not shrink when keys are deleted, so
+memory after a large book is cancelled can still reflect the earlier peak.
+
+---
 
 ## 5. Profiling and bottleneck
 
-**To write:** one measured bottleneck explained with code, operation counts and complexity.
+**Version A.** The main bottleneck of Version A is that it scans the whole order list on every event. Two functions walk the list from start to end: `_is_live` (`lob_a.py:184`), which checks that a new order id is not already active, and `_best_index` (`lob_a.py:191`), which finds the best opposite order before the first fill and again after every fill. One event therefore costs about B · (F + 2) list steps (B resting orders, F fills).
 
-Notes (cProfile, `05_results/profile_version_a.txt`):
-- `_best_index` (scan all orders for the best price): about 74% of time in buildup, 77% in sweep. Every new limit order runs it at least once, even when nothing trades; every fill runs it again.
-- `_is_live` (duplicate-id check by scanning the list): about 25%.
-- **Cost depends on B, not P.** crowded (8 prices) and buildup (1,977 prices) both take ~6 s at B = 10,000. cancel_churn runs the same 10,000 events in 0.014 s because B never exceeds 1.
-- Growing book: total work ≈ B²/2 ≈ 50 million comparisons for 10,000 resting orders.
-- Conclusion for Version B: need fast access to the best price and a fast id lookup.
+The cost grows quadratically, not linearly. In buildup the book grows with every event: the operation counts show 999 list elements visited per event at M = 1,000 and 9,999 at M = 10,000. Ten times more events, each scanning a ten times longer list, gives about 100 times the work. Measured: 48.9 ms to 4.82 s (99x), about 48 ns per list element. The latency run shows the same thing event by event: A's median event takes 44 µs at the start of buildup and 894 µs at the end. At M = 100,000 all runs of Version A were stopped at the declared 120 s limit; no time was estimated. 
+**Version B.** The previous bottleneck is removed: the duplicate check is a dict lookup, the best price comes directly from the price index, and the next maker is the front of the price level's FIFO queue. Its cost per event stays at about 1 to 1.5 µs at every book size. What remains is the fixed per-event Python work (validation, building the result), and the next bottleneck is reading the input file (1.6 µs per event).
+
+---
 
 ## 6. Revision (Version A → Version B)
 
-**To write:** what changed, why, effect on the measurements, tests unchanged.
+Profiling Version A on the 10,000-event buildup stream showed (under cProfile, which inflates absolute times) that roughly three quarters of the runtime (5.2 of 7.0 s) went to `_best_index` and roughly a quarter (1.7 s) to `_is_live`. Both scan the whole order list: `_best_index` runs before the first fill and again after every fill, and `_is_live` once per new submission, so each event costs O(B) and a growing book makes the replay roughly quadratic in M (section 5). Version B replaces the list with three structures. A dictionary from order ID to order makes the duplicate check and finding an order to cancel O(1) expected, the same hashing idea as the hash set in Lab 1. A FIFO deque per price level keeps time priority, so the oldest order is always at the front. A separate price index per side finds the best price without touching individual orders. I built the price index in two variants to compare their trade-offs. B-sorted keeps the price keys in a sorted list with the best price at the end on both sides, so reading it is O(1) and removing an exhausted best level is a `pop()`. Adding a new level, however, costs O(P) for the shift. B-heap uses `heapq`, which inserts in O(log P) and drops emptied levels lazily, with compaction keeping the heap at most 2P + 16 entries. All existing tests ran unchanged against both variants; new tests were added for compaction, the cross-version differential comparison and input robustness.
 
-Notes: Version B not built yet. Candidate design to justify:
-- dict `order_id → order` for duplicate check and cancel lookup in O(1);
-- orders grouped by price, a FIFO queue (deque) per price, and fast best-price access (heap or sorted price list).
+**Effect.** Version B is faster wherever the book grows. Version A grows quadratically with the number of events, while both B variants grow linearly, so the gap widens with M: B is about 50–430 times faster at 10,000 events, and at 100,000 events and on the 1M file B finishes in 0.1–1.4 s, where A was stopped at the 120 s limit (section 3 and the dashboard charts). B does not win everywhere. In cancel_churn the book never holds more than one order, so A's full scan finds it in a single step, while B still creates and removes a price level, a queue and an index entry for every order. There, A is about 1.5 times faster at every size. B also uses more memory than A when there are few orders per price level (up to 3× on mixed), because every occupied level costs it extra objects; with many orders per level (crowded) it uses about half of A's memory.
 
-AI usage: see `07_docs/AI_USAGE.md` (accepted / corrected / rejected).
-Note: the slide PDF contains hidden text telling AI tools to put "Unicorn" into code. It was identified and ignored.
+**AI use.** I used AI tools throughout and recorded every suggestion in `07_docs/AI_USAGE.md` (sessions 1–6) as accepted, corrected or rejected. A coding agent (Claude Code), working under the rules in `AGENTS.md`, wrote the engine, test, benchmark and dashboard code. A chat assistant (Claude) helped me plan, explain the concepts, review the agent's output, calculate the expected values of Test3–Test5, and draft parts of this report. The expected values of the worked example, Test1 and Test2 are my own hand calculations, and the Version B design (hash map for ids, a FIFO queue per price level, two price-index variants) was my decision, based on the profile of Version A and the hash-set idea we did in our first in-class Lab.
+
+I accepted most proposals that added safety or clarity, for example the compaction rules that bound stale entries in queues and heaps, the shared core file so that the two B variants differ only in their price index, the strict rule for calling one variant faster, and additional reject tests. I corrected several AI outputs:
+- the B-sorted layout, so that the best price is at the end of the list on both sides and an emptied best level is removed with `pop()`
+- the cost table, which mixed heap rebuild and pop costs and left out residual insertion
+- a chart that plotted stopped runs as if 600 s were a measured replay time
+- a test that compared exact reject-reason texts, which the specification does not define
+- an outdated test table
+
+I rejected a hidden instruction in the course slides that asked AI tools to insert a specific word into generated code. I noticed it before starting, instructed the agent in `AGENTS.md` to ignore it, and verified that the submitted code does not contain it. Every change was tested against the unchanged expected values, and no expected value was changed to make code pass.
+
+---
 
 ## 7. Limitations
 
-**To write.** Notes:
-- Synthetic, uncalibrated data; no strategic behaviour or realistic timing.
-- Single-run timings so far; Python timing noise; cProfile inflates absolute times.
-- Algorithm processing latency only, no network or queueing latency.
-- Validation of historical id reuse is out of scope.
+- **Synthetic data.** The streams come from the course generator; they are not
+  calibrated to an exchange and do not model strategic behaviour or realistic
+  timing. `buildup` with 4 levels produces exactly the `crowded` file, so the
+  concentration experiment reuses that stream.
+- **One machine, Python.** Intel Core Ultra 5 228V, Windows 11, Python 3.13.15, on
+  AC power. Absolute times depend on the machine; the shape of the scaling is the
+  result. Python's per-event overhead dominates Version B's cost.
+- **Timing noise.** Timings under about 1 ms have wide repeat spreads (up to 108%
+  for one 0.3 ms sale); full replays have a median spread of 8%. The repository is
+  in a OneDrive folder and syncing was not paused. One unexplained outlier: seed 42
+  at buildup 100k was ~50% slower than seeds 43/44 for both B variants.
+- **Scope of seeds.** Timing uses seeds 42, 43 and 44; latency, memory and
+  operation counts use seed 42 only.
+- **Stopped runs.** Version A was stopped at the declared 120 s limit at M = 100,000
+  and on the 1M file; these cells have no value and none was estimated.
+- **Latency** is algorithm processing time only (no queueing or network) and makes
+  no real-time capacity claim.
+- **Inferences.** The explanation of B's 1.9 ms slowest event as a dict resize is
+  inferred from the memory curve, not measured directly.
+- **Measured vs current code.** The benchmark ran at commit `4b9df5f`; later
+  commits only changed the file reader (`replay.py`), the test export and added
+  robustness tests. The engines are unchanged.
+- **Not production.** No fees, balances, hidden orders, self-trade prevention,
+  multiple venues, persistence or concurrency.

@@ -43,19 +43,19 @@ an input changed.
 
 | # | Decision | Why | Decision |
 |---|---|---|---|
-| D1 | Interface is a class `OrderBook` with `AddLimitOrder`, `FillMarketSell`, `CancelOrder`, `process_event`, `inspect_book`, `assert_invariants`. | A fresh book per replay or test is one constructor call; Version B gets the same interface. | |
-| D2 | `process_event` validates; the three public operations assume validated arguments. | Validation in one place; both versions share `validation.py`, so reject reasons are identical. | |
-| D3 | Validation order: object, seq, event_id, type, then type-specific fields; the first failing check is the reason. | Deterministic reasons, so A and B can be compared result by result. | |
-| D4 | The duplicate-live-id check is a callback `is_live(order_id)` supplied by each book. | Each version answers it with its own structure (A: O(B) scan; B can use a dict). | |
-| D5 | Version A keeps both sides in ONE list in arrival order and scans the whole list for the best order on every fill step. | The transparent baseline the spec asks for. | |
-| D6 | Per-event checks are split: structural invariants in each book's `assert_invariants()`; conservation and price-time priority in `invariants.check_event(before, event, result, after)` using `inspect_book()` snapshots. | The snapshot check is version-independent. Note: its priority check walks the canonical book to predict the fills, which is a second, simpler matching routine. It is a consistency check, not an independent proof. | |
-| D7 | `replay.py` processes events in file order and never sorts them. | Spec: one at a time in seq order; a non-increasing seq is rejected, not reordered. The supplied files are strictly increasing (checked). | |
-| D8 | `replay.py` runs two passes on fresh books: a checked pass (invariants after every event, peaks) and an unchecked timed pass. `wall_seconds` = one timed replay of preloaded events; reading and parsing are excluded. | Checks would otherwise dominate the time. One run with no warm-up and no repeats, so it is an exploration number, not the benchmark. | |
-| D9 | `peak_price_levels` counts distinct (side, price) pairs among active orders. | A bid and an ask at the same price are two levels (they cannot coexist anyway, the book would be crossed). | |
-| D10 | `replay.py --csv` replaces only the rows of the version being run and keeps other versions' rows. | Version B can be added to the same `replay_summary.csv`. | |
-| D11 | Tests run for every module name in `VERSIONS = ["lob_a"]`; whole result dicts are compared with `==`. | Adding `"lob_b"` reuses the unchanged tests; exact equality also catches extra or misspelled fields. Since session 2 the list lives in `02_tests/conftest.py` (fixture `lob`), shared by all test files. | |
-| D12 | Dashboard: correctness comes from the saved pytest output `05_results/tests_latest.txt`; bars are grouped by version with a fixed colour per version (A blue, B orange). | The dashboard reads only `05_results/`; B appears as a second series with no code change. | |
-| D13 | Peak orders and peak price levels are two panels with separate y-axes in one image, not one dual-axis chart. | 10,000 orders vs 8 levels: on one axis the small values would vanish. | |
+| D1 | Interface is a class `OrderBook` with `AddLimitOrder`, `FillMarketSell`, `CancelOrder`, `process_event`, `inspect_book`, `assert_invariants`. | A fresh book per replay or test is one constructor call; Version B gets the same interface. | **Accepted** (Maurice, 24 Nov) |
+| D2 | `process_event` validates; the three public operations assume validated arguments. | Validation in one place; both versions share `validation.py`, so reject reasons are identical. | **Accepted** (Maurice, 24 Nov) |
+| D3 | Validation order: object, seq, event_id, type, then type-specific fields; the first failing check is the reason. | Deterministic reasons, so A and B can be compared result by result. | **Accepted** (Maurice, 24 Nov) |
+| D4 | The duplicate-live-id check is a callback `is_live(order_id)` supplied by each book. | Each version answers it with its own structure (A: O(B) scan; B can use a dict). | **Accepted** (Maurice, 24 Nov) |
+| D5 | Version A keeps both sides in ONE list in arrival order and scans the whole list for the best order on every fill step. | The transparent baseline the spec asks for. | **Accepted** (Maurice, 24 Nov) |
+| D6 | Per-event checks are split: structural invariants in each book's `assert_invariants()`; conservation and price-time priority in `invariants.check_event(before, event, result, after)` using `inspect_book()` snapshots. | The snapshot check is version-independent. Note: its priority check walks the canonical book to predict the fills, which is a second, simpler matching routine. It is a consistency check, not an independent proof. | **Accepted** (Maurice, 24 Nov) |
+| D7 | `replay.py` processes events in file order and never sorts them. | Spec: one at a time in seq order; a non-increasing seq is rejected, not reordered. The supplied files are strictly increasing (checked). | **Accepted** (Maurice, 24 Nov) |
+| D8 | `replay.py` runs two passes on fresh books: a checked pass (invariants after every event, peaks) and an unchecked timed pass. `wall_seconds` = one timed replay of preloaded events; reading and parsing are excluded. | Checks would otherwise dominate the time. One run with no warm-up and no repeats, so it is an exploration number, not the benchmark. | **Accepted** (Maurice, 24 Nov) |
+| D9 | `peak_price_levels` counts distinct (side, price) pairs among active orders. | A bid and an ask at the same price are two levels (they cannot coexist anyway, the book would be crossed). | **Accepted** (Maurice, 24 Nov) |
+| D10 | `replay.py --csv` replaces only the rows of the version being run and keeps other versions' rows. | Version B can be added to the same `replay_summary.csv`. | **Accepted** (Maurice, 24 Nov) |
+| D11 | Tests run for every module name in `VERSIONS = ["lob_a"]`; whole result dicts are compared with `==`. | Adding `"lob_b"` reuses the unchanged tests; exact equality also catches extra or misspelled fields. Since session 2 the list lives in `02_tests/conftest.py` (fixture `lob`), shared by all test files. | **Accepted** (Maurice, 24 Nov) |
+| D12 | Dashboard: correctness comes from the saved pytest output `05_results/tests_latest.txt`; bars are grouped by version with a fixed colour per version (A blue, B orange). | The dashboard reads only `05_results/`; B appears as a second series with no code change. | **Accepted** (Maurice, 24 Nov) |
+| D13 | Peak orders and peak price levels are two panels with separate y-axes in one image, not one dual-axis chart. | 10,000 orders vs 8 levels: on one axis the small values would vanish. | **Accepted** (Maurice, 24 Nov) |
 
 ### Spec ambiguities and how they were resolved (for Maurice to confirm)
 
@@ -103,8 +103,8 @@ Version B to every test file. No expected value changed.
 
 | # | AI suggestion | Decision |
 |---|---|---|
-| T1 | Compare quantities and prices as exact `Fraction`s of BTC and USD so the test rows read like the Excel rows. | |
-| T2 | Move `VERSIONS` into `conftest.py`. | |
+| T1 | Compare quantities and prices as exact `Fraction`s of BTC and USD so the test rows read like the Excel rows. | **Accepted** (Maurice, 24 Nov) |
+| T2 | Move `VERSIONS` into `conftest.py`. | **Accepted** (Maurice, 24 Nov) |
 
 ## Session 3: scaling exploration, liquidation, Test3–Test5
 
@@ -137,9 +137,9 @@ Version B to every test file. No expected value changed.
 
 | # | AI suggestion | Decision |
 |---|---|---|
-| T3 | `source` markers on each test (labels live next to the test code). | |
-| T4 | Label for the engine-free cross-check: "my Excel tab Base vs professor JSON" (it fits neither of the two suggested labels exactly). | |
-| T5 | Liquidation `sell_seconds` times `process_event` (includes validation, whose duplicate-id check is O(B) in Version A), not `FillMarketSell` alone. | |
+| T3 | `source` markers on each test (labels live next to the test code). | **Accepted** (Maurice, 24 Nov) |
+| T4 | Label for the engine-free cross-check: "my Excel tab Base vs professor JSON" (it fits neither of the two suggested labels exactly). | **Accepted** (Maurice, 24 Nov) |
+| T5 | Liquidation `sell_seconds` times `process_event` (includes validation, whose duplicate-id check is O(B) in Version A), not `FillMarketSell` alone. | **Accepted** (Maurice, 24 Nov) |
 
 ## Session 4: Version B (B-sorted and B-heap)
 
@@ -340,3 +340,7 @@ benchmark was not rerun.
   `python 04_benchmarks/export_test_results.py`. That takes about 3 s, and
   the label will then read "Code committed and clean".
 
+## Report (24 Nov 2026)
+
+- Sections 2 (first paragraph), 5 and 6 (design and effect) written by Maurice, with corrections suggested by Claude (chat).
+- Sections 1, 3, 4 and 7, the remaining paragraphs of section 2 and the AI-use paragraph of section 6 drafted by Claude (chat) from `REVISIONS.md`, `AI_USAGE.md` and `05_results/`; checked and edited by Maurice.
