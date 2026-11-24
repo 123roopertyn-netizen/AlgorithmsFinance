@@ -979,3 +979,116 @@ No final benchmark, result-digest replay, liquidation, concentration generation,
 - Preliminary verification parsed both JSON metadata files, matched the manifest against both raw JSONL files, confirmed 46 balanced README fences and all dry-run/start/resume arguments, found 26 unique canonical risk rows, and reproduced the unchanged 129-file preservation fingerprint.
 - Privacy scan of the newly updated README, AI decisions, environment metadata, and results manifest found no personal home-directory paths. Historical privacy findings remain: 10 lines in `ACTION_LOG.md`, 285 in `02_data/generated_manifest.json`, and nine in `02_data/supplied_verification.json`; no redaction was authorized or performed.
 - No raw result, engine, shared contract/validation file, benchmark script, test, supplied/generated dataset or manifest, `AGENTS.md`, `.gitignore`, dependency, network state, Git state, or GitHub state was changed.
+
+## 2026-11-24 - Stage 4E implementation and non-executing verification
+
+### 100. Created and verified the approved concentration inputs
+
+- Created `02_data/generate_concentration_pairs.py`, three 10,000-event four-level gzip workloads, three separate metadata files, and `02_data/concentration_10000_manifest.json`. All targets were confirmed absent before execution; no existing file was overwritten.
+- Executed `python 02_data\generate_concentration_pairs.py --execute` once. Generation completed successfully in 1.2880664998665452 seconds and produced 338,578 compressed workload bytes, below the approved 30-second and 5-MiB limits.
+- Executed `python 02_data\generate_concentration_pairs.py --verify-only` twice during final verification. Both checks exited zero and reported three verified pairs.
+- Each pair contains 10,000 events, zero non-price mismatches, zero formula mismatches, unchanged side quantity totals, monotonic mapping, exactly four BUY and four SELL prices, and an uncrossed book. Each finalized hash equals the independently regenerated deterministic second-pass hash.
+- Output hashes: seed 42 `a29c3240118951391b89092893948ba283caa9dba63626de925766e5701d9f5e`; seed 43 `08dea51b872a43c8e2278c0055a2bec73192ce9696f0b6a03c06bfad86e68fd0`; seed 44 `317724ffc8ed5fae0708d0665e22087746c3d9f5026e6884cb5363d649a1b852`.
+
+### 101. Implemented the separate Stage 4E harness
+
+- Created `05_benchmarks/_stage4e_worker.py` and `05_benchmarks/run_stage4e.py`. The measured engines and Stage 4D controller/worker were not edited.
+- Implemented separate latency, traced-memory, liquidation, concentration, and diagnostic paths. The controller plans 50/4/30/120/8 observations, respectively, for 212 total, uses one subprocess at a time, and writes separate append-only evidence only when execution is later authorized.
+- Implemented stable workload/implementation/harness/environment identities, strict JSONL parsing, duplicate and contradictory record rejection, timeout-terminal configuration skips, explicit mode/global budget skips, and manual-review stop behavior for failures.
+- Enforced mode ceilings of 900/600/600/1,800/300 seconds. Their 4,200-second sum plus the 300-second verification reserve equals the fixed shared 4,500-second ceiling. Preflight reservation includes preparation, handshake, measurement, liquidation's second timing window, and cleanup.
+- Implemented disposable same-engine warm-up with the existing mixed 1,000-event stream, followed by `gc.collect()` and construction of a fresh empty measured engine. Warm-up and parsing remain outside measurement and apply identically to both engines.
+
+### 102. Ran only authorized syntax, self-test, dry-run, and integrity checks
+
+- Ran `python -m py_compile 02_data\generate_concentration_pairs.py 05_benchmarks\_stage4e_worker.py 05_benchmarks\run_stage4e.py`; it exited zero.
+- Ran `python 05_benchmarks\_stage4e_worker.py --self-test`; the percentile and independent liquidation-oracle checks passed.
+- Ran `python 05_benchmarks\run_stage4e.py self-test`; plan counts, shared-budget arithmetic, liquidation reservation, strict newline parsing, malformed/truncated input rejection, and duplicate/contradictory resume rejection passed. It reported 212 planned observations and zero workers launched.
+- Ran `python 05_benchmarks\run_stage4e.py dry-run`; it reported latency 50, memory 4, liquidation 30, concentration 120, diagnostics 8, and 212 total. It created no `07_results/stage4e` directory or measurement record.
+- Ran `python 05_benchmarks\run_stage4e.py verify`; it verified all planned input paths and current fingerprints and reported zero Stage 4E observations, zero charged seconds, and no result creation.
+- Recalculated preservation evidence after all checks: final primary SHA-256 `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f`; pilot SHA-256 `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`. No Stage 4D result, engine, correctness test, Stage 4D benchmark script, supplied workload, or original Stage 2B manifest was modified.
+- Removed only the three exact `.pyc` files created by these syntax checks and their now-empty project-local cache directories after resolving and validating their paths. Final Stage 4E bytecode-cache count is zero.
+- Final documentation checks found 52 balanced README fences and exactly 26 unique current Risk Register IDs. Six additional risk-ID mentions are confined to the separate Risk Status History table and are not duplicate current rows.
+- Tightened the liquidation construction check so its nonce-derived order/event identifiers are absent from the source stream as well as active state and `last_accepted_seq + 1` is absent from source sequences. Re-ran cache-free syntax compilation, worker self-test, controller self-test, and the 212-observation dry-run with `python -B`; all passed and `07_results/stage4e` remained absent.
+
+## 2026-11-24 - Stage 4E final compliance and implementation-integrity review
+
+### 103. Rechecked the instructor's exact performance requirements
+
+- Read the preserved instructor README directly. Line 116 requires `time.perf_counter`, warm-up, five repeats, every raw repeat, and the median. Line 118 requires separate per-event median/P95/P99 with a documented convention and beginning/end comparison during growing submission bursts.
+- Confirmed memory lines 120-122 require a separate `tracemalloc` run, peak traced bytes, declared inclusion/exclusion boundaries, growth during insertion, and post-cancellation-churn measurement. Returned fills must be disclosed as included or excluded; retaining them or complete trade history is not mandatory. Line 56 makes full trade history optional extra storage.
+- Confirmed line 108 requires fresh-book 10%/100%/200% liquidation sizes, integer 10% rounded up, maker orders touched, price levels visited, fill count, and unfilled remainder. Five repeats are supplied by the general timing rule at line 116 rather than repeated in the liquidation paragraph.
+- Preserved Stage 4D as independently audited cold-process evidence. Its 450 records and checksum remain unchanged; it is documented as lacking explicit matching-engine warm-up rather than relabelled.
+
+### 104. Corrected narrow pre-execution Stage 4E defects
+
+- Modified only `05_benchmarks/run_stage4e.py`, `05_benchmarks/_stage4e_worker.py`, `README.md`, this log, and `AI_DECISIONS.md`.
+- Added the documented `--global-budget-seconds` option and fixed it to the approved 4,500 seconds. Added the budget and timeout policies to resume identity.
+- Made every latency artifact derive from the selected project-contained `--results-root`; a results root outside the approved project is rejected.
+- Before execution/resume, every mode file now receives strict identity, phase, status, duplicate, contradiction, timeout-transition, and skip-duration validation. Any prior failed record stops execution for manual review.
+- Added explicit 30-second liquidation-construction and 30-second sale windows. A sale timeout now retains the already observed construction time, active depth, and requested quantity evidence.
+- Removed traced checkpoint-state inspection from the memory measurement. An equivalent untraced fresh-engine pass now records exact active-order/price-level peaks and checkpoint states, is discarded and garbage-collected, and a second fresh engine performs the traced replay. Current-event outputs are transiently traced but not retained; saved history is absent.
+- Labelled Version A scan/comparison diagnostic counts as analytical estimates. Version B wrapper calls, heap pops/rebuilds, fills, and state peaks are distinguished as directly observed or exact.
+- Added `phase: stage4e` and a separate measurement-mode field to every future record. No performance record was created.
+
+### 105. Ran the permitted final verification gates
+
+- Cache-free syntax compilation passed for the generator, Stage 4E controller, and Stage 4E worker. Controller and generator help checks passed.
+- The first controller self-test attempt was blocked before fixture creation by project-local managed filesystem permissions. No fixture or measurement was created. After requesting and receiving write permission limited to `05_benchmarks`, the isolated temporary-fixture suite passed and removed its directory.
+- Final controller self-test passed 21 named checks: plan counts, budget arithmetic, liquidation reservation, valid resume, identity mismatch, duplicate, contradictory, timeout-then-skip, orphan skip, invalid status, invalid phase/version labels, incomplete completed-result rejection, nonzero skip time, mode/global budget skips, malformed/truncated JSONL, cross-mode charging, custom-results-root latency derivation, and corrupted latency-artifact rejection. It launched zero workers.
+- Worker percentile/liquidation-oracle self-tests passed. The non-executing dry-run reported 212 observations and exact 50/4/30/120/8 mode counts. A custom dry-run result root was not created. An outside-project root and a 4,499-second budget were both rejected with exit code 2.
+- Read-only `verify` reported all 212 observations planned, zero recorded, and zero charged seconds. Concentration verification again reported all three pairs valid. No `07_results/stage4e`, temporary fixture directory, or bytecode cache remained.
+- Final/pilot hashes remain `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f` and `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`. Engines, shared implementation files, Stage 4D harness, supplied/generated manifests, and concentration data hashes all remained unchanged.
+
+## 2026-11-24 - Memory retention, Stage 4E smoke, and warmed-primary preparation
+
+### 106. Verified the PDF memory requirement
+
+- Attempted the PDF skill's preferred `pdfinfo`, `pdftotext`, and `pdftoppm` tools against the preserved original PDF. All three commands were unavailable; no PNG or other temporary artifact was created. Confirmed `pypdf`, `pdfplumber`, and `fitz` were also absent. No dependency was installed.
+- Used a read-only standard-library extraction of decompressed original PDF content streams. Physical PDF page 21, carrying slide footer `20 / 23`, contains the exact passage: “Retain the event's returned output while reading its allocation measurement.”
+- Corrected only `_stage4e_worker.py`: each current result is strongly referenced through its per-event `tracemalloc.get_traced_memory()` call and then deleted. No historical result list or trade history was introduced.
+
+### 107. Executed the isolated Stage 4E real-worker smoke test
+
+- Created a temporary project-local smoke driver and an exact, refusal-on-existing result path `07_results/.stage4e_smoke`. Ran optimized-engine 1,000-event workers for latency, memory, liquidation, concentration, and diagnostics under a 300-second ceiling.
+- All five completed with READY/STARTED/DONE protocol validation. Total smoke wall time was 1.2554763006046414 seconds; per-mode controller times were latency 0.2841105004772544, memory 0.27491309959441423, liquidation 0.22213800065219402, concentration 0.2279629996046424, and diagnostics 0.23464450053870678 seconds.
+- Verified the latency gzip path, existence, size/hash schema; 1,000 memory allocation reads and current-result retention semantics; liquidation independent oracle; diagnostic uninstrumented-equivalence check; and expected result schemas for every mode.
+- The controller reaped each exact worker. The smoke driver removed the exact validated temporary result tree in `finally`; its own exact temporary source file was then removed after outcomes were captured. Final smoke result/driver counts are zero. No production Stage 4E result was written.
+
+### 108. Implemented and verified separate warmed-primary infrastructure
+
+- Created `05_benchmarks/run_warmed_primary.py` and `05_benchmarks/_warmed_primary_worker.py`. Did not edit the retained Stage 4D controller or worker.
+- The wrapper reuses the audited Stage 4D scheduling/resume implementation while assigning separate phase/mode/protocol/output identities and fingerprinting the wrapper, warmed worker, and imported Stage 4D controller dependency.
+- Warm-up is the retained 1,000-event mixed seed-42 stream, SHA-256 `8c3455dc8370f2e006eda834f5bfeb47abdb7dc3766775cf12cdc8444f974d9d`. Each worker verifies the hash, processes it on a disposable same-class engine, deletes that engine, calls `gc.collect()`, creates a fresh engine, verifies empty state, and then waits for START.
+- Cache-free syntax/help checks passed. The warmed synthetic self-test passed 12 checks covering valid resume; warm-up hash/policy; implementation, harness, environment and protocol changes; duplicate records; timeout-to-skip; post-timeout completion; and malformed/truncated JSONL. It launched zero workers.
+- Warmed dry-run reported 450 planned repetitions, 90 configurations, 45 workloads, 225 repetitions per engine, 150 per size, zero existing records, zero charged seconds, and no output creation.
+- No full Stage 4E experiment or warmed-primary repetition was executed.
+
+## 2026-11-24 - Final pre-execution real-worker checks
+
+### 109. Verified Version A Stage 4E modes and one warmed-primary repetition
+
+- Confirmed zero Python/PythonW processes before testing and confirmed the production Stage 4E/warmed result paths were absent. Created one refusal-on-existing temporary result root and one temporary smoke driver inside the project.
+- Ran Version A on existing 1,000-event workloads through the real Stage 4E controller/worker path for all five modes. All completed with READY/STARTED/DONE validation: latency 0.3869790993630886 controller seconds; memory 0.3116678996011615; liquidation 0.39386089984327555; concentration 0.318499400280416; diagnostics 0.34151449985802174.
+- Version A checks included required result fields, latency raw-artifact hash, 1,000 current-result allocation reads, liquidation oracle verification, and diagnostic equivalence with an uninstrumented replay.
+- Ran one real baseline warmed-primary controller repetition using the existing 1,000-event buildup seed-42 workload. Captured exact message order READY/STARTED/DONE; verified the warm-up path/count/hash, disposable same-class engine, fresh empty measured engine, positive `engine_seconds` 0.05535379983484745, controller wall 0.286765999160707 seconds, fsynced JSONL output, and strict resume validation.
+- Combined smoke duration was 2.4855626998469234 seconds under the 300-second ceiling. The exact temporary result tree was removed by validated `finally` cleanup, then the exact temporary driver was removed. Zero Python/PythonW processes, temporary artifacts, warmed results, Stage 4E final results, and benchmark bytecode caches remained afterward.
+- Reparsed immutable Stage 4D evidence: 450 records, 90 configurations, 45 workloads, 390 completed, 12 timed out, 48 skipped after timeout, and SHA-256 `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f`. Pilot SHA-256 remained `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`.
+- Re-ran the non-executing Stage 4E self-test and dry-run. They retained 212 observations/52 configurations, 4,200 seconds of mode ceilings plus 300 verification seconds under the shared 4,500-second ceiling, and all strict resume/timeout/corruption safeguards.
+
+## 2026-11-24 - Stage 4E measurement execution
+
+### 110. Executed all five authorized Stage 4E modes in one managed foreground session
+
+- Preflight found zero Python/PythonW processes, no `07_results/stage4e` directory, and no latency, memory, liquidation, concentration, diagnostics, or warmed-primary result file.
+- Ran latency, memory, liquidation, concentration, then diagnostics sequentially through `run_stage4e.py`, using one worker at a time, the shared 4,500-second ceiling, approved mode limits, append-only fsynced files, and no resume flag because every output was initially absent.
+- The managed foreground sequence began at `2026-11-24T10:29:33.9499543+01:00`, ended at `2026-11-24T10:51:30.3375556+01:00`, exited zero, and consumed 1,316.387601 foreground seconds. Durable per-attempt controller charging totals 1,304.143308589235 seconds.
+- Results: latency 50 completed; memory four completed; liquidation 30 completed; concentration 90 completed/six timed out/24 skipped after timeout; diagnostics eight completed. Overall: 212 records, 182 completed, six timed out, 24 skipped, zero failed, zero mode-budget skips, and zero global-budget skips.
+- The six censored configurations are Version A `buildup` at 100,000 events for seeds 42/43/44, each in original and four-level-paired form. Every timeout occurred at repetition 1 during measurement; repetitions 2-5 are explicit `skipped_after_timeout`. All Version B concentration repetitions and all 10,000-event concentration comparisons completed.
+- No automatic retry, unexpected failure, abnormal interruption, warmed-primary timing, dashboard generation, or report generation occurred.
+
+### 111. Audited retained Stage 4E evidence read-only
+
+- The strict controller verifier accepted all 212 records, all source/harness/environment/budget/timeout identities, all timeout transitions, and every latency raw artifact.
+- Result hashes: latency `826f28dbf294d6c46092ce1c593350a32410b33915dfbd4721a774ae939e88bd`; memory `0292aedef063eb540c1635957fd1317873c247f094168644a0c4e21358b870ce`; liquidation `f533c30b5649e9b737c2aa4c96882c61793a8e1680f6c9398d14a0dde9fb6983`; concentration `ce448548c66dce84cb98337064c32f9275e31f16fa71f1c02191181aa0f5a585`; diagnostics `71780ec459bac00730505d797bb3fd31dc33d955e954b7622ffe624149d8a0e4`.
+- Fifty latency gzip CSV files total 2,048,747 bytes. A stable ordered path/size/file-hash list has aggregate SHA-256 `1a5954c578f0de1fea6b98d7b27b3c4452ac2699b76f331e03743196251f675f`; per-file hashes remain embedded in and checked against latency JSONL records.
+- Post-run process count was zero. `warmed_primary.jsonl` remained absent. Stage 4D and pilot hashes remained `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f` and `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`.

@@ -190,11 +190,11 @@ python3 -m unittest discover -s "03_tests" -p "test_*.py" -v
 
 Observed Windows result: 51 tests run, zero failures, zero errors, and zero skips. This includes exact worked-example verification, 10 fixed seeds × 40 randomized events, four optimized internal-invariant methods, and per-event comparison of both engines across fifteen existing 1,000-event workloads (15,000 events total).
 
-### Future benchmark stop policy
+### Historical benchmark stop-policy design
 
-No benchmark has yet been run. The proposed Stage 4 resource policy is a 30-second per-repeat limit for 1,000- and 10,000-event workloads and 120 seconds for 100,000-event workloads. On the first timeout, stop that engine/workload configuration immediately, skip its remaining repeats, and record the threshold, elapsed time, completed repeats, skipped repeats, and reason. Never calculate an ordinary five-repeat median from an incomplete configuration.
+Before the retained pilot and final-primary runs, the proposed Stage 4 resource policy was a 30-second per-repeat limit for 1,000- and 10,000-event workloads and 120 seconds for 100,000-event workloads. On the first timeout, stop that engine/workload configuration immediately, skip its remaining repeats, and record the threshold, elapsed time, completed repeats, skipped repeats, and reason. Never calculate an ordinary five-repeat median from an incomplete configuration.
 
-The proposed total benchmark wall-time budget is 150 minutes: 90 minutes for primary engine-only replay, 45 minutes for separate latency/memory/liquidation/diagnostic modes, and 15 minutes for integrity checks. A global cutoff wins over per-run limits, and incomplete mandatory observations must be reported rather than hidden. Primary timing excludes parsing, result logging, canonical snapshots, memory tracing, transition verification, and diagnostic counters. No one-million-event workload is planned.
+The initially proposed total benchmark wall-time budget was 150 minutes: 90 minutes for primary engine-only replay, 45 minutes for separate latency/memory/liquidation/diagnostic modes, and 15 minutes for integrity checks. This paragraph is retained as historical planning context; the completed Stage 4D and current Stage 4E sections below contain the operative evidence and limits.
 
 The full five-repeat matrix cannot be guaranteed within 90 primary minutes under worst-case near-timeout durations; its theoretical upper bound is 450 minutes. A controlled pilot was therefore run to estimate practical duration. It used both engines on all five supplied 10,000-event seed-42 streams and the generated 100,000-event seed-42 `buildup`, `cancel_churn`, and `sweep` streams. Events were parsed before timing, every run used a fresh engine, and snapshots, tracing, counters, logging, and result retention stayed outside the timed region. Processing limits were 30 seconds for 10,000 events and 120 seconds for 100,000 events; preparation limits were 15/45 seconds and the global ceiling was 20 minutes.
 
@@ -267,6 +267,76 @@ Reproduction requires CPython with the standard library, the retained workload f
 Final protocol `final-primary-v2` records two source fingerprints in every repetition. The implementation fingerprint uses this fixed order: the selected engine module (`baseline.py` or `optimized.py`), `validation.py`, `contracts.py`, then `__init__.py`. The harness fingerprint uses `05_benchmarks/run_benchmarks.py` followed by `05_benchmarks/_benchmark_worker.py`. Each component is represented by its normalized project-relative POSIX path and SHA-256 content hash. The aggregate is SHA-256 over UTF-8 JSON serialized with sorted object keys, compact separators, ASCII escaping, and preserved list order. Both aggregate hashes and their ordered component records belong to the resume identity; a mismatch stops execution instead of combining incompatible measurements.
 
 The cumulative budget has two documented accounting limits. The final record's fsync and controller shutdown happen after its session timestamp and can therefore be slightly undercounted. In addition, abrupt external process termination can bypass normal exact-handle worker cleanup and cannot reconstruct elapsed time that was never durably recorded. After any abnormal interruption, inspect the result boundary and running processes manually before authorizing `--resume`; never truncate, repair, or reinterpret evidence silently.
+
+### Stage 4E experiment infrastructure
+
+Stage 4E is implemented but has not yet been measured. Its controller plans 212 isolated observations: 50 latency, four memory, 30 liquidation, 120 concentration, and eight diagnostic runs. The five mode ceilings are 900/600/600/1,800/300 seconds, respectively. Together they reserve 4,200 seconds; the remaining 300 seconds of the fixed 4,500-second ceiling is reserved for verification. Every mode has a separate append-only JSONL file under `07_results/stage4e/`; latency observations additionally use deterministic gzip-compressed CSV files under `07_results/stage4e/latency_raw/`. These paths do not exist until measurements are separately authorized.
+
+The common warm-up policy processes the existing 1,000-event seed-42 mixed workload on a disposable instance of the selected engine in the same worker process. That exercises validation, submissions, cancellations, and matching and permits CPython first-call specialization. The disposable engine is released, `gc.collect()` runs, and only then is a new empty measured engine constructed. Warm-up and workload parsing are outside measurement. The policy and GC treatment are identical for both engines.
+
+From the project root, the non-executing checks are:
+
+```powershell
+python '05_benchmarks/run_stage4e.py' self-test --global-budget-seconds 4500
+python '05_benchmarks/run_stage4e.py' dry-run --results-root '07_results/stage4e' --global-budget-seconds 4500
+python '05_benchmarks/run_stage4e.py' verify --results-root '07_results/stage4e' --global-budget-seconds 4500
+python '02_data/generate_concentration_pairs.py' --verify-only
+```
+
+```bash
+python3 05_benchmarks/run_stage4e.py self-test --global-budget-seconds 4500
+python3 05_benchmarks/run_stage4e.py dry-run --results-root 07_results/stage4e --global-budget-seconds 4500
+python3 05_benchmarks/run_stage4e.py verify --results-root 07_results/stage4e --global-budget-seconds 4500
+python3 02_data/generate_concentration_pairs.py --verify-only
+```
+
+After separate measurement approval, run one mode at a time in this order and use `--resume` only after normal interruption and inspection:
+
+```powershell
+python '05_benchmarks/run_stage4e.py' latency --results-root '07_results/stage4e' --global-budget-seconds 4500
+python '05_benchmarks/run_stage4e.py' memory --results-root '07_results/stage4e' --global-budget-seconds 4500
+python '05_benchmarks/run_stage4e.py' liquidation --results-root '07_results/stage4e' --global-budget-seconds 4500
+python '05_benchmarks/run_stage4e.py' concentration --results-root '07_results/stage4e' --global-budget-seconds 4500
+python '05_benchmarks/run_stage4e.py' diagnostics --results-root '07_results/stage4e' --global-budget-seconds 4500
+```
+
+Append `--resume` to the applicable mode command only after normal interruption and inspection. Use `python3` with the same arguments on macOS/Linux. The controller launches one worker at a time. It fingerprints workloads, the selected implementation, the Stage 4E controller/worker, the environment, and the fixed budget policy; rejects malformed, truncated, duplicate, contradictory, or incompatible evidence in every mode file before resuming; stops for manual review after a failed record; and never silently retries a timeout. A timed-out configuration records its later repetitions as `skipped_after_timeout`. Exhausted mode/global budgets are explicit `skipped_mode_budget` or `skipped_global_budget` records. A user-supplied results root must resolve inside this project, and latency artifacts follow that root.
+
+Liquidation reconstructs a fresh supplied seed-42 10,000-event buildup book for every trial, computes actual bid depth from its canonical active orders, requires positive depth, and uses ceiling 10%, exact 100%, or exact 200% integer quantities. Construction time is separate. Only the direct liquidation call is timed, and an independent snapshot oracle checks ordered maker-price fills, quantities, proceeds, residual, and final state. A depleted book is never reused.
+
+The memory run performs a separate untraced state pass to obtain exact active-order and occupied-price-level peaks and checkpoint states without contaminating later `tracemalloc` peaks. It then garbage-collects that disposable state and uses a fresh engine for traced replay. Preloaded inputs are excluded; the engine and book are included. For every event, the current returned result remains strongly referenced until `tracemalloc.get_traced_memory()` reads its allocation state, then that single result is released; results are never accumulated and no saved trade history is retained. The final checkpoint is the post-stream/post-cancellation observation for `cancel_churn`. Traced Python bytes are not total RSS or native memory.
+
+The instructor's exact warm-up instruction is in the supplied README, “### Time and latency”, line 116: “Use `time.perf_counter`, warm up, repeat five times and keep every raw repeat plus its median.” Stage 4D retained valid cold-process evidence but did not explicitly warm `process_event`; it therefore deviates from that part of the protocol and is not relabelled as warmed evidence.
+
+The three new 10,000-event four-level pairs and their metadata are described by `02_data/concentration_10000_manifest.json`; the original Stage 2B manifest remains unchanged. The generator refuses overwrite and verifies zero non-price mismatches, zero formula mismatches, monotonic four-bucket mapping, deterministic gzip hashes, source provenance, and an independent second generation pass.
+
+Stage 4D remains valid retained cold-process evidence. The separate warmed-primary infrastructure uses the same 450-repetition matrix, disposable mixed-workload warm-up, fresh measured-engine boundary, five raw repeats, and timeout censoring. It writes only to `07_results/stage4e/warmed_primary.jsonl` and must never overwrite, append to, or merge with `07_results/raw/timing.jsonl`.
+
+Verify warmed-primary infrastructure without execution:
+
+```powershell
+python '05_benchmarks/run_warmed_primary.py' --self-test --global-budget-seconds 5400
+python '05_benchmarks/run_warmed_primary.py' --output '07_results/stage4e/warmed_primary.jsonl' --global-budget-seconds 5400 --dry-run
+```
+
+```bash
+python3 05_benchmarks/run_warmed_primary.py --self-test --global-budget-seconds 5400
+python3 05_benchmarks/run_warmed_primary.py --output 07_results/stage4e/warmed_primary.jsonl --global-budget-seconds 5400 --dry-run
+```
+
+After separate execution approval, start only when the output is absent:
+
+```powershell
+python '05_benchmarks/run_warmed_primary.py' --output '07_results/stage4e/warmed_primary.jsonl' --global-budget-seconds 5400
+```
+
+Resume only after normal interruption, inspection, and explicit authorization:
+
+```powershell
+python '05_benchmarks/run_warmed_primary.py' --output '07_results/stage4e/warmed_primary.jsonl' --global-budget-seconds 5400 --resume
+```
+
+Use `python3` with the same arguments on macOS/Linux. Protocol `warmed-primary-v1` fingerprints the selected engine and shared dependencies, the new wrapper/worker and retained Stage 4D controller dependency, the environment, and the 1,000-event mixed warm-up workload. The worker verifies warm-up hash `8c3455dc8370f2e006eda834f5bfeb47abdb7dc3766775cf12cdc8444f974d9d`, processes it on a disposable same-class engine, releases that engine, calls `gc.collect()`, and verifies that a newly constructed measured engine is empty before READY. Warm-up and preparation are excluded from `engine_seconds`. Interpreter first-call specialization is partially warmed; scenario-specific branches, CPU thermal state, and operating-system scheduling are not guaranteed to be stabilized.
 
 ## Decisions required before Stage 3
 
