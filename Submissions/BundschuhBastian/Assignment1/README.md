@@ -163,8 +163,11 @@ Details of how the rules are applied (also fixed before the first run):
   13.1 ms and 12.4 ms (at events 91,228 and 44,613, with a second spike of 7.1 and 7.8 ms), gc off
   0.82 ms and 0.88 ms. So the ~12 ms spikes are garbage-collector pauses (full collections while
   the book holds ~10^5 live records). With gc off the largest remaining events sit at 10,922,
-  21,845, 43,690 and 87,381, a doubling pattern that fits a dict or list resize; that explanation
-  was not tested.
+  21,845, 43,690 and 87,381, the order-index dict growing at 2/3 of its capacity (a dict of
+  16,384, 32,768, 65,536 and 131,072 slots holds 10,922, 21,845, 43,690 and 87,381 entries before it
+  is resized). Checked: `sys.getsizeof` of a dict filled with 100,000 string keys jumps when the 10,923rd,
+  21,846th, 43,691st and 87,382nd key is inserted, which are event indices 10,922 ... 87,381 in `buildup`
+  (one insert per event). Each resize is one longer insert; the cost per insert stays amortized O(1).
 - **Memory** (`results/memory.csv`). `tracemalloc`, started after the events are loaded, with a fresh
   book. Counted: Python allocations made during the replay that are still alive at the moment of
   measuring: book structures, the order index, the current result dict and fill list (discarded

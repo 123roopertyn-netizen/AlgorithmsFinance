@@ -254,7 +254,9 @@ def page_latency() -> None:
     ).properties(height=300))
     st.subheader("Rare long events: garbage collection on and off")
     st.write("B on `buildup`, 100,000 events, two runs each. With gc on the maximum is about 12 ms; "
-             "with gc off it is below 1 ms. So those spikes are garbage-collector pauses.")
+             "with gc off it is below 1 ms. So those spikes are garbage-collector pauses. The remaining "
+             "gc-off peaks (events 87,381, 43,690 and 21,845) are order-index dict resizes at 2/3 of "
+             "capacity: each is one longer insert, and the cost per insert stays amortized O(1).")
     gc = load("latency_gc_test.csv")
     gc = gc.assign(run=gc.groupby("label").cumcount() + 1)
     gc["run"] = gc["label"] + " #" + gc["run"].astype(str)
@@ -591,8 +593,9 @@ def page_bottleneck() -> None:
                       "O(F·B)"],
         "Version B": ["O(1)", "O(1)", "O(1) at an existing price; O(P) for a new price", "O(1) amortized",
                       "O(1)", "O(M·P) worst case, small constant", "O(F)"]}))
-    st.write("B = active orders, P = price levels, F = fills, M = events. With B growing to M/2 in "
-             "`buildup`, A's total is quadratic; this is the slope near 2 on the scaling page.")
+    st.write("B = active orders, P = price levels, F = fills, M = events. In `buildup` "
+             "the number of active orders B grows to M, and each side holds about M/2 of them, so "
+             "A's scans get longer with every event and its total is quadratic; this is the slope near 2 on the scaling page.")
     st.subheader("How much of A's time is the id scan?")
     f = data.runs(load("fairness_time.csv"))
     f = f[(f["status"] == "ok") & (f["scenario"].isin(["buildup", "crowded", "sweep"]))]
