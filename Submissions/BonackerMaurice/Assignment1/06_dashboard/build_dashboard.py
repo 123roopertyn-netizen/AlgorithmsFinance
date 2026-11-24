@@ -9,9 +9,11 @@ Final benchmark (04_benchmarks/run_benchmark.py):
     benchmark_summary.csv                    median / min / max per cell
     benchmark_results.csv                    every raw repeat (+ memory rows)
     concentration_check.csv                  price-time check, 4 vs 1,000 levels
-    latency_summary.csv, latency_quantiles.csv
+    latency_summary.csv, latency_quantiles.csv, latency_by_type.csv
     memory_end_state.csv, memory_samples.csv
     opcounts.csv
+Latency and memory rerun (run_benchmark.py --latency-memory):
+    benchmark_run_latency_memory.json, environment_latency_memory.json
 Correctness: tests_by_case.csv + tests_by_case_run.json (commit and code state
 of the test run; 04_benchmarks/export_test_results.py), differential_tests.csv.
 The only other thing it reads is the checked-out code, to say whether it is
@@ -241,7 +243,38 @@ def code_match(run, now):
     return f"NO ({detail}). The results describe the measured commit." if detail else "NO"
 
 
-def section_provenance(run, env):
+def rerun_rows(run, env, rerun, renv, now):
+    """Provenance of a separate latency and memory run, next to the full run."""
+    git = rerun["git"]
+    differs = [name for name in ("python", "packages", "os") if (env or {}).get(name)
+            != (renv or {}).get(name)]
+    if (env or {}).get("machine") != (renv or {}).get("machine"):
+        differs.append("machine or power state")
+    phases = ", ".join(f"{p['name']} {p['seconds']:.0f} s" for p in rerun["phases"])
+    return [
+        ["measured commit", f"{git.get('commit')} (branch {git.get('branch')})"],
+        ["command", rerun["command"]],
+        ["code committed and clean at start", "yes" if git.get("code_clean") else "NO"],
+        ["code unchanged during the run", "yes" if rerun.get("source_unchanged") else "NO"],
+        ["checked-out code = measured code", code_match(rerun, now)],
+        ["engines (lob_a, lob_b_*, validation) = full run", engines_match(run, rerun)],
+        ["run status", f"{rerun['status']} ({phases})"],
+        ["started / finished (UTC)", f"{rerun['started_utc']} / {rerun['finished_utc']}"],
+        ["machine, power state, OS, Python, packages vs the full run",
+         "the same" if not differs else "DIFFERENT: " + ", ".join(differs)],
+    ]
+
+
+def engines_match(run, rerun):
+    old, new = run.get("source_files") or {}, rerun.get("source_files") or {}
+    names = [f for f in sorted(old.keys() | new.keys())
+             if "03_code/lob_" in f or f.endswith("03_code/validation.py")]
+    diff = [f for f in names if old.get(f) != new.get(f)]
+    return "unknown" if not names else "yes (same checksums)" if not diff else \
+        "NO: " + ", ".join(diff)
+
+
+def section_provenance(run, env, rerun, renv):
     if not run:
         return "<h2>Provenance</h2>\n<p>No benchmark run saved (05_results/benchmark_run.json).</p>"
     git, s = run["git"], run["settings"]
@@ -271,15 +304,24 @@ def section_provenance(run, env):
         ["clock", f"perf_counter = {env['perf_counter']['implementation']}, resolution "
                   f"{env['perf_counter']['resolution_s']:g} s" if env else ""],
     ]
-    defs = html_table(["term", "definition"], sorted(run["definitions"].items()))
-    return ("<h2>Provenance</h2>\n" + html_table(["", ""], rows) + "\n"
+    terms = {**run["definitions"], **((rerun or {}).get("definitions") or {})}
+    defs = html_table(["term", "definition"], sorted(terms.items()))
+    second = ""
+    if rerun:
+        second = ("<p><b>Latency and memory come from a later, separate run</b> (per-type "
+                  "latency, memory sampled with the returned output). It replaced only the "
+                  "latency and memory rows; everything else is from the full run above.</p>\n"
+                  + html_table(["", ""], rerun_rows(run, env, rerun, renv, now)) + "\n")
+    return ("<h2>Provenance</h2>\n<p>Full benchmark run:</p>\n" + html_table(["", ""], rows)
+            + "\n" + second +
             "<p>Reproduce (from Assignment1/): <code>python -m pip install -r "
             "requirements.txt</code>, then <code>python 04_benchmarks/run_benchmark.py</code> "
             "(regenerates the data; checksums in benchmark_datasets.csv), then "
-            "<code>python 06_dashboard/build_dashboard.py</code>.</p>\n"
+            "<code>python 06_dashboard/build_dashboard.py</code>. Latency and memory only: "
+            "<code>python 04_benchmarks/run_benchmark.py --latency-memory</code>.</p>\n"
             "<p><b>Limitation:</b> latency, memory and operation counts were measured on "
             "seed 42 only; timing covers seeds 42, 43 and 44.</p>\n"
-            + details("Measurement definitions (from benchmark_run.json)", defs))
+            + details("Measurement definitions (saved with the runs)", defs))
 
 
 def test_run_label(tests, now):
@@ -374,7 +416,8 @@ def section_correctness(run):
 
     results = read_csv("benchmark_results.csv")
     if results:
-        measured = [r for r in results if r["phase"] in ("replay", "build", "sell")
+        measured = [r for r in results if r["run_kind"] == "timing"
+                    and r["phase"] in ("replay", "build", "sell")
                     and r["status"] in ("ok", "mismatch")]
         mism = [r for r in measured if r["status"] == "mismatch"]
         parts.append(f"<p>Checks after every timed replay, build and sale of the benchmark "
@@ -573,7 +616,38 @@ def section_concentration(summary, datasets):
                          + [label(v) for v in VERSION_ORDER], rows) + "\n" + finding)
 
 
-def section_latency():
+def latency_by_type_table():
+    """Small per-type table: one row per (file, event type), one column per version."""
+    rows = read_csv("latency_by_type.csv")
+    if not rows:
+        return ""
+    cells, counts, differ = {}, {}, 0
+    for r in rows:
+        key = (int(r["events"]), r["scenario"], r["event_type"])
+        if r["status"] == "stopped":
+            cells[key + (r["version"],)] = "stopped"
+        elif int(r["count"]):
+            differ += counts.setdefault(key, int(r["count"])) != int(r["count"])
+            cells[key + (r["version"],)] = " / ".join(
+                f"{int(r[k]) / 1000:.1f}" for k in ("p50_ns", "p95_ns", "p99_ns", "max_ns"))
+    types = list(dict.fromkeys(r["event_type"] for r in rows))
+    order = sorted(counts, key=lambda k: (k[0], SCENARIO_ORDER.index(k[1]), types.index(k[2])))
+    table = [[k[1], f"{k[0]:,}", k[2], f"{counts[k]:,}"]
+             + [cells.get(k + (v,), "") for v in VERSION_ORDER] for k in order]
+    never = [t for t in types if not any(k[2] == t for k in counts)]
+    bad = [r for r in rows if r["status"] not in ("ok", "stopped")]
+    return ("\n<p>Per event type (µs): <b>median / p95 / p99 / max</b>. Every timed event has "
+            "exactly one type; LIMIT traded = at least one fill, also if a residual rests. "
+            "The counts are the same in every version and agree with the dataset manifest"
+            + (f" (NOT in {len(bad) + differ} rows)" if bad or differ else "")
+            + ". Types that do not occur in a file are left out"
+            + (f"; no file contains events of type {', '.join(never)}" if never else "")
+            + ".</p>\n"
+            + html_table(["scenario", "M", "event type", "count"]
+                         + [label(v) for v in VERSION_ORDER], table))
+
+
+def section_latency(source):
     summ = read_csv("latency_summary.csv")
     quant = read_csv("latency_quantiles.csv")
     if not summ:
@@ -621,6 +695,7 @@ def section_latency():
                           cell(r, "p50_ns"), cell(r, "p95_ns"), cell(r, "p99_ns")])
     over = sorted({r["timer_overhead_ns"] for r in summ if r["timer_overhead_ns"]})
     return ("<h2>Processing latency (separate instrumentation run)</h2>\n"
+            f"<p>{source}</p>\n"
             "<p>perf_counter_ns() around each process_event call, after one warm-up replay; "
             "GC disabled during the replay. This is algorithm processing latency only: no "
             "queueing or network delay, and no claim about real-time capacity. It is not "
@@ -630,10 +705,14 @@ def section_latency():
             + html_table(["scenario", "M", "version", "p50", "p95", "p99", "max"], table)
             + "\n<p>Submission burst (buildup): first vs last 1,000 events, as the book "
               "grows from empty to M resting orders (µs):</p>\n"
-            + html_table(["M", "version", "events", "p50", "p95", "p99"], burst))
+            + html_table(["M", "version", "events", "p50", "p95", "p99"], burst)
+            + latency_by_type_table()
+            + "\n<p>One instrumented replay per cell (not repeated), so compare orders of "
+              "magnitude, not small differences: single events (max, p99 of rare types) are "
+              "noisy.</p>")
 
 
-def section_memory():
+def section_memory(source):
     end = read_csv("memory_end_state.csv")
     samples = read_csv("memory_samples.csv")
     if not end:
@@ -686,11 +765,20 @@ def section_memory():
                       fmt_bytes(r["traced_peak_bytes"]), fmt_bytes(r["traced_current_bytes"]),
                       per, r["live_orders"], r["price_levels"], r["queue_entries"],
                       r["dead_queue_entries"], r["index_entries"], r["stale_index_entries"]])
+    ok = [r for r in end if r["status"] == "ok"]
+    more = sum(int(r["traced_with_output_bytes"]) > int(r["traced_current_bytes"])
+               for r in ok if r.get("traced_with_output_bytes"))
     return ("<h2>Memory (separate tracemalloc run, seed 42)</h2>\n"
+            f"<p>{source}</p>\n"
             "<p>Events are loaded before tracing starts, so the input is NOT included. "
             "Included: the book (orders, price levels, FIFO queues, price index) and the "
-            "transient result and fill list of the event being processed (in the peak, not "
-            "in the end value). No history is stored. Traced bytes are Python allocations "
+            "returned result and fill list of the current event, which stays referenced "
+            "while the sample is read and is released before the next event. The charts "
+            "and the peak therefore hold the book plus one event's output; 'traced at end' "
+            "is after the last output is released. Read with the last output still "
+            f"referenced, the end value is larger in {more} of {len(ok)} cells (an output "
+            "without fills fits into CPython's free lists, which tracemalloc counts either "
+            "way). No history is stored. Traced bytes are Python allocations "
             "seen by tracemalloc; they are not the algorithm's auxiliary space (a count of "
             "retained entries, shown on the right) and not process memory (which also holds "
             "the interpreter, the preloaded events and allocator caches).</p>\n" + img + "\n"
@@ -746,19 +834,26 @@ def section_opcounts():
 def main():
     run = read_json("benchmark_run.json")
     env = read_json("environment.json")
+    rerun = read_json("benchmark_run_latency_memory.json")
+    renv = read_json("environment_latency_memory.json")
+    used = rerun or run
+    source = (f"Measured at commit {html.escape(str(used['git'].get('commit'))[:7])} on "
+              f"{used['started_utc'][:10]} ("
+              + ("separate latency and memory run" if rerun else "full run")
+              + ", see Provenance), seed 42.") if used else ""
     summary = read_csv("benchmark_summary.csv")
     if not summary:
         raise SystemExit("05_results/benchmark_summary.csv is missing: run the benchmark first")
     datasets = {d["dataset"]: d for d in read_csv("benchmark_datasets.csv")}
-    sections = [section_provenance(run, env), section_correctness(run),
+    sections = [section_provenance(run, env, rerun, renv), section_correctness(run),
                 section_replay(summary), section_throughput(summary),
                 section_sorted_vs_heap(summary), section_liquidation(summary, datasets),
-                section_concentration(summary, datasets), section_latency(),
-                section_memory(), section_opcounts()]
+                section_concentration(summary, datasets), section_latency(source),
+                section_memory(source), section_opcounts()]
     warn = ""
-    if run and (run["status"] != "complete" or not run["git"].get("code_clean")
-                or not run.get("source_unchanged")):
-        warn = ("<p class='warn'>Warning: this run is not a complete run of committed, "
+    if any(r["status"] != "complete" or not r["git"].get("code_clean")
+           or not r.get("source_unchanged") for r in (run, rerun) if r):
+        warn = ("<p class='warn'>Warning: a run is not a complete run of committed, "
                 "unchanged code. See Provenance.</p>")
     body = "\n\n".join(sections)
     page = f"""<!doctype html>

@@ -382,6 +382,10 @@ them equal.
 
 This replaces the single runs above as the evidence for Revision 1.
 
+The latency and memory numbers below come from the rerun of 24 Nov 2026
+(commit `ade26d1`, see "Benchmark change" at the end). Everything else is
+from this run.
+
 **What was run**
 
 - Command: `python 04_benchmarks/run_benchmark.py`, from `Assignment1/`.
@@ -399,7 +403,9 @@ This replaces the single runs above as the evidence for Revision 1.
   - 26 memory rows ok and 4 stopped (Version A at M = 100,000).
 - Correctness:
   - Every timed replay, build and sale was checked against the dataset
-    manifest: 2,216 of 2,216 measurements agree.
+    manifest: 2,190 of 2,190 measurements agree. (Corrected on 24 Nov 2026
+    from 2,216, which wrongly included the 26 memory rows; the memory runs
+    are not checked this way.)
   - The concentration check passed 18 of 18 streams.
 
 **Limitations**
@@ -476,11 +482,12 @@ events, each scanning a list ten times longer, so the work grows about
 **The latency shows it event by event.** In buildup at M = 10,000, Version
 A's median event takes:
 
-- 44 µs in the first 1,000 events, when the book is small;
-- 894 µs in the last 1,000 events, with about 9,000–10,000 resting orders,
-  which is 20 times slower.
+- 42 µs in the first 1,000 events, when the book is small;
+- 1,024 µs in the last 1,000 events, with about 9,000–10,000 resting orders,
+  which is 24 times slower.
 
-B takes 1.4 µs and then 1.1 µs, so it does not slow down as the book grows.
+B takes 1.4–1.5 µs and then 1.2–1.4 µs, so it does not slow down as the book
+grows.
 
 **Why Version B removes the bottleneck.**
 
@@ -612,16 +619,17 @@ The dashboard table "B-sorted vs B-heap" lists every workload.
      compaction to at most twice the live count.
    - A's memory runs at M = 100,000 were stopped. A's bytes per order were
      193–205 in every measured case.
-3. **Single slow events.** At buildup M = 100,000, B's p99 is 1.8 µs but its
-   slowest single event is 1.9 ms.
+3. **Single slow events.** At buildup M = 100,000, B's p99 is 1.9 µs but its
+   slowest single event is 1.9 ms (B-heap) and 2.0 ms (B-sorted).
    - The memory curve jumps at about 22k, 44k and 87k orders. Those are the
      points where a Python dict enlarges its table (2/3 of 32,768, 65,536 and
      131,072 slots).
    - So the slowest event is most likely the `orders` dict resizing: O(1)
      amortized, but one event pays O(B). This is an inference from the
      memory curve, not a separate measurement.
-   - It does not change the comparison: Version A's typical event at
-     M = 10,000 already takes 0.46–0.89 ms.
+   - It does not change the comparison: Version A's typical event in
+     buildup at M = 10,000 already takes 0.48 ms (median of all events) to
+     1.02 ms (median of the last 1,000).
 4. **Small books gain less.** At M = 1,000, B is 4.8 times faster than A on
    mixed, against 50 times at M = 10,000. The gain grows with the book,
    because A's cost does.
@@ -732,3 +740,102 @@ exactly this.
   checksum-verified and contain no malformed lines.
 - The dashboard's provenance row now names the files that differ from the
   measured code, instead of a bare "NO".
+
+## Benchmark change: latency per event type, memory with retained output (24 Nov 2026)
+
+**Status:** requested by Maurice on 24 Nov 2026. This is a change to the
+measurement scripts, not to an engine.
+
+**Unchanged:** the engines (same checksums as at `4b9df5f`), `validation.py`,
+the tests, all expected values, the datasets, and all 2,667 timing rows.
+
+**What changed**
+
+- `bench_latency.py` gives every timed event one type and writes
+  `latency_by_type.csv`: count, median, p95, p99 and max per type, version and
+  scenario (nearest rank). The types are `LIMIT resting`, `LIMIT traded` (at
+  least one fill, also if a residual rests), `MARKET_SELL`, `CANCEL found`,
+  `CANCEL not_found` and `rejected`.
+- The type is recorded in the untimed warm-up replay of the same events, so
+  the timed loop is the same as before. Checks: both replays end with the same
+  book, and the counts agree with the dataset manifest.
+- `bench_memory.py` keeps the result of the current event while a memory
+  sample is read, and releases it before the next event. New column
+  `traced_with_output_bytes`: the end value with the last result still
+  referenced. `traced_current_bytes` is still the value after its release.
+- `run_benchmark.py --latency-memory` runs only these two phases. A run of
+  selected phases now writes its own record
+  (`benchmark_run_latency_memory.json`) instead of overwriting the record of
+  the full run, and it checks the event files against their sha256.
+
+**Why.** The slides ask to separate event types and compare early with late
+events, and to retain the returned output while reading the memory.
+
+**The rerun**
+
+- Command: `python 04_benchmarks/run_benchmark.py --latency-memory`.
+- Commit `ade26d1`, clean; the source was the same at the start and the end.
+- 24 Nov 2026, 11:42 to 11:55 UTC. Latency took 160 s, memory 571 s.
+- The machine, power state (AC), Windows, Python and package versions are the
+  same as in the full run. The first check found the laptop on battery, so
+  Maurice plugged it in before the start.
+- The same cells were stopped as before: Version A at M = 100,000 (latency:
+  buildup; memory: every scenario except cancel_churn).
+- Tests re-exported at `ade26d1`: 182 of 182 pass, code clean.
+
+**What changed in the numbers**
+
+| Measure | 22 Nov (`4b9df5f`) | 24 Nov (`ade26d1`) |
+|---|---|---|
+| A, buildup 10k, median of the first 1,000 events | 44.0 µs | 41.9 µs |
+| A, buildup 10k, median of the last 1,000 events | 894.5 µs | 1,023.9 µs |
+| A, buildup 10k, median / p99 of all events | 457 / 950 µs | 481 / 1,224 µs |
+| B-sorted, buildup 10k, median first → last 1,000 | 1.4 → 1.1 µs | 1.5 → 1.4 µs |
+| B-heap, buildup 10k, median first → last 1,000 | 1.5 → 1.2 µs | 1.4 → 1.2 µs |
+| B, buildup 100k, p99 (both variants) | 1.8 µs | 1.9 µs |
+| B-sorted / B-heap, buildup 100k, slowest event | 1.94 / 1.93 ms | 2.02 / 1.94 ms |
+| Traced bytes at the end, all 26 cells | – | identical |
+| Traced peak, all 26 cells | – | identical, except +28 bytes for B on sweep |
+| Process peak memory (context only) | 31–150 MB | 30–148 MB |
+
+- **Latency.** The engines and the timed loop are the same, so these
+  differences are run-to-run variation. Each latency cell is one instrumented
+  replay and is not repeated. A's late events came out 14% slower and B's medians
+  moved by at most 0.3 µs; the conclusions do not change.
+- **Memory.** 126 of 2,600 samples are larger, all in mixed and sweep (the
+  streams that trade), by at most 1,232 bytes (0.23%). That is the retained
+  output, and it is small because an event's fill list is small next to the
+  book.
+- The end value with the last output still referenced is equal to the value
+  after its release in all 26 cells. The last event of these files has no
+  fills, and CPython keeps the freed dict and list in its free lists, which
+  tracemalloc still counts.
+
+**What the event types show** (M = 10,000, median in µs)
+
+| Scenario | Event type | Count | A | B-sorted | B-heap |
+|---|---|---|---|---|---|
+| mixed | LIMIT resting | 5,089 | 60.5 | 1.4 | 1.4 |
+| mixed | LIMIT traded | 986 | 94.1 | 1.9 | 2.1 |
+| mixed | MARKET_SELL | 1,487 | 69.4 | 1.4 | 1.5 |
+| mixed | CANCEL found | 617 | 10.9 | 1.1 | 1.0 |
+| mixed | CANCEL not_found | 1,821 | 27.7 | 0.5 | 0.5 |
+| sweep | LIMIT resting | 8,000 | 389.9 | 1.2 | 1.2 |
+| sweep | MARKET_SELL | 2,000 | 365.7 | 0.8 | 0.8 |
+| cancel_churn | LIMIT resting | 5,000 | 0.9 | 1.2 | 1.3 |
+| cancel_churn | CANCEL found | 5,000 | 0.6 | 0.8 | 0.8 |
+
+- **In A, a trading event is the slowest type**, because the best order is
+  searched again after every fill. In sweep, a MARKET_SELL has a median of
+  366 µs but a p99 of 4.9 ms and a maximum of 7.4 ms.
+- **In A, a cancel that finds nothing is slower than one that finds its
+  target** (mixed: 27.7 vs 10.9 µs). A `not_found` cancel always walks the
+  whole list, while a found one stops at its target.
+- **In B it is the other way round** (0.5 vs about 1.0 µs). A `not_found`
+  cancel is one failed dict lookup, while a found one also has to update its
+  price level.
+- **In B every type has a median between 0.5 and 2.1 µs**, whatever the size
+  of the book. Trading events cost most, because they build fills.
+- In cancel_churn, A is faster than B on both event types.
+- No generated file contains a rejected event, so the `rejected` row has
+  count 0 everywhere. Rejection is covered by the tests, not by the benchmark.

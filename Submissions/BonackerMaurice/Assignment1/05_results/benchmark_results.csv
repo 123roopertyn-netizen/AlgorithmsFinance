@@ -2676,8 +2676,8 @@ memory,memory,b_heap,mixed,42,1000,10000,10000,1588,752,,,,,,,replay,1,False,,92
 memory,memory,a,mixed,42,1000,10000,10000,1588,752,,,,,,,replay,1,False,,308136,307652,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,b_sorted,mixed,42,1000,10000,10000,1588,752,,,,,,,replay,1,False,,947356,938684,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,a,sweep,42,1000,10000,10000,8000,1959,,,,,,,replay,1,False,,1540896,807292,ok,tracemalloc run; elapsed time not reported (tracing slows it)
-memory,memory,b_sorted,sweep,42,1000,10000,10000,8000,1959,,,,,,,replay,1,False,,2569676,1438036,ok,tracemalloc run; elapsed time not reported (tracing slows it)
-memory,memory,b_heap,sweep,42,1000,10000,10000,8000,1959,,,,,,,replay,1,False,,2569804,1406740,ok,tracemalloc run; elapsed time not reported (tracing slows it)
+memory,memory,b_sorted,sweep,42,1000,10000,10000,8000,1959,,,,,,,replay,1,False,,2569704,1438036,ok,tracemalloc run; elapsed time not reported (tracing slows it)
+memory,memory,b_heap,sweep,42,1000,10000,10000,8000,1959,,,,,,,replay,1,False,,2569832,1406740,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,b_sorted,cancel_churn,42,1000,10000,10000,1,1,,,,,,,replay,1,False,,3372,1836,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,b_heap,cancel_churn,42,1000,10000,10000,1,1,,,,,,,replay,1,False,,3980,1900,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,a,cancel_churn,42,1000,10000,10000,1,1,,,,,,,replay,1,False,,1304,1044,ok,tracemalloc run; elapsed time not reported (tracing slows it)
@@ -2690,9 +2690,9 @@ memory,memory,b_heap,crowded,42,1000,100000,100000,100000,8,,,,,,,replay,1,False
 memory,memory,b_sorted,mixed,42,1000,100000,100000,15118,894,,,,,,,replay,1,False,,3540696,3266340,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,b_heap,mixed,42,1000,100000,100000,15118,894,,,,,,,replay,1,False,,3515192,3241508,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,a,mixed,42,1000,100000,100000,15118,894,,,,,,,replay,1,False,,,,stopped,stopped: exceeded the 120 s limit; not measured
-memory,memory,b_heap,sweep,42,1000,100000,100000,80000,2000,,,,,,,replay,1,False,,10449084,6204272,ok,tracemalloc run; elapsed time not reported (tracing slows it)
+memory,memory,b_heap,sweep,42,1000,100000,100000,80000,2000,,,,,,,replay,1,False,,10449112,6204272,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,a,sweep,42,1000,100000,100000,80000,2000,,,,,,,replay,1,False,,,,stopped,stopped: exceeded the 120 s limit; not measured
-memory,memory,b_sorted,sweep,42,1000,100000,100000,80000,2000,,,,,,,replay,1,False,,10449052,6236272,ok,tracemalloc run; elapsed time not reported (tracing slows it)
+memory,memory,b_sorted,sweep,42,1000,100000,100000,80000,2000,,,,,,,replay,1,False,,10449080,6236272,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,a,cancel_churn,42,1000,100000,100000,1,1,,,,,,,replay,1,False,,1304,1044,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,b_sorted,cancel_churn,42,1000,100000,100000,1,1,,,,,,,replay,1,False,,3372,1836,ok,tracemalloc run; elapsed time not reported (tracing slows it)
 memory,memory,b_heap,cancel_churn,42,1000,100000,100000,1,1,,,,,,,replay,1,False,,3980,1932,ok,tracemalloc run; elapsed time not reported (tracing slows it)

@@ -260,8 +260,8 @@ the AI started the full run on a quiet, plugged-in laptop.
   40 tests passed.
 - 2,409 timing rows ok and 258 stopped (all Version A). 26 memory rows ok
   and 4 stopped.
-- 0 mismatches in 2,216 checked measurements; 18 of 18 concentration
-  streams pass.
+- 0 mismatches in 2,190 checked measurements; 18 of 18 concentration
+  streams pass. (Corrected on 24 Nov from 2,216, see Session 7.)
 - The explanations are in `07_docs/REVISIONS.md`, "Final benchmark".
 
 ### Open points for Maurice
@@ -344,3 +344,59 @@ benchmark was not rerun.
 
 - Sections 2 (first paragraph), 5 and 6 (design and effect) written by Maurice, with corrections suggested by Claude (chat).
 - Sections 1, 3, 4 and 7, the remaining paragraphs of section 2 and the AI-use paragraph of section 6 drafted by Claude (chat) from `REVISIONS.md`, `AI_USAGE.md` and `05_results/`; checked and edited by Maurice.
+
+## Session 7: latency per event type, memory with retained output, README (24 Nov 2026)
+
+Maurice's task list:
+
+1. latency per event type in `bench_latency.py`;
+2. memory samples with the returned output retained in `bench_memory.py`;
+3. a README reproduction path for a clean environment;
+4. an option in `run_benchmark.py` to run only the latency and memory phases.
+
+Constraints: no change to engine code or expected test values. Maurice
+committed the scripts (`ade26d1`) before the rerun.
+
+### What the AI produced
+
+| File | Content |
+|---|---|
+| `04_benchmarks/bench_latency.py` | Six event types, `latency_by_type.csv`, checks against the manifest and between the two replays |
+| `04_benchmarks/bench_memory.py` | The result stays referenced while a sample is read and is then released; new column `traced_with_output_bytes` |
+| `04_benchmarks/run_benchmark.py` | `--latency-memory`; a run of selected phases writes its own record and checks the event files against their sha256 |
+| `04_benchmarks/bench_common.py` | Definition texts for latency, event types and memory |
+| `README.md` | Reproduction path, worked-example output, run times, definitions of the measured data, placeholder for the submitted commit |
+| `06_dashboard/build_dashboard.py` | Small per-type latency table, provenance of the rerun next to the full run, updated memory text |
+| `05_results/` | Latency and memory results of the rerun, test export at `ade26d1` (182 of 182 pass) |
+| `07_docs/REVISIONS.md` | Section "Benchmark change"; latency numbers in "Final benchmark" updated to the rerun |
+
+### Problems found
+
+- **Provenance.** Any run of selected phases used to overwrite
+  `benchmark_run.json` and `environment.json`. The rerun would have erased the
+  record of the full run at `4b9df5f`. Fixed before the rerun (separate
+  record).
+- **Harness bytes in the memory reading.** In the first version, the two end
+  values were kept as Python ints, which are traced themselves (56 bytes). The
+  value after the release was larger than the one before. Found in the smoke
+  test and fixed before the commit (values go into a preallocated array).
+- **Dashboard count.** "2,216 of 2,216 measurements agree" also counted the 26
+  memory rows, which are not checked against the manifest. The correct number
+  is 2,190 of 2,190. This was the AI's error from Session 5, corrected in the
+  dashboard, `REVISIONS.md` and this file.
+- **Battery.** Before the rerun the laptop was on battery. The AI asked, and
+  Maurice plugged it in first.
+- **Not tested:** `pip install -r requirements.txt` in an empty environment.
+  The other README steps that fit into minutes (tests, worked example, data,
+  smoke run, dashboard) were run in a fresh copy of the repository files.
+
+### Open points for Maurice
+
+| # | AI suggestion | Decision |
+|---|---|---|
+| T19 | The event type is recorded in the untimed warm-up replay, not in the timed loop. This keeps the timed loop unchanged, so the overall and early/late figures stay comparable. | **Accepted** (Maurice, 24 Nov) |
+| T20 | `LIMIT traded` means at least one fill, also if a residual rests. A partly filled limit is not counted as `LIMIT resting`. | **Accepted** (Maurice, 24 Nov) |
+| T21 | `traced_current_bytes` stays the value after the last output is released; `traced_with_output_bytes` is an extra column. The two are equal in all 26 cells. | **Accepted** (Maurice, 24 Nov) |
+| T22 | Runs of selected phases write their own record and refuse to start when an event file differs from the manifest. | **Accepted** (Maurice, 24 Nov) |
+| T23 | The rerun's latency differences (A's late events 14% slower, B's medians up to 0.3 µs) are reported as run-to-run variation. Each cell is one replay, so this is an inference. | **Accepted** (Maurice, 24 Nov) |
+| T24 | The latency numbers in the "Final benchmark" section of `REVISIONS.md` were updated in place, because they describe the saved files. The old values are kept in the table in "Benchmark change". | **Accepted** (Maurice, 24 Nov) |

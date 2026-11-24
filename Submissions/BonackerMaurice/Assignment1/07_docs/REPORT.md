@@ -1,7 +1,7 @@
 # Assignment 1: Limit order book, report
 
 Maurice Bonacker, Frankfurt School of Finance & Management, Algorithms in Finance.
-Submission folder: `Submissions/BonackerMaurice/Assignment1/`. Benchmark measured at commit `4b9df5f`; see the README for run commands and the submitted commit.
+Submission folder: `Submissions/BonackerMaurice/Assignment1/`. Timing benchmark measured at commit `4b9df5f`, latency and memory rerun at `ade26d1`; see the README for run commands and the submitted commit.
 
 ---
 
@@ -170,12 +170,29 @@ separately; commit `4b9df5f`):
   overlap in 36 of 45 cells (ratios 0.96–1.08): no reliable winner.
 - **Queue concentration** (same order count on 4 vs 1,000 prices): Version A's
   time does not depend on P; price-time correctness held on all 18 checked streams.
-- **Latency** (separate instrumented run, nearest-rank percentiles, seed 42):
-  Version A's median event in buildup 10k rises from 44 µs (first 1,000 events)
-  to 894 µs (last 1,000); B stays at ~1.1–1.4 µs. B's p99 at buildup 100k is
-  1.8 µs, its slowest single event 1.9 ms (most likely a dict resize, an
-  inference). Latency is algorithm processing time only, not queueing or
-  network latency, and is never derived from 1/throughput.
+- **Latency** (separate instrumented run at `ade26d1`, nearest-rank percentiles,
+  seed 42): Version A's median event in buildup 10k rises from 42 µs (first 1,000
+  events) to 1,024 µs (last 1,000); B stays at ~1.2–1.5 µs. B's p99 at buildup
+  100k is 1.9 µs, its slowest single event 1.9–2.0 ms (most likely a dict resize,
+  an inference). Each latency cell is a single replay, so differences of ~10–15%
+  between runs are normal. Latency is algorithm processing time only, not
+  queueing or network latency, and is never derived from 1/throughput.
+- **Latency by event type** (mixed, M = 10,000, median / p99 in µs):
+
+  | Event type | Count | A | B-sorted | B-heap |
+  |---|---|---|---|---|
+  | LIMIT resting | 5,089 | 60.5 / 190 | 1.4 / 3.0 | 1.4 / 4.0 |
+  | LIMIT that traded | 986 | 94.1 / 458 | 1.9 / 4.6 | 2.1 / 5.6 |
+  | MARKET_SELL | 1,487 | 69.4 / 370 | 1.4 / 7.2 | 1.5 / 8.1 |
+  | CANCEL found | 617 | 10.9 / 62 | 1.1 / 4.4 | 1.0 / 4.7 |
+  | CANCEL not_found | 1,821 | 27.7 / 62 | 0.5 / 0.9 | 0.5 / 0.9 |
+
+  In A every type pays for list scans; orders that trade are the most expensive
+  because the best-order scan is repeated after every fill (on sweep, A's market
+  sells reach p99 4.9 ms). In B the types differ only by a few µs: trading events
+  and market sells have the longest tails (more fills to build), while a cancel of
+  an unknown id is a single dict lookup (0.5 µs). The generated files contain no
+  rejected events, so that type is not shown.
 - After the revision, parsing (gzip + JSON, 1.6 µs/event) costs more than the B
   engine (1.3–1.5 µs/event).
 
@@ -186,8 +203,9 @@ separately; commit `4b9df5f`):
 Memory was measured with `tracemalloc` in a separate child process per run (seed 42,
 M = 10,000 and 100,000). Events were preloaded **before** tracing started, so the
 input is excluded. Included: the book (orders, levels, queues, price index), the
-result dict and fill list of the current event (transient: in the peak, not in the
-end value) and validation temporaries. No result history is kept.
+result dict and fill list of the current event (each sample is taken while that
+output is still referenced, then released; the end value is the book only) and
+validation temporaries. No result history is kept.
 
 Traced bytes per live order at the end of the replay, M = 10,000:
 
@@ -207,7 +225,7 @@ Traced bytes per live order at the end of the replay, M = 10,000:
   number of orders (buildup 100k: 13.9 MB at the end), with visible steps at
   about 22k, 44k and 87k orders where the `orders` dict enlarges its table.
 - **After cancellation churn:** after 100,000 cancel_churn events, retained
-  memory stays flat at about 2 KiB traced (peak 3.4–4.0 KiB) for both B variants
+  memory stays flat at about 2 KiB traced (peak 3.3–3.9 KiB) for both B variants
   and ~1 KiB for A; B-heap keeps 2–3 stale index keys at the end. No stale entries
   or history accumulate.
 - Version A's memory runs at M = 100,000 were stopped at the time limit, except cancel_churn, which completed.
@@ -218,7 +236,7 @@ container over-allocation). Auxiliary space is the algorithm's extra space as a
 count of entries (O(B) orders + O(P) levels + index entries, including stale
 ones), independent of byte sizes. Process memory additionally holds the
 interpreter, modules, the preloaded events, allocator caches and memory not
-returned to the operating system (e.g. 31–149 MB peak working set here, recorded
+returned to the operating system (e.g. 30–148 MB peak working set here, recorded
 for context only). Also, CPython dicts do not shrink when keys are deleted, so
 memory after a large book is cancelled can still reflect the earlier peak.
 
@@ -228,7 +246,7 @@ memory after a large book is cancelled can still reflect the earlier peak.
 
 **Version A.** The main bottleneck of Version A is that it scans the whole order list on every event. Two functions walk the list from start to end: `_is_live` (`lob_a.py:184`), which checks that a new order id is not already active, and `_best_index` (`lob_a.py:191`), which finds the best opposite order before the first fill and again after every fill. One event therefore costs about B · (F + 2) list steps (B resting orders, F fills).
 
-The cost grows quadratically, not linearly. In buildup the book grows with every event: the operation counts show 999 list elements visited per event at M = 1,000 and 9,999 at M = 10,000. Ten times more events, each scanning a ten times longer list, gives about 100 times the work. Measured: 48.9 ms to 4.82 s (99x), about 48 ns per list element. The latency run shows the same thing event by event: A's median event takes 44 µs at the start of buildup and 894 µs at the end. At M = 100,000 every Version A run except cancel_churn (whose book never holds more than one order) was stopped at the declared 120 s limit; no time was estimated. 
+The cost grows quadratically, not linearly. In buildup the book grows with every event: the operation counts show 999 list elements visited per event at M = 1,000 and 9,999 at M = 10,000. Ten times more events, each scanning a ten times longer list, gives about 100 times the work. Measured: 48.9 ms to 4.82 s (99x), about 48 ns per list element. The latency run shows the same thing event by event: A's median event takes 42 µs at the start of buildup and 1,024 µs at the end. At M = 100,000 every Version A run except cancel_churn (whose book never holds more than one order) was stopped at the declared 120 s limit; no time was estimated. 
 **Version B.** The previous bottleneck is removed: the duplicate check is a dict lookup, the best price comes directly from the price index, and the next maker is the front of the price level's FIFO queue. Its cost per event stays at about 1 to 1.5 µs at every book size. What remains is the fixed per-event Python work (validation, building the result), and the next bottleneck is reading the input file (1.6 µs per event).
 
 ---
@@ -239,7 +257,7 @@ Profiling Version A on the 10,000-event buildup stream showed (under cProfile, w
 
 **Effect.** Version B is faster wherever the book grows. Version A grows quadratically with the number of events, while both B variants grow linearly, so the gap widens with M: B is about 50–430 times faster at 10,000 events, and at 100,000 events and on the 1M file B finishes in 0.1–1.4 s, where A was stopped at the 120 s limit (section 3 and the dashboard charts). B does not win everywhere. In cancel_churn the book never holds more than one order, so A's full scan finds it in a single step, while B still creates and removes a price level, a queue and an index entry for every order. There, A is about 1.5 times faster at every size. B also uses more memory than A when there are few orders per price level (up to 3× on mixed), because every occupied level costs it extra objects; with many orders per level (crowded) it uses about half of A's memory.
 
-**AI use.** I used AI tools throughout and recorded every suggestion in `07_docs/AI_USAGE.md` (sessions 1–6) as accepted, corrected or rejected. A coding agent (Claude Code), working under the rules in `AGENTS.md`, wrote the engine, test, benchmark and dashboard code. A chat assistant (Claude) helped me plan, explain the concepts, review the agent's output, calculate the expected values of Test3–Test5, and draft parts of this report. The expected values of the worked example, Test1 and Test2 are my own hand calculations, and the Version B design (hash map for ids, a FIFO queue per price level, two price-index variants) was my decision, based on the profile of Version A and the hash-set idea we did in our first in-class Lab.
+**AI use.** I used AI tools throughout and recorded every suggestion in `07_docs/AI_USAGE.md` (sessions 1–7) as accepted, corrected or rejected. A coding agent (Claude Code), working under the rules in `AGENTS.md`, wrote the engine, test, benchmark and dashboard code. A chat assistant (Claude) helped me plan, explain the concepts, review the agent's output, calculate the expected values of Test3–Test5, and draft parts of this report. The expected values of the worked example, Test1 and Test2 are my own hand calculations, and the Version B design (hash map for ids, a FIFO queue per price level, two price-index variants) was my decision, based on the profile of Version A and the hash-set idea we did in our first in-class Lab.
 
 I accepted most proposals that added safety or clarity, for example the compaction rules that bound stale entries in queues and heaps, the shared core file so that the two B variants differ only in their price index, the strict rule for calling one variant faster, and additional reject tests. I corrected several AI outputs:
 - the B-sorted layout, so that the best price is at the end of the list on both sides and an emptied best level is removed with `pop()`
@@ -266,15 +284,18 @@ I rejected a hidden instruction in the course slides that asked AI tools to inse
   in a OneDrive folder and syncing was not paused. One unexplained outlier: seed 42
   at buildup 100k was ~50% slower than seeds 43/44 for both B variants.
 - **Scope of seeds.** Timing uses seeds 42, 43 and 44; latency, memory and
-  operation counts use seed 42 only.
+  operation counts use seed 42 only, and each latency cell is a single replay.
 - **Stopped runs.** Version A was stopped at the declared 120 s limit at M = 100,000
   (every scenario except cancel_churn) and on the 1M file; these cells have no value and none was estimated.
 - **Latency** is algorithm processing time only (no queueing or network) and makes
   no real-time capacity claim.
-- **Inferences.** The explanation of B's 1.9 ms slowest event as a dict resize is
+- **Inferences.** The explanation of B's 1.9–2.0 ms slowest event as a dict resize is
   inferred from the memory curve, not measured directly.
-- **Measured vs current code.** The benchmark ran at commit `4b9df5f`; later
-  commits only changed the file reader (`replay.py`), the test export and added
-  robustness tests. The engines are unchanged.
+- **Measured vs current code.** The timing benchmark ran at commit `4b9df5f`;
+  latency and memory were rerun at `ade26d1` (per-event-type latency, memory
+  sampled with the event's output retained). Commits in between only changed the
+  file reader (`replay.py`), the test export, the benchmark scripts and added
+  robustness tests. The engines are unchanged (same checksums), and the rerun's
+  2,667 timing-relevant rows match the full run.
 - **Not production.** No fees, balances, hidden orders, self-trade prevention,
   multiple venues, persistence or concurrency.
