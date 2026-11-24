@@ -21,6 +21,7 @@ bench.common.write_environment(), results/env.json.
 from __future__ import annotations
 
 import argparse
+import datetime
 import gc
 import statistics
 import time
@@ -32,7 +33,10 @@ from lob import VERSIONS
 from lob.common import load_events
 
 TIME_RAW = RESULTS / "time_raw.csv"
-FIELDS = ["version", "scenario", "seed", "events", "levels", "status", "reason", "phase", "repeat",
+CANARY_RAW = RESULTS / "canary_raw.csv"
+CANARY_SPEC = dict(scenario="mixed", events=100000, seed=42, levels=1000)    # always run with B
+FIELDS = ["start_utc", "power_source", "battery_percent", "low_power_mode", "block", "canary_point",
+          "version", "scenario", "seed", "events", "levels", "status", "reason", "phase", "repeat",
           "replay_status", "elapsed_seconds", "median_seconds", "repeats", "parse_seconds",
           "events_done", "limit_seconds"]
 
@@ -65,9 +69,13 @@ def time_worker(conn, version: str, path: str, slow_first_s: float, repeats: int
         conn.send(("unit_done", f"timed{r}", _replay(cls, events)))
 
 
-def run_one(version: str, spec: dict, limit_s: float, slow_first_s: float, repeats: int) -> dict:
-    """Run one (version, stream) pair; append its rows to time_raw.csv; return the run summary."""
-    base = {"version": version, **{k: spec[k] for k in ("scenario", "seed", "events", "levels")},
+def run_one(version: str, spec: dict, limit_s: float, slow_first_s: float, repeats: int,
+            out_path=None, extra: dict | None = None) -> dict:
+    """Run one (version, stream) pair; append its rows to time_raw.csv (or `out_path`); return the
+    run summary. `start_utc` and the power state are taken when the run starts."""
+    out_path = out_path or TIME_RAW
+    base = {"start_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+            **common.power_state(), **(extra or {}), "version": version, **{k: spec[k] for k in ("scenario", "seed", "events", "levels")},
             "limit_seconds": limit_s}
     result = run_limited(time_worker, (version, str(stream_path(**spec)), slow_first_s, repeats),
                          limit_s)
@@ -101,7 +109,7 @@ def run_one(version: str, spec: dict, limit_s: float, slow_first_s: float, repea
                 if r["replay_status"] == "ok" and r["phase"] in ("timed", "single")]
     median = statistics.median(measured) if measured else ""
     for row in rows or [{"phase": "none", "replay_status": "none"}]:
-        append_csv(TIME_RAW, FIELDS, {**base, **row, "status": status, "reason": reason,
+        append_csv(out_path, FIELDS, {**base, **row, "status": status, "reason": reason,
                                       "median_seconds": median, "repeats": len(measured),
                                       "parse_seconds": parse_s})
     return {"status": status, "median": median, "repeats": len(measured), "reason": reason}
@@ -119,6 +127,16 @@ def a_million_decision(spec: dict, rows: list[dict]) -> str | None:
         return (f"A at 100,000 events on {spec['scenario']} took {median:.1f} s "
                 f"(>= {common.A_MILLION_THRESHOLD} s)")
     return None
+
+
+def canary(block: str, point: str, args) -> None:
+    """B on mixed 100,000 events (seed 42), 5 repeats, same rules as every run; rows go to
+    results/canary_raw.csv. Same median before and after every block = the machine was stable."""
+    out = run_one("B", CANARY_SPEC, args.limit_seconds, args.slow_first_seconds, args.repeats,
+                  CANARY_RAW, {"block": block, "canary_point": point})
+    power = common.power_state()
+    print(f"    canary {point:6s} {block}: median {float(out['median']):.4f} s "
+          f"(power {power['power_source']}, low power {power['low_power_mode']})", flush=True)
 
 
 def planned_runs(args) -> list[tuple[str, dict]]:
@@ -146,7 +164,13 @@ def main(argv: list[str] | None = None) -> int:
     common.write_environment()
     runs = planned_runs(args)
     started = time.monotonic()
+    block, pending = "", False       # block = all runs of one (events, scenario)
     for i, (version, spec) in enumerate(runs, start=1):
+        this_block = f"{spec['scenario']}_{spec['events']}"
+        if this_block != block:
+            if pending and block:
+                canary(block, "after", args)
+            block, pending = this_block, False
         label = (f"[{i}/{len(runs)} {time.monotonic() - started:7.0f}s] {version} "
                  f"{spec['scenario']:12s} M={spec['events']:>8d} L={spec['levels']:>4d} s{spec['seed']}")
         rows = read_csv(TIME_RAW)
@@ -158,16 +182,23 @@ def main(argv: list[str] | None = None) -> int:
             reason = a_million_decision(spec, rows)
             if reason:
                 append_csv(TIME_RAW, FIELDS, {
+                    "start_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(
+                        timespec="seconds"), **common.power_state(), "block": block,
                     "version": "A", **{k: spec[k] for k in ("scenario", "seed", "events", "levels")},
                     "status": "not_run", "reason": reason, "phase": "none", "replay_status": "none",
                     "repeats": 0, "limit_seconds": args.limit_seconds})
                 print(label, "-> not_run:", reason, flush=True)
                 continue
+        if not pending:
+            canary(block, "before", args)
+            pending = True
         print(label, "-> running", flush=True)
         out = run_one(version, spec, args.limit_seconds, args.slow_first_seconds, args.repeats)
         print(label, f"-> {out['status']}",
               (f"median {float(out['median']):.4f} s, repeats={out['repeats']}"
                if out["median"] != "" else out["reason"]), flush=True)
+    if pending and block:
+        canary(block, "after", args)
     return 0
 
 

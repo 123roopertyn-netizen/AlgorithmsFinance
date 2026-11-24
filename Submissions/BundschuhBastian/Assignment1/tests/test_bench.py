@@ -201,6 +201,25 @@ def test_env_json_has_python_macos_machine_and_commit(tmp_path, monkeypatch):
     assert env["python"].startswith("3.") and env["git_commit"] and len(env["git_commit"]) == 40
     assert env["platform"].startswith("macOS") and env["macos"] and env["mac_model_id"]
     assert "gc enabled" in env["timing"] and env["constants"]["limit_seconds"] == 600
+    assert env["power_at_start"]["power_source"] in ("ac", "battery", "unknown")
+    assert "low_power_mode" in env["power_at_start"]
+
+
+def test_rows_have_start_time_and_power_state_and_canary_goes_to_its_own_file(small_stream,
+                                                                              monkeypatch):
+    spec, tmp = small_stream
+    monkeypatch.setattr(bench_time, "CANARY_RAW", tmp / "canary_raw.csv")
+    monkeypatch.setattr(bench_time, "CANARY_SPEC", spec)
+    bench_time.run_one("B", spec, 600, 60, 5)
+    raw = read(tmp / "time_raw.csv")
+    assert all(r["start_utc"].endswith("+00:00") for r in raw)
+    assert all(r["power_source"] in ("ac", "battery", "unknown") for r in raw)
+    assert all("low_power_mode" in r for r in raw)
+    args = bench_time.argparse.Namespace(limit_seconds=600, slow_first_seconds=60, repeats=5)
+    bench_time.canary("blk", "before", args)
+    canary = read(tmp / "canary_raw.csv")
+    assert {(r["block"], r["canary_point"], r["version"]) for r in canary} == {("blk", "before", "B")}
+    assert len(canary) == 6 and len(read(tmp / "time_raw.csv")) == len(raw)   # primary file untouched
 
 
 # --- counters: instrumentation must not change behaviour and must restore the engines ----------

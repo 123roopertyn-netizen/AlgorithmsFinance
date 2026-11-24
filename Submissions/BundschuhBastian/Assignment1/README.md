@@ -124,6 +124,21 @@ Details of how the rules are applied (also fixed before the first run):
   keep it enabled; a first benchmark run started with `gc` disabled was stopped after 33 runs
   (the 1,000-event streams and the first 10,000-event run) and its files were discarded, so no
   reported number comes from it.
+  *Incident, run 1 (machine state):* the first full 6a grid showed Version B on `buildup` with
+  100,000 events at about 0.20 s for seeds 42 and 43 and about 0.09 s for seed 44, each stable inside
+  its own run. The code and the data did not change between those runs, so the machine changed state
+  (Bastian was using it; it may also have been on battery). That file is kept unchanged as evidence
+  (`results/time_raw_run1.csv`, `results/env_run1.json`) and no reported number comes from it. Run 1
+  did not record the start time or the power state, so the cause is not proven. Changes for run 2:
+  (1) every row has `start_utc` (start of its run), `power_source` (`ac`/`battery`),
+  `battery_percent` and `low_power_mode` (read with `pmset`), and `env.json` has `power_at_start`;
+  (2) a **canary** runs before and after each block of runs (a block = all runs of one scenario and
+  one event count): Version B, `mixed`, 100,000 events, seed 42, warm-up + 5 repeats, same rules as
+  every run, saved in `results/canary_raw.csv` with `block` and `canary_point`. If the canary
+  median differs between points, or from the start, the runs in between were taken on a machine in a
+  different state and are not comparable; they are re-run, not corrected. (3) The whole grid is run
+  again into a new `results/time_raw.csv`. The machine must be on AC power, Low Power Mode off, and
+  not used during the run.
 - **Instrumented runs** (latency, `tracemalloc` memory, operation counters) are separate runs and
   never part of the primary timing. They use seed 42 and 10,000 events (counters also 1,000) for A
   and B, and 100,000 events for B. A runs at 100,000 events only if its timing run at that size

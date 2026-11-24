@@ -89,6 +89,26 @@ def _sh(*cmd: str) -> str:
         return ""
 
 
+def power_state() -> dict:
+    """Power source, battery percent and Low Power Mode of this Mac right now (best effort)."""
+    batt = _sh("pmset", "-g", "batt")
+    source = "unknown"
+    if "'AC Power'" in batt:
+        source = "ac"
+    elif "'Battery Power'" in batt:
+        source = "battery"
+    percent = ""
+    for token in batt.replace(";", " ").split():
+        if token.endswith("%"):
+            percent = token[:-1]
+            break
+    low = "unknown"
+    for line in _sh("pmset", "-g").splitlines():
+        if line.split()[:1] == ["lowpowermode"]:
+            low = line.split()[1]
+    return {"power_source": source, "battery_percent": percent, "low_power_mode": low}
+
+
 def environment() -> dict:
     """Python, OS, machine, code version (git), dependencies, generator settings reference."""
     return {
@@ -103,6 +123,7 @@ def environment() -> dict:
                                                                     "Memory"))],
         "cpu_brand": _sh("sysctl", "-n", "machdep.cpu.brand_string"),
         "memory_bytes": _sh("sysctl", "-n", "hw.memsize"),
+        "power_at_start": power_state(),
         "git_commit": _sh("git", "-C", str(ROOT), "rev-parse", "HEAD"),
         "git_dirty": bool(_sh("git", "-C", str(ROOT), "status", "--porcelain", "--", ".")),
         "dependencies": _sh(sys.executable, "-m", "pip", "freeze").splitlines(),
