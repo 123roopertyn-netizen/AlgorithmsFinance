@@ -4,7 +4,7 @@ Submission for Assignment 1 of Algorithms in Finance (Frankfurt School), due 26 
 Report: `07_docs/REPORT.md`. Dashboard: `06_dashboard/dashboard.html`.
 
 Submitted commit: `76a97a7` (full hash `76a97a7d1e61030f23f4154270f4fc3f29ba0058`, branch `bonacker/phase1`): all code, tests, results, dashboard and report.
-The only later commit adds this line to the README. The timing benchmark was measured at `4b9df5f`, the latency and memory rerun at `ade26d1`; the engines are identical in all three commits.
+Later commits only change this README. The timing benchmark was measured at `4b9df5f`, the latency and memory rerun at `ade26d1`; the engines are identical in all three commits.
 
 ## Reproduce everything from a clean environment
 
