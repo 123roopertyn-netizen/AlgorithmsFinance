@@ -2,10 +2,14 @@
 
 Called by run_benchmark.py (phase "memory"). In the child:
   1. load the events BEFORE tracemalloc.start() (input excluded),
-  2. tracemalloc.start(); a fresh book; replay every event (results are
-     dropped at once, no history), sampling traced current bytes about
-     100 times (sample buffers are preallocated before tracing),
-  3. read traced current (book alive) and peak bytes after the last event,
+  2. tracemalloc.start(); a fresh book; replay every event. The returned
+     output of the current event stays referenced while its sample is read
+     (about 100 samples; the buffers are preallocated before tracing) and is
+     released before the next event, so no history builds up,
+  3. after the last event read the traced bytes twice: with that event's
+     output still referenced (traced_with_output_bytes, and the peak), then
+     after releasing it (traced_current_bytes: the book; CPython's free lists
+     can keep a few released dicts and lists, which tracemalloc still counts),
   4. stop tracing, then count what the book retains: live orders, occupied
      levels, queue entries incl. dead (cancelled) ones, index entries incl.
      stale heap keys. Also the process peak working set / max RSS.
@@ -35,8 +39,8 @@ SAMPLE_FIELDS = ["version", "scenario", "seed", "events", "event_index", "active
                  "traced_current_bytes"]
 END_FIELDS = ["version", "scenario", "seed", "events", "status", "live_orders",
               "price_levels", "queue_entries", "dead_queue_entries", "index_entries",
-              "stale_index_entries", "traced_current_bytes", "traced_peak_bytes",
-              "process_peak_bytes", "note"]
+              "stale_index_entries", "traced_current_bytes", "traced_with_output_bytes",
+              "traced_peak_bytes", "process_peak_bytes", "note"]
 SAMPLES = 100
 
 
@@ -65,6 +69,7 @@ def child(path, version):
     at = array("q", bytes(8 * count))
     active = array("q", bytes(8 * count))
     current = array("q", bytes(8 * count))
+    ends = array("q", bytes(8 * 3))      # plain ints kept here would be traced themselves
     cls = book_class(version)
 
     emit(start=["memory"])
@@ -74,19 +79,24 @@ def child(path, version):
     book = cls()
     process = book.process_event
     k = 0
+    result = None
     for i, event in enumerate(events, 1):
-        process(event)
+        result = None                        # release the previous event's output
+        result = process(event)              # this event's output stays referenced ...
         if i % step == 0 and k < count:
             at[k] = i
             active[k] = len(book.orders)
-            current[k] = tracemalloc.get_traced_memory()[0]
+            current[k] = tracemalloc.get_traced_memory()[0]    # ... while it is sampled
             k += 1
-    end_current, end_peak = tracemalloc.get_traced_memory()
+    ends[0], ends[1] = tracemalloc.get_traced_memory()         # last output referenced
+    result = None                            # release it: the book alone remains
+    ends[2] = tracemalloc.get_traced_memory()[0]
     tracemalloc.stop()
     gc.enable()
     emit(stop=["memory"])
     emit(result={"samples": [list(at[:k]), list(active[:k]), list(current[:k])],
-                 "traced_current_bytes": end_current, "traced_peak_bytes": end_peak,
+                 "traced_with_output_bytes": ends[0], "traced_peak_bytes": ends[1],
+                 "traced_current_bytes": ends[2],
                  "process_peak_bytes": process_peak_bytes(), **retained(book)})
 
 

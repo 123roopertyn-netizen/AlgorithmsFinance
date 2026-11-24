@@ -99,16 +99,32 @@ DEFINITIONS = {
                               "the final book size are compared with the dataset manifest; "
                               "a difference gives status 'mismatch'",
     "latency": "separate instrumentation run: perf_counter_ns() around each process_event "
-               "call, after one uninstrumented warm-up replay. Algorithm processing latency "
+               "call (the discarded result is freed inside the window), after one untimed "
+               "warm-up replay. Algorithm processing latency "
                "only: no queueing or network latency, and no real-time capacity claim. Never "
                "derived from 1/throughput. Includes one timer call (timer_overhead_ns)",
+    "latency event types": "every timed event has exactly one type, from the event and its "
+               "result: LIMIT resting (no fill, the whole order rests), LIMIT traded (at "
+               "least one fill, also if a residual rests), MARKET_SELL, CANCEL found "
+               "(cancelled), CANCEL not_found, rejected. The types are recorded in the "
+               "warm-up replay of the same events, so the timed loop is unchanged; the "
+               "final books of both replays and the counts per type (against the dataset "
+               "manifest) are checked. Count 0 = the type does not occur in that file. "
+               "With fewer than 100 events of a type, p99 (nearest rank) equals the max",
     "percentile": PERCENTILE_CONVENTION,
     "memory": "separate tracemalloc run in its own child process. Events are preloaded BEFORE "
               "tracemalloc.start(), so the input is excluded. Included: the book (orders, "
-              "levels, FIFO queues, price index), the result dict and fill list of the event "
-              "being processed (transient: in the peak, not in the end value) and validation "
-              "temporaries. No history is saved. traced_peak_bytes = maximum during the "
-              "replay; traced_current_bytes = after the last event, book still alive",
+              "levels, FIFO queues, price index) and the returned output (result dict and "
+              "fill list) of the current event, which stays referenced while the sample is "
+              "read and is released before the next event. Every sample in "
+              "memory_samples.csv therefore holds the book plus one event's output. "
+              "Validation temporaries are in the peak only. No history is saved. "
+              "traced_peak_bytes = maximum during the replay, with the current event's "
+              "output; traced_with_output_bytes = after the last event, its output still "
+              "referenced; traced_current_bytes = after that output is released: the book, "
+              "still alive. Released dicts and lists can stay in CPython's free lists, which "
+              "tracemalloc still counts, so after an event with few or no fills the two end "
+              "values can be equal",
     "traced vs auxiliary vs process memory": "Traced bytes are the Python allocations seen by "
               "tracemalloc while tracing (object sizes incl. headers and container "
               "over-allocation). Auxiliary space is the algorithm's extra space as a count "
