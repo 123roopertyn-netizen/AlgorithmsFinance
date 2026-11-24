@@ -206,6 +206,23 @@ Details of how the rules are applied (also fixed before the first run):
   scenarios. The variant is labeled in the `version` column and never replaces Version A.
 
 
+## Dashboard (Phase 7)
+
+```bash
+.venv/bin/pip install -r requirements.txt
+.venv/bin/streamlit run dashboard/app.py
+```
+
+The dashboard only **loads** the files in `results/`. It never imports the order books or the benchmark
+code and never starts a replay (`tests/test_dashboard.py` checks this). Pages: Overview, Scaling
+(log-log; stopped runs marked with a cross at the 600 s limit, not-run runs with a diamond at the top, both
+without a value), Throughput, Latency (p50/p95/p99/max by event type, first against last 1,000 events,
+gc on and off), Memory (including the state after cancellations and cancel churn), Liquidation,
+Concentration, Fairness, Correctness, Run-1 incident (with the canaries), Workload and raw repeats, and
+Why A is slow (code, operation counts, complexity). A is orange and B blue on every page; the labeled
+variant `A_idset` is a lighter orange. `?page=Scaling` in the URL opens a page directly.
+
+
 ## Measured-data definitions
 
 TODO (Phase 6).
