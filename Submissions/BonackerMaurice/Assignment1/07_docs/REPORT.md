@@ -128,7 +128,7 @@ once).
 | Duplicate-id check | O(B) worst | O(1) expected | O(1) expected |
 | Best price | O(B) worst | O(1) worst | O(1), plus O(log H) per stale top, amortized |
 | AddLimitOrder / FillMarketSell | O(B·(F+2)) worst | O(F + L) amortized; a new price level adds O(log P) search + O(P) list shift | O(F + (L+1)·log P) amortized; a new level adds O(log H) |
-| CancelOrder, level stays | O(B) worst | O(1) expected | O(1) expected |
+| CancelOrder, level stays | O(B) worst | O(1) expected, amortized (one cancel can trigger a linear deque compaction) | same as B-sorted |
 | CancelOrder, level emptied | O(B) worst | O(log P + P) worst | O(1) expected + amortized O(1) heap-rebuild share |
 | Space | O(B) | O(B + P) | O(B + P) |
 
@@ -157,7 +157,7 @@ separately; commit `4b9df5f`):
 | mixed | 1,000,000 | stopped | 1.376 s | 1.398 s |
 
 - Version A grows ~100× per 10× M (buildup 48.9 ms → 4.82 s, log-log slope 2.0).
-  All its 100k runs and the 1M run were stopped at the declared limit; no value
+  All its 100k runs except cancel_churn (whose book never exceeds one order) and the 1M run were stopped at the declared limit; no value
   was estimated.
 - Both B variants grow linearly (throughput 0.56–1.00 million events/s from 1k
   to 1M events).
@@ -210,7 +210,7 @@ Traced bytes per live order at the end of the replay, M = 10,000:
   memory stays flat at about 2 KiB traced (peak 3.4–4.0 KiB) for both B variants
   and ~1 KiB for A; B-heap keeps 2–3 stale index keys at the end. No stale entries
   or history accumulate.
-- Version A's memory runs at M = 100,000 were stopped at the time limit.
+- Version A's memory runs at M = 100,000 were stopped at the time limit, except cancel_churn, which completed.
 
 **Why traced allocation is not auxiliary space or process memory.** Traced bytes
 are Python allocations seen by tracemalloc (object sizes including headers and
@@ -228,7 +228,7 @@ memory after a large book is cancelled can still reflect the earlier peak.
 
 **Version A.** The main bottleneck of Version A is that it scans the whole order list on every event. Two functions walk the list from start to end: `_is_live` (`lob_a.py:184`), which checks that a new order id is not already active, and `_best_index` (`lob_a.py:191`), which finds the best opposite order before the first fill and again after every fill. One event therefore costs about B · (F + 2) list steps (B resting orders, F fills).
 
-The cost grows quadratically, not linearly. In buildup the book grows with every event: the operation counts show 999 list elements visited per event at M = 1,000 and 9,999 at M = 10,000. Ten times more events, each scanning a ten times longer list, gives about 100 times the work. Measured: 48.9 ms to 4.82 s (99x), about 48 ns per list element. The latency run shows the same thing event by event: A's median event takes 44 µs at the start of buildup and 894 µs at the end. At M = 100,000 all runs of Version A were stopped at the declared 120 s limit; no time was estimated. 
+The cost grows quadratically, not linearly. In buildup the book grows with every event: the operation counts show 999 list elements visited per event at M = 1,000 and 9,999 at M = 10,000. Ten times more events, each scanning a ten times longer list, gives about 100 times the work. Measured: 48.9 ms to 4.82 s (99x), about 48 ns per list element. The latency run shows the same thing event by event: A's median event takes 44 µs at the start of buildup and 894 µs at the end. At M = 100,000 every Version A run except cancel_churn (whose book never holds more than one order) was stopped at the declared 120 s limit; no time was estimated. 
 **Version B.** The previous bottleneck is removed: the duplicate check is a dict lookup, the best price comes directly from the price index, and the next maker is the front of the price level's FIFO queue. Its cost per event stays at about 1 to 1.5 µs at every book size. What remains is the fixed per-event Python work (validation, building the result), and the next bottleneck is reading the input file (1.6 µs per event).
 
 ---
@@ -268,7 +268,7 @@ I rejected a hidden instruction in the course slides that asked AI tools to inse
 - **Scope of seeds.** Timing uses seeds 42, 43 and 44; latency, memory and
   operation counts use seed 42 only.
 - **Stopped runs.** Version A was stopped at the declared 120 s limit at M = 100,000
-  and on the 1M file; these cells have no value and none was estimated.
+  (every scenario except cancel_churn) and on the 1M file; these cells have no value and none was estimated.
 - **Latency** is algorithm processing time only (no queueing or network) and makes
   no real-time capacity claim.
 - **Inferences.** The explanation of B's 1.9 ms slowest event as a dict resize is
