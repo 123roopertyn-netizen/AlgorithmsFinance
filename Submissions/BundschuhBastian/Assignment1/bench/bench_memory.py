@@ -13,7 +13,7 @@ shows growth while inserting and what stays after the cancellations).
 For each run: bytes held after each 10% of the events, bytes held at the end, peak bytes.
 A at 100,000 events only if its timing run took less than 60 s.
 
-    .venv/bin/python -m bench.memory
+    .venv/bin/python -m bench.bench_memory
 """
 from __future__ import annotations
 
@@ -25,14 +25,15 @@ import tracemalloc
 
 import generate_orders
 from bench import common
+from bench.blocks import canary_around, stamp
 from bench.common import RESULTS, append_csv, read_csv, stream_path
-from bench.counters import allowed
+from bench.bench_counts import allowed
 from bench.harness import run_limited
 from lob import VERSIONS
 from lob.common import load_events
 
 OUT = RESULTS / "memory.csv"
-FIELDS = ["version", "scenario", "seed", "events", "status", "reason", "final_bytes", "peak_bytes",
+FIELDS = ["start_utc", "power_source", "battery_percent", "low_power_mode", "version", "scenario", "seed", "events", "status", "reason", "final_bytes", "peak_bytes",
           "bytes_after_insertion", "checkpoints_bytes", "active_orders_end"]
 STRESS = "insert_then_cancel"
 
@@ -91,26 +92,30 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     done = {(r["version"], r["scenario"], r["events"]) for r in read_csv(OUT)}
     for events in args.sizes:
-        for scenario in (*common.SCENARIOS, STRESS):
-            for version in ("A", "B"):
-                if (version, scenario, str(events)) in done:
-                    continue
+        todo = [(v, sc) for sc in (*common.SCENARIOS, STRESS) for v in ("A", "B")
+                if (v, sc, str(events)) not in done]
+        if not todo:
+            continue
+        with canary_around(f"memory_{events}"):
+            for version, scenario in todo:
                 base = {"version": version, "scenario": scenario, "seed": 42, "events": events}
                 reason = allowed(version, scenario, events) if scenario != STRESS else (
                     None if version == "B" or events <= 10000 else
                     allowed(version, "buildup", events))
                 if reason:
-                    append_csv(OUT, FIELDS, {**base, "status": "not_run", "reason": reason})
+                    append_csv(OUT, FIELDS, {**stamp(), **base, "status": "not_run",
+                                             "reason": reason})
                     print(version, scenario, events, "not_run:", reason, flush=True)
                     continue
+                st0 = stamp()
                 res = run_limited(memory_worker, (version, scenario, events), args.limit_seconds)
                 msgs = [m for m in res["messages"] if m[0] == "unit_done"]
                 if res["outcome"] == "end" and msgs:
                     p = msgs[0][2]
-                    append_csv(OUT, FIELDS, {**base, "status": "ok", **p,
+                    append_csv(OUT, FIELDS, {**st0, **base, "status": "ok", **p,
                                              "checkpoints_bytes": json.dumps(p["checkpoints_bytes"])})
                 else:
-                    append_csv(OUT, FIELDS, {**base, "status": res["outcome"],
+                    append_csv(OUT, FIELDS, {**st0, **base, "status": res["outcome"],
                                              "reason": res["error"] or
                                              f"limit reached; events done {res['events_done']}"})
                 print(version, scenario, events, res["outcome"], flush=True)

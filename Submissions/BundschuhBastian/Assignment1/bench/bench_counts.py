@@ -9,10 +9,11 @@ The engines are not modified. Their functions are wrapped while a stream is repl
                             compactions / compaction_records_moved (lazy cancel, step 9).
   Both (from the results)   fills, makers_touched (= fills: a maker appears once per event),
                             levels_visited (distinct fill prices per event, summed).
-Instrumented sizes: 1,000 and 10,000 events for A and B; 100,000 for B, and for A only when its
-timing run at that size took less than 60 s.
+Instrumented sizes (small M): 1,000 and 10,000 events for A and B (`--sizes` can add 100,000;
+A there only when its timing run took less than 60 s). Every size is a block with a canary before
+and after (bench.blocks); every row has start time and power state.
 
-    .venv/bin/python -m bench.counters
+    .venv/bin/python -m bench.bench_counts
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ import contextlib
 from bisect import bisect_left, bisect_right
 
 from bench import common
+from bench.blocks import canary_around, stamp
 from bench.common import RESULTS, append_csv, read_csv, stream_path
 from bench.harness import run_limited
 from lob import VERSIONS
@@ -32,7 +34,7 @@ COUNTER_FIELDS = ["fills", "makers_touched", "levels_visited", "scan_is_live", "
                   "best_index_calls", "scan_cancel", "key_inserts", "key_shift_elements",
                   "key_deletes", "key_delete_shift_elements", "levels_dropped", "compactions",
                   "compaction_records_moved"]
-FIELDS = ["version", "scenario", "seed", "events", "levels", "status", "reason",
+FIELDS = ["start_utc", "power_source", "battery_percent", "low_power_mode", "version", "scenario", "seed", "events", "levels", "status", "reason",
           "elapsed_seconds"] + COUNTER_FIELDS
 
 
@@ -155,31 +157,35 @@ def allowed(version: str, scenario: str, events: int) -> str | None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--sizes", nargs="+", type=int, default=[1000, 10000, 100000])
+    parser.add_argument("--sizes", nargs="+", type=int, default=[1000, 10000])
     parser.add_argument("--limit-seconds", type=float, default=common.LIMIT_SECONDS)
     args = parser.parse_args(argv)
     done = {(r["version"], r["scenario"], r["events"]) for r in read_csv(OUT)}
     for events in args.sizes:
-        for scenario in common.SCENARIOS:
-            for version in ("A", "B"):
-                if (version, scenario, str(events)) in done:
-                    continue
+        todo = [(v, sc) for sc in common.SCENARIOS for v in ("A", "B")
+                if (v, sc, str(events)) not in done]
+        if not todo:
+            continue
+        with canary_around(f"counts_{events}"):
+            for version, scenario in todo:
                 base = {"version": version, "scenario": scenario, "seed": 42, "events": events,
                         "levels": 1000}
                 reason = allowed(version, scenario, events)
                 if reason:
-                    append_csv(OUT, FIELDS, {**base, "status": "not_run", "reason": reason})
+                    append_csv(OUT, FIELDS, {**stamp(), **base, "status": "not_run",
+                                             "reason": reason})
                     print(version, scenario, events, "not_run:", reason, flush=True)
                     continue
+                st0 = stamp()
                 res = run_limited(counters_worker, (version, str(stream_path(scenario, events, 42))),
                                   args.limit_seconds)
                 done_msgs = [m for m in res["messages"] if m[0] == "unit_done"]
                 if res["outcome"] == "end" and done_msgs:
                     counts, elapsed = done_msgs[0][2]
-                    append_csv(OUT, FIELDS, {**base, "status": "ok", "elapsed_seconds": elapsed,
-                                             **counts})
+                    append_csv(OUT, FIELDS, {**st0, **base, "status": "ok",
+                                             "elapsed_seconds": elapsed, **counts})
                 else:
-                    append_csv(OUT, FIELDS, {**base, "status": res["outcome"],
+                    append_csv(OUT, FIELDS, {**st0, **base, "status": res["outcome"],
                                              "reason": res["error"] or "limit reached"})
                 print(version, scenario, events, res["outcome"], flush=True)
     return 0

@@ -70,7 +70,7 @@ SPEC.md               rules + decisions D1-D19 (Phase 0)
 lob/                  common.py (reader, reasons, display), version_a.py, version_b.py, replay.py
 tests/                hand-calculated, worked example, invariants, A-vs-B equivalence
 tools/                verify_data.py, own small generator (Phase 4)
-bench/                timing, latency, memory, counters, liquidation (Phase 6)
+bench/                timing, latency, memory, counts, liquidation (Phase 6)
 results/              saved raw results + environment metadata
 dashboard/            Streamlit app that only loads results/ (Phase 7)
 data/                 supplied 10,000-event files + worked example (unchanged)
@@ -139,18 +139,38 @@ Details of how the rules are applied (also fixed before the first run):
   different state and are not comparable; they are re-run, not corrected. (3) The whole grid is run
   again into a new `results/time_raw.csv`. The machine must be on AC power, Low Power Mode off, and
   not used during the run.
-- **Instrumented runs** (latency, `tracemalloc` memory, operation counters) are separate runs and
-  never part of the primary timing. They use seed 42 and 10,000 events (counters also 1,000) for A
-  and B, and 100,000 events for B. A runs at 100,000 events only if its timing run at that size
-  and scenario finished with a median below 60 s (same threshold as rule 3); otherwise `not_run`.
-  No instrumented run uses the 1,000,000-event files.
-- **Latency.** `perf_counter_ns` before and after every `process` call; the cost of the timer pair
-  is measured and reported, not subtracted. Percentiles by the nearest-rank rule: for n sorted
-  values, the p-th percentile is the value at rank ceil(p/100 * n), 1-based (p50, p95, p99).
-  Early versus late: first 5% and last 5% of the events, and 20 equal chunks in order.
-- **Memory.** `tracemalloc`, events loaded before tracing starts (so the input is not counted);
-  counted are the book, the result dicts and fill lists while alive, and temporary objects. No
-  trade history is kept. Not counted: interpreter, native memory, allocator slack.
+- **Instrumented runs, Phase 6b** (`bench/bench_latency.py`, `bench_memory.py`, `bench_counts.py`)
+  are separate runs, never part of the primary timing, one after the other, under the same
+  conditions as timing run 2: AC power, Low Power Mode off, machine idle. Every result row has
+  `start_utc`, `power_source`, `battery_percent`, `low_power_mode`. Each module runs in blocks (one
+  module and one event count) with the canary of run 2 before and after the block
+  (`results/canary_raw.csv`); a block whose canary medians differ clearly is repeated. Streams: seed
+  42; latency and memory 10,000 and 100,000 events, counters 1,000 and 10,000 (small M). A runs at
+  100,000 events only if its timing run at that size and scenario finished with a median below 60 s
+  (same threshold as rule 3); otherwise `not_run`. No instrumented run uses the 1,000,000-event files.
+  Each run is a child process with the 600 s limit.
+- **Latency** (`results/latency_summary.csv`). `perf_counter_ns` before and after every `process`
+  call, gc enabled as in the timing runs; the cost of the timer pair is measured and reported
+  (`timer_overhead_ns`), not subtracted. Nearest-rank percentiles: for n sorted values, the p-th
+  percentile is the value at rank ceil(p/100 * n), 1-based (p50, p95, p99). Rows per event type
+  (`ALL`, `LIMIT`, `CANCEL`, `MARKET_SELL`; no row if the window holds none of that type) and per
+  window: `all`, `first1000`, `last1000` (the first and the last 1,000 events of the stream, to see
+  how latency changes while the book grows; asked for `buildup` and `crowded`, computed for every
+  scenario), plus 20 equal chunks in order (`latency_by_position.csv`). It is processing time per
+  event only, not queueing, not 1 / throughput.
+- **Memory** (`results/memory.csv`). `tracemalloc`, started after the events are loaded, with a fresh
+  book. Counted: Python allocations made during the replay that are still alive at the moment of
+  measuring: book structures, the order index, the current result dict and fill list (discarded
+  after each event), temporary objects. `peak_bytes` is the maximum of that sum during the replay
+  (`reset_peak` at the start); `final_bytes` is the sum after the last event ("after replay").
+  Also every 10% of the events (`checkpoints_bytes`) and, for `insert_then_cancel`, after the
+  insertions. Not counted: the input event list, the interpreter, native memory, allocator slack
+  and fragmentation. No trade history is kept (SPEC D16). tracemalloc slows the replay, so no
+  timing comes from these runs, and the numbers are not total process memory.
+- **Counters** (`results/counters.csv`). The engines are wrapped, not modified. A: records examined by
+  the scans (`scan_is_live`, `scan_best_index`, `scan_cancel`). B: elements moved when a price
+  level is inserted or deleted in the sorted price list, levels dropped, compactions and records
+  moved. Both: `fills`, `levels_visited` (distinct fill prices per event, summed).
 - **Liquidation.** Book = first N BUY limits of the generator stream, N in {1,000; 10,000;
   100,000}, with 1,000 price levels (`buildup`) or 4 (`crowded`); sells of ceil(10%), 100% and
   200% of the bid quantity; fresh book per trial; only the sell is timed (build time saved

@@ -11,9 +11,9 @@ mkdir -p results
 "$PY" -m bench.correctness
 [[ "${1:-}" == "quick" ]] && exit 0
 "$PY" -m bench.bench_time              # Phase 6a: primary timing (writes results/env.json too)
-"$PY" -m bench.counters                # separate instrumented runs follow
-"$PY" -m bench.memory
-"$PY" -m bench.latency
+"$PY" -m bench.bench_counts              # separate instrumented runs follow
+"$PY" -m bench.bench_memory
+"$PY" -m bench.bench_latency
 "$PY" -m bench.liquidation
 "$PY" -m pytest -q > results/pytest_summary.txt 2>&1 || true
 echo "done"

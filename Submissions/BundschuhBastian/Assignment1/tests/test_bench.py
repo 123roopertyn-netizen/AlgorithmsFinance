@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 import generate_orders
-from bench import bench_time, common, counters, latency, liquidation
+from bench import bench_counts as counters, bench_latency as latency, bench_time, common, liquidation
 from bench.harness import run_limited
 from lob import VERSIONS
 from tools.gen_small import PROFILES, generate
@@ -32,12 +32,25 @@ def test_nearest_rank_percentiles():
 
 
 def test_latency_summary_shapes():
-    lat = list(range(1, 1001))
+    lat = list(range(1, 3001))
     s = latency.summarize(lat)
-    assert s["windows"]["all"]["p50_ns"] == 500 and s["windows"]["all"]["p99_ns"] == 990
-    assert s["windows"]["first5pct"]["n"] == 50 and s["windows"]["last5pct"]["p50_ns"] == 975
-    assert len(s["chunks"]) == 20 and sum(c["n"] for c in s["chunks"]) == 1000
-    assert sum(s["hist_log2_ns"].values()) == 1000
+    w = s["windows"]
+    assert w["ALL|all"]["p50_ns"] == 1500 and w["ALL|all"]["p99_ns"] == 2970
+    assert w["ALL|first1000"]["n"] == 1000 and w["ALL|first1000"]["p50_ns"] == 500
+    assert w["ALL|last1000"]["n"] == 1000 and w["ALL|last1000"]["p50_ns"] == 2500
+    assert len(s["chunks"]) == 20 and sum(c["n"] for c in s["chunks"]) == 3000
+    assert sum(s["hist_log2_ns"].values()) == 3000
+    assert "LIMIT|all" not in w                                   # no types given: ALL only
+
+
+def test_latency_split_by_event_type_and_short_streams():
+    lat = [10, 20, 30, 40, 50, 60]
+    types = ["LIMIT", "LIMIT", "CANCEL", "LIMIT", "CANCEL", "LIMIT"]
+    w = latency.summarize(lat, types)["windows"]
+    assert w["LIMIT|all"]["n"] == 4 and w["CANCEL|all"]["n"] == 2
+    assert w["CANCEL|all"]["p50_ns"] == 30 and w["LIMIT|all"]["p95_ns"] == 60
+    assert "MARKET_SELL|all" not in w                              # no such event: no row
+    assert w["ALL|first1000"]["n"] == 6                             # stream shorter than 1,000
 
 
 # --- stream list agrees with the checksum record ---------------------------------------------
