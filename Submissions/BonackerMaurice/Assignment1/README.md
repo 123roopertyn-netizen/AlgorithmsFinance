@@ -16,8 +16,13 @@ Python 3.13 (measured with 3.13.15 on Windows 11). The engines, `replay.py`
 and the benchmark scripts use only the standard library. `pytest` runs the
 tests and `matplotlib` draws the dashboard plots.
 
+The submitted commit lives on my fork (branch `bonacker/phase1`). Once the pull
+request is merged into the course repository, the same folder is also under
+`cogeorg/AlgorithmsFinance`; if the merge was squashed, use the fork to check out
+`76a97a7` exactly.
+
 ```bash
-git clone https://github.com/cogeorg/AlgorithmsFinance.git
+git clone https://github.com/Oxilop365/AlgorithmsFinance.git
 cd AlgorithmsFinance/Submissions/BonackerMaurice/Assignment1
 git checkout 76a97a7
 python -m venv .venv
