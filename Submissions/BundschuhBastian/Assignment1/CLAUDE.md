@@ -24,8 +24,10 @@ in SPEC.md without asking Bastian.
 | 3 Version B (revision) + REVISIONS.md: 333 tests pass; speed steps 1-8 measured (kept 1, 2, 4) | done | 2ef6e65 (correct), e519381 (last kept optimization), 1075e26 (REVISIONS final) |
 | 4 Own small generator `tools/gen_small.py` + A-vs-B equivalence after EVERY event: 345 tests pass | done | 45fbc2b |
 | 5 `bench/make_data.sh`: all data, outside timing, with gz + decompressed sha256: 55 streams, 384 tests pass | done | 432a82d |
-| 6 Benchmarks (time, latency, memory, counters, liquidation) → `results/` | next | |
-| 7 Dashboard (Streamlit, like the lab) that only LOADS `results/` | | |
+| 6a Timing: A and B, 5 scenarios x 1k/10k/100k x seeds 42-44, B and A-if-allowed on 1M; run 1 discarded (machine state), run 2 with canaries + power log; 454 tests pass | done | bbd3df8 (code), 99ceb67 (canary), dee4fb3 (run 2 results) |
+| 6b Latency (by type, first/last 1,000, gc on/off), memory (tracemalloc), counters | done | d24cbf7 (code), 9efc5e1 (results), 5090237 (gc test, REVISIONS memory correction) |
+| 6c Liquidation, queue concentration, cancel churn vs M, flood peaks, fairness check (A + id set) | done | fc73082 (code), c70dbe2 (results) |
+| 7 Dashboard (Streamlit) that only LOADS `results/`: 12 pages, 19 tests | done | e0bab7b |
 | 8 REPORT.md, README, clean-venv run, commit id, push, PR | | |
 
 Plan by day: Sun 22 phases 0–1 · Mon 23 phase 2 · Tue 24 phases 3–5 · Wed 25 phases 6–7 (start
@@ -34,6 +36,8 @@ long benchmark runs in the morning) · Thu 26 phase 8.
 ## Commands (from this folder, macOS)
 ```bash
 .venv/bin/python -m pytest -q                      # tests (venv made with python3.11)
+.venv/bin/streamlit run dashboard/app.py           # dashboard (reads results/ only)
+bash bench/run_all.sh                              # all benchmarks, one after another; machine idle, AC power
 .venv/bin/python tools/verify_data.py              # supplied data vs MANIFEST.json
 .venv/bin/python -m lob.replay data/worked_example.jsonl --version A
 ```
@@ -103,6 +107,13 @@ The professor will rank Version B by speed on his own data.
 - Record Python, OS, machine (Apple MacBook Air), git commit, generator settings.
 
 ## Known facts / traps
+- Benchmark conditions: AC power, Low Power Mode off, machine idle. Timing run 1 was discarded because
+  B changed by 2x between runs (machine state); `results/time_raw_run1.csv` stays as evidence. Every
+  block of 6a-6c has a canary (`results/canary_raw.csv`, B mixed 100,000, about 0.080 s).
+- A at 100,000 events: buildup 270 s, crowded 283 s, sweep 231 s, mixed 33 s (medians, seed 42); A on
+  mixed 1,000,000 was stopped at 600 s; A on the other 1M files is `not_run` (rule: needs < 60 s at 100,000).
+- B memory is O(peak B), not O(B): the order-index dict never shrinks (4.05 MB left for 1 order after
+  100,000 inserts and 99,999 cancels). The ~12 ms latency spikes of B are gc pauses (gc off: < 1 ms).
 - `.gz` sha256 depends on the zlib version; the decompressed sha256 does not. Report both.
 - `sweep` 10k: earlier sells (414,709,280,000 units) exceed all bids (205,760,000,000), so the
   final oversized sale is `unfilled`, not `partial`.

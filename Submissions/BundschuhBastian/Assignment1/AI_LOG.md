@@ -85,6 +85,43 @@ Cumulative speed-up of kept steps 1, 2, 4 (before step 9; for the current B see 
 | `tests/test_generated_data.py`: regenerate every stream with at most 10,000 events in memory and compare with the record; the seed-42 10,000-event streams must equal the five supplied files; the record must list exactly the planned 55 names | accepted | 39 new tests, 384 in total pass, no big file needed on a fresh clone |
 | Claim that `crowded` is `buildup --levels 4` (so "4 vs 1,000 prices" can use one scenario) | corrected from assumption to test | read from the generator code, then checked: identical decompressed hash at 100,000 events, and `crowded` equals `buildup --levels 4` at 2,000 events |
 
+## Phase 6: benchmarks
+
+| Suggestion | Decision | Reason / evidence |
+|---|---|---|
+| Limits and run rules (600 s per replay, > 60 s first replay = single measurement, A on 1M only if A at 100,000 took < 60 s, statuses ok/stopped/not_run/error) written into the README before any run | accepted (Bastian's decisions) | commit 4ada71e, before the first measurement |
+| First draft: `gc` disabled during replays | corrected by Bastian | Bastian decided gc stays enabled (default Python behaviour). A first run with gc off was stopped after 33 runs and its files were discarded; no reported number comes from it. Recorded in README |
+| Child-process harness: wall-clock limit, SIGUSR1 at the limit, events done read from the replay frame | accepted | tests: stop with progress, normal end, error |
+| `bench_time.py`: parse once, fresh book per replay, `gc.collect()` before each replay, warm-up + 5 repeats, raw repeats + median | accepted | 18 bench tests at the time (gc enabled, one parse, fresh book, warm-up + 5, env.json) |
+| Counters instrumentation restored `_best_index` as a plain function | corrected | the next plain replay raised `TypeError`; fixed with `staticmethod(...)`; test checks the restore |
+| Timing run 1 (all 100 runs) | rejected by Bastian | B buildup 100,000 took 0.20 s for seeds 42 and 43 and 0.09 s for seed 44; the machine had changed state (in use, maybe battery). Kept as `time_raw_run1.csv`, never reported. Fix: start time and power state on every row, canary before and after every block, full grid repeated. Run 2: all 88 canaries 0.0764-0.0821 s, AC power. A buildup 100,000, stopped at 600 s in run 1, finished in 270 s in run 2 (about 2x slowdown in run 1) |
+| 6b `bench_latency`, `bench_memory`, `bench_counts` (renamed from latency/memory/counters) with canary blocks | accepted | tests: 20 pass |
+| Latency replay with gc disabled (first draft) | corrected | changed to gc enabled to match the timing runs; gc pauses now show up in the tail |
+| `summarize()` with 20 chunks | corrected | the new test for streams shorter than 20 events found a `ValueError` (empty chunk); fixed |
+| Bastian's gc test (B buildup 100,000, gc off) | accepted, extended | I ran gc off and gc on twice each, to see that spikes repeat. gc on: max 13.1 and 12.4 ms (events 91,228 and 44,613); gc off: 0.82 and 0.88 ms. The ~12 ms spikes are garbage collection. The doubling pattern left with gc off (events 10,922, 21,845, 43,690, 87,381) is a guess (dict or list resize), not tested |
+| REVISIONS step 9: "memory is O(B), not O(number of submissions)" | corrected (my wrong claim, found in 6b) | the order index dict never shrinks: after 100,000 inserts and 99,999 cancels B holds 4.05 MB, 3.84 MB of it the index (`sys.getsizeof`); A holds 5.5 KB. Correct statement: queues <= 2*B records, whole book O(peak B). No engine change; docstring in `version_b.py` still says O(B) |
+| 6c liquidation with gc disabled (old code) | corrected | changed to enabled; test checks gc stays on during a trial |
+| 6c: "A only if within limit" at 100,000 bids | my reading, flagged to Bastian | A runs under the same 600 s limit (no 60 s gate). A finished: 38.7 s, 207.6 s, 210.5 s (single trials) |
+| `A_idset` fairness variant (A + a set of live ids, in `bench/variants.py`, outside `lob/`) | accepted, labeled | 24 tests show identical results and a set equal to the live ids after every event. Result: the id set removes about half of A's time on buildup, crowded, mixed, sweep (10,000 events); A_idset is still 100-200x slower than B |
+| My expectation that the id scan was the main cost (2/3 of the comparisons) | corrected by the measurement | counts: `scan_is_live` = n(n-1)/2 = 49,995,000 and `scan_best_index` about 25 M at 10,000 events, but removing the id scan saves about half of the time, because one best-price comparison costs more than one id comparison |
+| Queue concentration | accepted | A flat at 270-285 s from 4 to 4,000 levels; B 0.0865 s to 0.0996 s |
+| Cancel churn vs M | accepted | memory flat from 1,000 to 1,000,000 events (A 988 B, B 1,284 B after replay); time per event constant |
+| Reading A's 1M `not_run` rows | note | A on mixed 1,000,000 ran (its 100,000 median was 32.9 s) and was stopped at 600 s; no value recorded |
+
+## Phase 7: dashboard
+
+| Suggestion | Decision | Reason / evidence |
+|---|---|---|
+| Streamlit app with 12 pages that only reads `results/` | accepted | `tests/test_dashboard.py`: every page renders, the code never imports `lob` or `bench` and never writes a file |
+| No Streamlit lab found in the repo to copy | note | plain Streamlit with a page list in the sidebar |
+| `design-taste-frontend` skill | used for restraint only | it is made for company websites; I took "no decoration, one system" and nothing else. A orange, B blue, A_idset light orange, everywhere |
+| Faceted layered chart on the scaling page | corrected | Altair refused layered facets with data in the layers; data moved to the facet. Three panels per row were cut off at the right; narrower panels |
+| Bar charts on a log axis | corrected | they rendered empty (no base on a log axis); replaced by dots on the log pages. Memory bars are linear |
+| Code snippets on "Why A is slow" | accepted as static text | a test checks that every snippet line is in `lob/version_a.py` |
+| Stopped and not-run markers | accepted | cross at the 600 s line and a diamond at the top, no value; the test checks that stopped runs have no median |
+| Pyright | corrected | pandas/altair gave 146 type errors; four rules switched off inside the three dashboard files, 0 errors left there. 10 older errors in other files remain |
+| Screenshots with headless Chrome | partly done | 11 of 12 pages looked at (not Correctness); the last fixes (memory axis, counts chart, Overview deltas) were not re-shot |
+
 ## Accepted
 
 ## Corrected
