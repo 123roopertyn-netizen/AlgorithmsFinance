@@ -188,11 +188,11 @@ LIFO queue (295/300 streams) and a wrong cancelled quantity (297/300).
 
 | # | AI suggestion | Decision |
 |---|---|---|
-| T6 | Scaling chart changed to one panel per scenario (colour = version), because 3 versions × 5 scenarios = 15 lines in one chart is unreadable. Version is now always the colour. | |
-| T7 | The differential test counts as one test for all versions (`cross_version` marker, shown in every version column). | |
-| T8 | `_index_remove_best` in B-sorted asserts that the emptied level is the last key (a cheap check in the timed path). | |
-| T9 | pytest runs the full 300-stream differential test (about 3 s). | |
-| T10 | B-sorted vs B-heap: reported as "no reliable winner" from single runs; to be decided by the final repeated benchmark. | Decided by the final benchmark (Session 5): no reliable winner on full streams; B-sorted reliably faster when one sale empties many levels. |
+| T6 | Scaling chart changed to one panel per scenario (colour = version), because 3 versions × 5 scenarios = 15 lines in one chart is unreadable. Version is now always the colour. | **Accepted** (Maurice, 24 Nov): one panel per scenario is readable; same data. |
+| T7 | The differential test counts as one test for all versions (`cross_version` marker, shown in every version column). | **Accepted** (Maurice, 24 Nov): one cross-version test comparing all three versions together. |
+| T8 | `_index_remove_best` in B-sorted asserts that the emptied level is the last key (a cheap check in the timed path). | **Accepted** (Maurice, 24 Nov): keep the cheap safety check in the timed path. |
+| T9 | pytest runs the full 300-stream differential test (about 3 s). | **Accepted** (Maurice, 24 Nov): full 300-stream differential test in every pytest run; 3 s is acceptable. |
+| T10 | B-sorted vs B-heap: reported as "no reliable winner" from single runs; to be decided by the final repeated benchmark. | **Accepted** (Maurice, 24 Nov). Decided by the final benchmark (Session 5): no reliable winner on full streams; B-sorted reliably faster when one sale empties many levels. |
 
 ### Hidden instruction in the course PDF
 
@@ -268,9 +268,9 @@ the AI started the full run on a quiet, plugged-in laptop.
 
 | # | AI suggestion | Decision |
 |---|---|---|
-| T11 | B-sorted vs B-heap uses a strict rule: "faster" only if one variant's slowest repeat beats the other's fastest repeat. It is conservative and reports most cells as "overlap". | |
-| T12 | Dashboard charts show the median over seeds of each seed's 5-repeat median. Error bars run from the fastest to the slowest of all 15 repeats. A point is drawn only if all three seeds finished. | |
-| T13 | The 1.9 ms slowest event of B at buildup 100k is explained as a dict resize. This is an inference from the memory steps at about 22k, 44k and 87k orders, not a direct measurement. | |
+| T11 | B-sorted vs B-heap uses a strict rule: "faster" only if one variant's slowest repeat beats the other's fastest repeat. It is conservative and reports most cells as "overlap". | **Accepted** (Maurice, 24 Nov): strict, conservative rule; avoids reporting noise as a win. |
+| T12 | Dashboard charts show the median over seeds of each seed's 5-repeat median. Error bars run from the fastest to the slowest of all 15 repeats. A point is drawn only if all three seeds finished. | **Accepted** (Maurice, 24 Nov): median of per-seed medians with min-max error bars over all 15 repeats. |
+| T13 | The 1.9 ms slowest event of B at buildup 100k is explained as a dict resize. This is an inference from the memory steps at about 22k, 44k and 87k orders, not a direct measurement. | **Accepted, labelled as an inference** (Maurice, 24 Nov): the dict-resize explanation stays, clearly marked as not directly measured. |
 | T14 | OneDrive syncing was not paused during the run. Seed 42 at buildup 100k was about 50% slower than seeds 43 and 44 for both B variants, and the cause is not identified. A rerun outside OneDrive would show whether it is noise. | **Accepted as documented** (Maurice): no rerun; OneDrive syncing and the unexplained seed-42 outlier stay listed as limitations. |
 
 ## Session 6: robustness and dashboard clean-up
@@ -305,10 +305,10 @@ Constraints: no change to the matching logic or to expected test values.
 
 | # | AI suggestion | Decision |
 |---|---|---|
-| T15 | "How to print the final book" is implemented as a new option, `--print-book`. It prints a header line, then one JSON order per line on stdout; redirect to save it. | |
-| T16 | Invalid UTF-8 and nesting too deep to parse are also reported as "malformed JSON line n". Both are lines the replay cannot parse. | |
+| T15 | "How to print the final book" is implemented as a new option, `--print-book`. It prints a header line, then one JSON order per line on stdout; redirect to save it. | **Accepted** (Maurice, 24 Nov): keep `--print-book`; documented in the README. |
+| T16 | Invalid UTF-8 and nesting too deep to parse are also reported as "malformed JSON line n". Both are lines the replay cannot parse. | **Accepted** (Maurice, 24 Nov): every unparseable line is rejected, never crashes the replay. |
 | T17 | The dashboard's test table still shows the 40 tests from the benchmark run (`tests_by_case.csv` was not refreshed), so it matches `benchmark_run.json`. The current suite has 182 tests. | **Corrected** (Maurice): re-export with all 182 tests and label the table with the commit it ran on (see "Test table re-export" below). |
-| T18 | Reject cases beyond your list were added: zero and negative values, a float `seq`, a decreasing `seq`, side `BID`, and a still-live duplicate id. The duplicate is the contrast to the "reuse after the order is gone" case. | |
+| T18 | Reject cases beyond your list were added: zero and negative values, a float `seq`, a decreasing `seq`, side `BID`, and a still-live duplicate id. The duplicate is the contrast to the "reuse after the order is gone" case. | **Accepted** (Maurice, 24 Nov): keep the extra reject cases, labelled as the agent's additions. |
 
 ### Test table re-export (23 Nov 2026)
 
