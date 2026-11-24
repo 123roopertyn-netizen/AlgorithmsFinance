@@ -268,9 +268,9 @@ Final protocol `final-primary-v2` records two source fingerprints in every repet
 
 The cumulative budget has two documented accounting limits. The final record's fsync and controller shutdown happen after its session timestamp and can therefore be slightly undercounted. In addition, abrupt external process termination can bypass normal exact-handle worker cleanup and cannot reconstruct elapsed time that was never durably recorded. After any abnormal interruption, inspect the result boundary and running processes manually before authorizing `--resume`; never truncate, repair, or reinterpret evidence silently.
 
-### Stage 4E experiment infrastructure
+### Stage 4E experiment evidence
 
-Stage 4E is implemented but has not yet been measured. Its controller plans 212 isolated observations: 50 latency, four memory, 30 liquidation, 120 concentration, and eight diagnostic runs. The five mode ceilings are 900/600/600/1,800/300 seconds, respectively. Together they reserve 4,200 seconds; the remaining 300 seconds of the fixed 4,500-second ceiling is reserved for verification. Every mode has a separate append-only JSONL file under `07_results/stage4e/`; latency observations additionally use deterministic gzip-compressed CSV files under `07_results/stage4e/latency_raw/`. These paths do not exist until measurements are separately authorized.
+Stage 4E completed all 212 planned record slots across 52 configurations: 182 completed, six timed out, 24 were explicitly skipped after the corresponding timeout, and none failed or exhausted a mode/global budget. Durable per-attempt controller charging totals 1,304.143308589235 seconds. The matrix contains 50 latency, four memory, 30 liquidation, 120 concentration, and eight diagnostic observations under protocol `stage4e-v1`. The five mode ceilings were 900/600/600/1,800/300 seconds, respectively; together they reserved 4,200 seconds, with the remaining 300 seconds of the fixed 4,500-second ceiling reserved for verification. Mode-specific append-only JSONL evidence is under `07_results/stage4e/`; the 50 latency observations also retain verified gzip-compressed CSV files under `07_results/stage4e/latency_raw/`.
 
 The common warm-up policy processes the existing 1,000-event seed-42 mixed workload on a disposable instance of the selected engine in the same worker process. That exercises validation, submissions, cancellations, and matching and permits CPython first-call specialization. The disposable engine is released, `gc.collect()` runs, and only then is a new empty measured engine constructed. Warm-up and workload parsing are outside measurement. The policy and GC treatment are identical for both engines.
 
@@ -290,7 +290,7 @@ python3 05_benchmarks/run_stage4e.py verify --results-root 07_results/stage4e --
 python3 02_data/generate_concentration_pairs.py --verify-only
 ```
 
-After separate measurement approval, run one mode at a time in this order and use `--resume` only after normal interruption and inspection:
+For exact reproduction in a new results root, run one mode at a time in this order and use `--resume` only after normal interruption and inspection. Do not point these commands at the retained evidence unless an authorized resume is actually required:
 
 ```powershell
 python '05_benchmarks/run_stage4e.py' latency --results-root '07_results/stage4e' --global-budget-seconds 4500
@@ -310,7 +310,9 @@ The instructor's exact warm-up instruction is in the supplied README, “### Tim
 
 The three new 10,000-event four-level pairs and their metadata are described by `02_data/concentration_10000_manifest.json`; the original Stage 2B manifest remains unchanged. The generator refuses overwrite and verifies zero non-price mismatches, zero formula mismatches, monotonic four-bucket mapping, deterministic gzip hashes, source provenance, and an independent second generation pass.
 
-Stage 4D remains valid retained cold-process evidence. The separate warmed-primary infrastructure uses the same 450-repetition matrix, disposable mixed-workload warm-up, fresh measured-engine boundary, five raw repeats, and timeout censoring. It writes only to `07_results/stage4e/warmed_primary.jsonl` and must never overwrite, append to, or merge with `07_results/raw/timing.jsonl`.
+The separate warmed-primary run is the main instructor-compliant primary timing evidence because it applies the required warm-up before timing. Protocol `warmed-primary-v1` retained all 450 planned record slots across 90 configurations and 45 workloads: 392 completed, 12 timed out, 46 were explicitly skipped after timeout, and none failed or exhausted the global budget. Charged controller wall time was 1,997.3183167995885 seconds. The artifact is `07_results/stage4e/warmed_primary.jsonl`, 1,367,400 bytes, SHA-256 `7777cdea1b4c9cb9d798fd5e8fc1e7da97b8c31fdd7ac7776463c74c4bf27660`.
+
+Stage 4D `final-primary-v2` remains immutable supplementary cold-process evidence. It did not document a matching-engine warm-up and therefore must not be relabelled, merged with warmed repeats, or used as the main instructor-compliant timing series. Its retained 450 records contain 390 completed, 12 timed out, and 48 skipped observations; `07_results/raw/timing.jsonl` remains SHA-256 `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f`.
 
 Verify warmed-primary infrastructure without execution:
 
@@ -324,7 +326,7 @@ python3 05_benchmarks/run_warmed_primary.py --self-test --global-budget-seconds 
 python3 05_benchmarks/run_warmed_primary.py --output 07_results/stage4e/warmed_primary.jsonl --global-budget-seconds 5400 --dry-run
 ```
 
-After separate execution approval, start only when the output is absent:
+For exact reproduction in a new output path, start only when that output is absent. The retained warmed artifact must not be overwritten:
 
 ```powershell
 python '05_benchmarks/run_warmed_primary.py' --output '07_results/stage4e/warmed_primary.jsonl' --global-budget-seconds 5400

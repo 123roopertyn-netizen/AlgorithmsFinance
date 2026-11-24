@@ -63,5 +63,85 @@
       "skipped_after_timeout": 48,
       "charged_controller_wall_seconds": 1765.189204200171
     }
+  },
+  "stage4e_experiments": {
+    "execution_date": "2026-11-24",
+    "execution_origin": "assistant-managed foreground session",
+    "protocol": "stage4e-v1",
+    "measurement_modes": [
+      "latency",
+      "memory",
+      "liquidation",
+      "concentration",
+      "diagnostics"
+    ],
+    "environment_fingerprint": "dec8eb13ed809973943a03f07a7fc5158e155c3d8aa22b035eda345aeaf0d2f7",
+    "harness_fingerprint": "99e2bdd9f1096a84c79c2572cbd51a49d144035a70d42df4554d506b410eedf3",
+    "limits_seconds": {
+      "shared_cumulative": 4500,
+      "latency": 900,
+      "memory": 600,
+      "liquidation": 600,
+      "concentration": 1800,
+      "diagnostics": 300,
+      "verification_reserve": 300
+    },
+    "result": {
+      "records": 212,
+      "completed": 182,
+      "timed_out": 6,
+      "skipped_after_timeout": 24,
+      "failed": 0,
+      "charged_controller_wall_seconds": 1304.143308589235
+    },
+    "measurement_limitations": [
+      "Per-event clocks perturb latency measurements.",
+      "tracemalloc reports traced Python allocations rather than total process resident memory.",
+      "Version A diagnostic inner-loop counts are analytical estimates rather than direct instrumentation.",
+      "OneDrive and operating-system scheduling remained uncontrolled environmental factors."
+    ]
+  },
+  "warmed_primary_benchmark": {
+    "execution_date": "2026-11-24",
+    "execution_origin": "assistant-managed foreground session",
+    "evidence_role": "main instructor-compliant primary timing evidence",
+    "protocol": "warmed-primary-v1",
+    "measurement_mode": "warmed_primary_timing",
+    "limits_seconds": {
+      "cumulative_controller_wall": 5400,
+      "processing_1000_and_10000_events": 30,
+      "processing_100000_events": 120
+    },
+    "warmup": {
+      "workload_path": "02_data/generated/mixed_1000_seed42.jsonl.gz",
+      "event_count": 1000,
+      "sha256": "8c3455dc8370f2e006eda834f5bfeb47abdb7dc3766775cf12cdc8444f974d9d",
+      "policy": "same-process disposable same-class engine; process all warm-up events; release; gc.collect; construct fresh empty measured engine"
+    },
+    "source_fingerprints": {
+      "baseline_implementation_sha256": "afa06981e3b1d79b8c10903bd6f8d0cc9d648373b7fc9b20e8e14f431a5770fc",
+      "optimized_implementation_sha256": "06e5ebb794e11852f4b6b6c49df54134a2dd3d3e2e489a4ef269afc35aef9490",
+      "benchmark_harness_sha256": "ce1fd6b5ccf517e35e783e176dc7c2cfce333f41423d85c73d1cd0d66a6fe493",
+      "environment_sha256": "aab6f20672ff1af72c4f79ed2c2f31827f8d522aedae4e7b6239937659236853"
+    },
+    "result": {
+      "path": "07_results/stage4e/warmed_primary.jsonl",
+      "bytes": 1367400,
+      "sha256": "7777cdea1b4c9cb9d798fd5e8fc1e7da97b8c31fdd7ac7776463c74c4bf27660",
+      "records": 450,
+      "configurations": 90,
+      "workloads": 45,
+      "completed": 392,
+      "timed_out": 12,
+      "skipped_after_timeout": 46,
+      "failed": 0,
+      "charged_controller_wall_seconds": 1997.3183167995885
+    },
+    "measurement_limitations": [
+      "The generic warm-up only partially addresses interpreter specialization and does not guarantee every scenario-specific branch is warm.",
+      "Thermal state, OneDrive activity, and operating-system scheduling were not controlled.",
+      "Process startup, parsing, warm-up, and preparation are excluded from engine_seconds.",
+      "Timeout-censored configurations do not support ordinary five-repeat medians or speedups."
+    ]
   }
 }

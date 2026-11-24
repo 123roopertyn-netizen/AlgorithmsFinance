@@ -1092,3 +1092,55 @@ No final benchmark, result-digest replay, liquidation, concentration generation,
 - Result hashes: latency `826f28dbf294d6c46092ce1c593350a32410b33915dfbd4721a774ae939e88bd`; memory `0292aedef063eb540c1635957fd1317873c247f094168644a0c4e21358b870ce`; liquidation `f533c30b5649e9b737c2aa4c96882c61793a8e1680f6c9398d14a0dde9fb6983`; concentration `ce448548c66dce84cb98337064c32f9275e31f16fa71f1c02191181aa0f5a585`; diagnostics `71780ec459bac00730505d797bb3fd31dc33d955e954b7622ffe624149d8a0e4`.
 - Fifty latency gzip CSV files total 2,048,747 bytes. A stable ordered path/size/file-hash list has aggregate SHA-256 `1a5954c578f0de1fea6b98d7b27b3c4452ac2699b76f331e03743196251f675f`; per-file hashes remain embedded in and checked against latency JSONL records.
 - Post-run process count was zero. `warmed_primary.jsonl` remained absent. Stage 4D and pilot hashes remained `fa6366bae35d7876cccd7abba2357d2d0d10c045d966c72f0cd2a21c2db7fa7f` and `c731a54589b63e441f0451fe17eaaf93275de765865632a3e07971953ed100f1`.
+
+## 2026-11-24 - Warmed-primary execution
+
+### 112. Executed the separately authorized warmed-primary matrix
+
+- Read-only preflight verified 450 planned repetitions, 90 configurations, 45 workloads, increasing sizes 1,000/10,000/100,000, five repeats, 30/120-second limits, `warmed-primary-v1`, correct implementation/harness/environment/workload identities, warm-up hash `8c3455dc8370f2e006eda834f5bfeb47abdb7dc3766775cf12cdc8444f974d9d`, zero existing warmed records, and zero Python/PythonW processes.
+- Started one managed foreground controller: `python 05_benchmarks/run_warmed_primary.py --output 07_results/stage4e/warmed_primary.jsonl --global-budget-seconds 5400`. No background process, retry, resume, concurrent workload, code change, dataset change, or protocol change occurred.
+- Controller exited zero after writing all 450 append-only fsynced records. Statuses: 392 completed, 12 timed out, 46 skipped after timeout, zero failed, and zero global-budget skips. Charged controller wall time was 1,997.3183167995885 seconds.
+
+### 113. Audited warmed-primary evidence read-only
+
+- Strict dry-run/resume validation accepted all 450 records, 90 configurations, 45 workloads, terminal timeout transitions, complete implementation/harness/environment/warm-up identities, positive completed durations, and absence of fabricated durations in timeout/skip records.
+- Result: `07_results/stage4e/warmed_primary.jsonl`, 1,367,400 bytes, SHA-256 `7777cdea1b4c9cb9d798fd5e8fc1e7da97b8c31fdd7ac7776463c74c4bf27660`.
+- Twelve Version A 100,000-event configurations timed out: buildup, crowded, mixed and sweep for seeds 42/43/44. Eleven timed out on repetition 1 and have four skips. Mixed seed 42 completed repetitions 1 and 2, timed out on repetition 3, and has two skips. No ordinary five-repeat median or speedup is valid for these configurations.
+- All 450 records carry the single approved warm-up path/count/hash/policy. The worker can emit READY only after verifying the warm-up hash, processing 1,000 mixed events on a disposable same-class engine, deleting it, collecting garbage, constructing a fresh engine, and verifying empty state. Completed records therefore provide protocol evidence without mixing warm-up into `engine_seconds`.
+- Post-run Python/PythonW process count was zero. Stage 4D, pilot, and all five Stage 4E hashes exactly matched preflight. Cold-process and warmed-primary evidence remain separate.
+
+## 2026-11-24 - Final experimental-evidence documentation
+
+### 114. Re-derived retained evidence before editing
+
+- Read `AGENTS.md`, inventoried `07_results`, and inspected the current manifest, environment metadata, README, action history, and AI decisions. No file was changed by these inspections.
+- Parsed the pilot, cold-primary, five Stage 4E JSONL files, warmed-primary JSONL, and all 50 compressed latency CSV files with Python standard-library code. The first summary command failed with a `TypeError` because a pilot field was `null`; it changed nothing. The corrected command explicitly treated absent numeric fields as zero and completed successfully.
+- Verified Stage 4E at 212 records across 52 configurations: 182 completed, six timed out, 24 skipped after timeout, zero failures, protocol `stage4e-v1`, and 1,304.143308589235 charged controller seconds.
+- Verified warmed primary at 450 records across 90 configurations and 45 workloads: 392 completed, 12 timed out, 46 skipped after timeout, zero failures, 1,367,400 bytes, SHA-256 `7777cdea1b4c9cb9d798fd5e8fc1e7da97b8c31fdd7ac7776463c74c4bf27660`, protocol `warmed-primary-v1`, and 1,997.3183167995885 charged controller seconds.
+- Verified every latency artifact against its parent JSONL record: 50 gzip files, 500,000 observations, and 2,048,747 total bytes, with matching individual sizes and SHA-256 values.
+
+### 115. Recorded pre-edit preservation inventories
+
+- Calculated stable path-and-content inventory digests for protected groups: engines/shared source `5c6fd47cbaadc018a397435394344785c9abbe3264ea1d42031b289ce1b0062c` (six files); tests `294998a21fd061ab4f83371ffc77c2fd8bc11b2a2031c9f62214d45187812cd2` (11 files); datasets `804739b7aaab3577b185779fe2d043de763539aa4487cc9a13296ee8b0bf0e57` (114 files); benchmark scripts `1b8bfa2fc61d2b4f7e5221a88da386b3b66ca7ac1a4231d8894da8419dd7c03d` (six files); and raw measurements `67b05a1cec977cba583edeca0e714620a7895470c075de2d0740de902a46f70d` (58 files).
+- Requested and received write access limited to `README.md`, `ACTION_LOG.md`, `AI_DECISIONS.md`, `01_environment/environment.json`, and `07_results/results_manifest.json`.
+
+### 116. Finalized current-status documentation and the results manifest
+
+- Updated `README.md` with completed Stage 4E and warmed-primary evidence, portable reproduction safeguards, and the explicit classification of warmed primary as the main instructor-compliant timing evidence and Stage 4D cold primary as supplementary evidence.
+- Updated `AI_DECISIONS.md` so pre-execution decisions are explicitly historical and point to DEC-049/DEC-050, without altering the canonical 26-risk register. Added the final evidence-role distinction to DEC-050.
+- Extended `01_environment/environment.json` with record-derived Stage 4E and warmed-primary protocol, limits, fingerprints, results, and limitations. Existing Stage 1 and Stage 4D metadata was preserved.
+- Replaced schema-v1 `07_results/results_manifest.json` with schema 2. An attempted single patch containing both delete and add operations for the same path was rejected before any change. The manifest was then replaced through two scoped patch operations. Schema 2 covers pilot, supplementary cold primary, all five Stage 4E JSONL files, all 50 latency gzip files, and main warmed-primary evidence. It contains no analytical medians or speedups and does not hash itself.
+
+### 117. Validated documentation and preservation
+
+- Parsed `environment.json` and `results_manifest.json` as JSON. Recomputed every manifest-listed JSONL and latency artifact size, SHA-256, record/observation count, status count, protocol, Stage 4E charged-time sum, and warmed final cumulative charged time; all checks passed.
+- Verified 26 canonical Risk Register rows with 26 unique IDs, balanced README command fences, and no remaining current README phrase claiming Stage 4E or warmed-primary evidence is absent.
+- New documentation hashes: `results_manifest.json` SHA-256 `d74d1216e22a5a963cd85020adcebe3e7c949ad98dadb80749f7cfd5900f2e0b`; `environment.json` SHA-256 `330433799b79c6325d2b949d54986f4435bd071a86f195c9d7c17c7fb62d5e00`.
+- Post-edit inventory digests exactly matched all five pre-edit protected-group digests. Therefore engines, shared contracts/validation, tests, datasets, benchmark scripts, pilot evidence, cold-primary evidence, Stage 4E evidence, warmed-primary evidence, and all 50 latency files remained byte-identical.
+
+No experiment, analytical summary, dashboard, technical report, dependency installation, network access, Git command, or GitHub operation occurred.
+
+### 118. Performed the final consistency check
+
+- Reparsed both updated JSON files successfully, searched README and AI decisions for five obsolete pre-execution phrases, and found none as current text.
+- Recalculated the pilot, cold-primary, warmed-primary, results-manifest, and environment-metadata hashes once more. The retained evidence hashes remained unchanged; the documentation hashes matched the values recorded above.

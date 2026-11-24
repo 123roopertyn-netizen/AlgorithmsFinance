@@ -625,18 +625,18 @@ This history records meaningful changes without creating duplicate current-statu
 
 ### DEC-043 - Separate warmed experiment harness
 
-- Status: IMPLEMENTED AND NON-EXECUTING CHECKS VERIFIED; MEASUREMENTS NOT YET RUN.
+- Status: HISTORICAL PRE-EXECUTION CHECKPOINT; MEASUREMENTS SUBSEQUENTLY VERIFIED IN DEC-049.
 - Stage 4E uses new controller/worker files and separate result paths. It does not modify either engine, the correctness suite, the Stage 4D harness, or retained primary/pilot evidence.
 - Every worker warms the selected engine class by processing the existing mixed 1,000-event seed-42 stream on a disposable instance. After that instance is released, `gc.collect()` runs and the measurement function constructs a new empty engine. Parsing and warm-up are excluded from measurement; the same rule applies to both engines.
 - Planned observations are latency 50, memory 4, liquidation 30, concentration 120, and diagnostics 8 (212 total). Mode instrumentation remains separate: per-event clocks do not enter concentration timing, `tracemalloc` is confined to memory runs, and diagnostic counters are compared with an uninstrumented same-engine replay.
-- The controller uses append-only mode-specific JSONL, one worker at a time, strict fingerprints, explicit timeout/budget statuses, and a manual-review stop after any failure. No Stage 4E result directory or measurement record exists at this checkpoint.
+- The controller uses append-only mode-specific JSONL, one worker at a time, strict fingerprints, explicit timeout/budget statuses, and a manual-review stop after any failure. At this historical checkpoint no Stage 4E measurement record existed; the later execution evidence is recorded in DEC-049.
 
 ### DEC-044 - Stage 4E budget, liquidation, and warmed-primary boundary
 
-- Status: IMPLEMENTED AS AN EXECUTION CONTRACT; PERFORMANCE EVIDENCE PENDING.
+- Status: IMPLEMENTED; EXECUTION EVIDENCE VERIFIED IN DEC-049 AND DEC-050.
 - Mode ceilings are latency 900, memory 600, liquidation 600, concentration 1,800, and diagnostics 300 seconds. Their 4,200-second total plus a 300-second verification reserve equals the fixed 4,500-second global ceiling. Attempt admission reserves every applicable preparation, handshake, measurement, and cleanup window before launch.
 - Liquidation always reconstructs a fresh supplied seed-42 10,000-event buildup book, calculates active BUY depth from the engine snapshot, requires positive depth, and uses ceiling 10%, exact 100%, or exact 200% quantities. Construction is recorded separately; only the direct sale is timed. An independent oracle checks ordered maker-price fills, quantities, proceeds, residual, and final snapshot.
-- Stage 4D remains retained cold-process evidence because it did not document matching-engine warm-up. If separately approved, warmed-primary timing will use the same disposable mixed-workload warm-up and fresh measured-engine boundary, retain five raw repeats and timeout censoring, and write a new artifact. It will not overwrite, append to, or reinterpret the Stage 4D result.
+- Stage 4D remains retained cold-process evidence because it did not document matching-engine warm-up. The subsequently executed warmed-primary timing used the same disposable mixed-workload warm-up and fresh measured-engine boundary, retained five planned raw repeats with explicit timeout censoring, and wrote a separate artifact without overwriting, appending to, or reinterpreting the Stage 4D result.
 - Remaining risk: CPython specialization is workload- and path-sensitive; a 1,000-event mixed warm-up exercises all major operations but cannot guarantee every scenario-specific branch or stable thermal state. The protocol is fair and reproducible, not proof that all runtime adaptation has converged.
 
 ### DEC-045 - Additional 10,000-event concentration pairs
@@ -649,26 +649,26 @@ This history records meaningful changes without creating duplicate current-statu
 
 ### DEC-046 - Stage 4E pre-execution compliance corrections
 
-- Status: IMPLEMENTED AND SYNTHETICALLY VERIFIED; PERFORMANCE EVIDENCE PENDING.
+- Status: IMPLEMENTED; SYNTHETIC AND RETAINED PERFORMANCE EVIDENCE VERIFIED.
 - Instructor requirements were re-read from the preserved README. Warm-up and five raw timing repeats come from line 116; latency median/P95/P99 and beginning/end comparisons from line 118; traced-memory boundaries, insertion growth, and post-cancellation state from line 122; and fresh 10%/100%/200% liquidation statistics from line 108. Retaining returned event outputs is not mandatory, but their memory inclusion must be disclosed. Full trade-history retention remains optional extra storage under line 56.
 - Stage 4D is retained as valid cold-process evidence but deviates from the explicit warm-up instruction because no matching-engine operation was documented before its timed replays. No Stage 4D result was changed or rerun.
 - The Stage 4E CLI now accepts only the approved `--global-budget-seconds 4500`, records budget/timeout policy in resume identity, validates all five mode files before continuation, and derives every artifact from a project-contained `--results-root`.
 - Liquidation construction and sale have independent 30-second deadlines. If only the sale times out, completed construction evidence is retained. Each completed trial still uses a new reconstructed engine and independent result/snapshot oracle.
 - Memory methodology was corrected before measurement: exact state peaks/checkpoints come from a separate untraced equivalent replay, that engine is discarded and garbage-collected, and a fresh engine is traced. This prevents checkpoint snapshot/set construction from contaminating later `tracemalloc` peaks. Returned current-event objects are transiently traced but discarded; no history is retained.
 - Diagnostic claims are now scoped accurately: Version A inner-loop comparisons are analytical estimates derived from pre-event active state; Version B wrapper calls, heap changes, common fill counts, and state peaks are separately labelled as directly observed or exact. Diagnostic evidence must not be presented as primary timing.
-- Synthetic verification passed strict identity/corruption/status checks, mode-specific completed-result validation, timeout-to-skip transitions, cross-mode budget charging, project-root enforcement, custom latency artifact routing, and latency artifact size/hash corruption rejection. No performance worker or Stage 4E result was created.
+- Synthetic verification passed strict identity/corruption/status checks, mode-specific completed-result validation, timeout-to-skip transitions, cross-mode budget charging, project-root enforcement, custom latency artifact routing, and latency artifact size/hash corruption rejection. At this historical pre-execution checkpoint no performance result existed; DEC-049 records the later retained execution.
 
 ### DEC-047 - PDF-confirmed memory-output retention boundary
 
-- Status: IMPLEMENTED, SMOKE-VERIFIED, AND PENDING FULL MEASUREMENT.
+- Status: IMPLEMENTED, SMOKE-VERIFIED, AND FULL MEASUREMENT VERIFIED.
 - The original PDF memory slide was inspected directly. Its decompressed content stream for physical PDF page 21 (slide footer 20/23) says: “Retain the event's returned output while reading its allocation measurement.” Poppler and Python PDF libraries were unavailable and dependency installation was prohibited, so exact source-stream extraction rather than visual rendering was used; the passage is unambiguous.
 - The traced memory loop now binds the current `process_event` result, calls `tracemalloc.get_traced_memory()` while that object remains strongly referenced, records the applicable checkpoint/limit state, and then deletes only that result. It never accumulates earlier outputs or trade history.
 - Real 1,000-event memory-worker smoke runs for both Version B and Version A verified 1,000 per-event allocation reads and the recorded retention boundary. This correction changes memory instrumentation only; neither engine nor primary timing is affected.
 
 ### DEC-048 - Separate warmed-primary evidence
 
-- Status: INFRASTRUCTURE AND ONE ISOLATED REAL-WORKER SMOKE VERIFIED; FULL MEASUREMENTS NOT RUN.
-- Stage 4D remains immutable cold-process evidence. Warmed primary uses a separate worker/controller and future artifact `07_results/stage4e/warmed_primary.jsonl`, phase `warmed_primary`, measurement mode `warmed_primary_timing`, and protocol `warmed-primary-v1`.
+- Status: HISTORICAL PRE-EXECUTION CHECKPOINT; FULL MEASUREMENTS SUBSEQUENTLY VERIFIED IN DEC-050.
+- Stage 4D remains immutable cold-process evidence. At this checkpoint warmed primary was planned with a separate worker/controller and future artifact `07_results/stage4e/warmed_primary.jsonl`, phase `warmed_primary`, measurement mode `warmed_primary_timing`, and protocol `warmed-primary-v1`; DEC-050 records its later execution.
 - The plan is the retained 450-repetition matrix: five scenarios, three sizes, three seeds, two engines, and five repeats. It retains 30/120-second processing limits, a 5,400-second cumulative budget, one worker, fresh measured state, stop-on-first-timeout, explicit later skips, append-only fsynced JSONL, and strict resume validation.
 - Before every timed replay, the selected engine class processes the deterministic 1,000-event mixed seed-42 workload on a disposable same-class engine. The worker verifies the warm-up SHA-256, releases the disposable engine, runs `gc.collect()`, constructs a fresh engine, and verifies empty state. Only the full target workload replay is enclosed by `time.perf_counter`.
 - Resume identity adds the warm-up path, event count, SHA-256, and policy to the complete implementation/harness/environment identity. The harness fingerprint includes the warmed wrapper, warmed worker, and retained Stage 4D controller dependency.
@@ -684,4 +684,14 @@ This history records meaningful changes without creating duplicate current-statu
 - Version A timed out on repetition 1 for six 100,000-event buildup configurations: seeds 42, 43 and 44 in both original and four-level-paired forms. Each has exactly four later `skipped_after_timeout` records. No ordinary five-repeat median, throughput comparison, or speedup may be reported for these censored configurations, and timeout limits must not be substituted for missing durations.
 - The strict verifier accepted every record identity and transition and all 50 compressed latency artifact hashes. Memory outputs use PDF-required current-result retention; liquidation outputs passed independent fill/proceeds/final-book oracles; diagnostic timings remain instrumented dual-replay evidence rather than primary timing.
 - Environmental limitations remain: OneDrive was enabled; thermal state and OS scheduling were uncontrolled; per-event clocks perturb latency; `tracemalloc` is not RSS; and diagnostic Version A comparison counts are analytical estimates. These limitations do not invalidate retained evidence but must be disclosed.
-- Warmed-primary timing remains absent and separately authorized only after this checkpoint. Stage 4D cold-process evidence is unchanged and must not be combined with future warmed repeats in ordinary summaries.
+- At the DEC-049 checkpoint warmed-primary timing was still absent. It was subsequently executed and verified under DEC-050. Stage 4D cold-process evidence remains unchanged and must not be combined with warmed repeats in ordinary summaries.
+
+### DEC-050 - Warmed-primary measurements
+
+- Status: EXECUTED AND STRICTLY VERIFIED.
+- The separate `warmed-primary-v1` result contains all 450 planned record slots across 90 configurations and 45 workloads: 392 completed, 12 timed out, 46 skipped after timeout, zero failed, and zero budget-skipped. Charged controller time is 1,997.3183167995885 seconds of the 5,400-second allowance.
+- Every record has the single approved 1,000-event mixed seed-42 warm-up identity and policy. Each worker verifies the warm-up hash, warms a disposable same-class engine, releases it, calls `gc.collect()`, constructs and verifies a fresh empty measured engine, and times only the target replay. Implementation, harness, environment, workload and warm-up fingerprints are uniform and strict-resume compatible.
+- Version A timed out at 100,000 events for buildup, crowded, mixed and sweep at seeds 42/43/44. Eleven configurations timed out on repetition 1. Mixed seed 42 completed repetitions 1 and 2 before timing out on repetition 3; the resulting 46 skips are therefore correct. These 12 configurations remain censored and cannot receive ordinary five-repeat medians or speedups.
+- The warmed artifact is 1,367,400 bytes with SHA-256 `7777cdea1b4c9cb9d798fd5e8fc1e7da97b8c31fdd7ac7776463c74c4bf27660`. Stage 4D cold-process evidence and all Stage 4E evidence retained their preflight hashes and must remain analytically separate.
+- Scientific limitations: the generic warm-up partially addresses interpreter first-call specialization but not every scenario-specific branch or thermal equilibrium; process startup, parsing, warm-up and preparation are excluded from `engine_seconds`; OneDrive and OS scheduling remain uncontrolled; and timeout variability near 120 seconds is demonstrated by mixed seed 42 failing only on repetition 3.
+- Interpretation: warmed primary is the main instructor-compliant primary timing evidence because it performs the required warm-up. Stage 4D remains supplementary cold-process evidence, and neither series repairs or substitutes durations for censored configurations.
