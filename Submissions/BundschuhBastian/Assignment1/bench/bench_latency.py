@@ -52,16 +52,19 @@ def timer_overhead_ns(samples: int = 200_000) -> int:
     return percentile_nearest_rank(deltas, 50)
 
 
-def _replay_latency(cls, events) -> list[int]:
+def _replay_latency(cls, events, gc_on: bool = True) -> list[int]:
     book = cls()
     process = book.process
     clock = time.perf_counter_ns
     lat = [0] * len(events)
     gc.collect()                       # gc stays enabled, as in the timing runs
+    if not gc_on:                      # only for the gc_off test (--gc-test)
+        gc.disable()
     for i, e in enumerate(events):
         t0 = clock()
         process(e)
         lat[i] = clock() - t0
+    gc.enable()
     return lat
 
 
@@ -104,11 +107,57 @@ def latency_worker(conn, version: str, path: str) -> None:
     conn.send(("unit_done", "latency", {"overhead": overhead, **summarize(lat, [e["type"] for e in events])}))
 
 
+GC_TEST = RESULTS / "latency_gc_test.csv"
+GC_FIELDS = ["start_utc", "power_source", "battery_percent", "low_power_mode", "label", "version",
+             "scenario", "seed", "events", "p50_ns", "p99_ns", "p999_ns", "max_ns",
+             "events_over_1ms", "top5_index_ns", "gc_collections", "status", "reason"]
+
+
+def gc_test_worker(conn, version: str, path: str, gc_on: bool) -> None:
+    """One latency replay with gc on or off; reports the largest spikes and gc activity."""
+    events = load_events(path)
+    conn.send(("unit_start", "gc"))
+    before = sum(g["collections"] for g in gc.get_stats())
+    lat = _replay_latency(VERSIONS[version], events, gc_on)
+    collections = sum(g["collections"] for g in gc.get_stats()) - before
+    s = sorted(lat)
+    top = sorted(range(len(lat)), key=lat.__getitem__, reverse=True)[:5]
+    conn.send(("unit_done", "gc", {
+        "p50_ns": percentile_nearest_rank(s, 50), "p99_ns": percentile_nearest_rank(s, 99),
+        "p999_ns": percentile_nearest_rank(s, 99.9), "max_ns": s[-1],
+        "events_over_1ms": sum(1 for v in lat if v > 1_000_000),
+        "top5_index_ns": ";".join(f"{i}:{lat[i]}" for i in top), "gc_collections": collections}))
+
+
+def gc_test(args) -> int:
+    """B on buildup, 100,000 events, seed 42: gc_off, gc_on, gc_off, gc_on (canary around).
+    Question: are the rare very long events garbage-collector pauses?"""
+    path = str(stream_path("buildup", 100000, 42))
+    with canary_around("latency_gc_test"):
+        for label, gc_on in (("gc_off", False), ("gc_on", True), ("gc_off", False), ("gc_on", True)):
+            st0 = stamp()
+            res = run_limited(gc_test_worker, ("B", path, gc_on), args.limit_seconds)
+            msgs = [m for m in res["messages"] if m[0] == "unit_done"]
+            base = {**st0, "label": label, "version": "B", "scenario": "buildup", "seed": 42,
+                    "events": 100000}
+            if res["outcome"] == "end" and msgs:
+                append_csv(GC_TEST, GC_FIELDS, {**base, **msgs[0][2], "status": "ok"})
+                print(label, msgs[0][2]["max_ns"], "ns max", msgs[0][2]["top5_index_ns"], flush=True)
+            else:
+                append_csv(GC_TEST, GC_FIELDS, {**base, "status": res["outcome"],
+                                                "reason": res["error"] or "limit reached"})
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--sizes", nargs="+", type=int, default=[10000, 100000])
     parser.add_argument("--limit-seconds", type=float, default=common.LIMIT_SECONDS)
+    parser.add_argument("--gc-test", action="store_true",
+                        help="extra run: B buildup 100,000 with gc off vs on (latency_gc_test.csv)")
     args = parser.parse_args(argv)
+    if args.gc_test:
+        return gc_test(args)
     done = {(r["version"], r["scenario"], r["events"]) for r in read_csv(SUMMARY)}
     hist_all = json.loads(HIST.read_text()) if HIST.exists() else {}
     for events in args.sizes:

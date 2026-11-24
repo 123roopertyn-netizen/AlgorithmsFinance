@@ -158,6 +158,13 @@ Details of how the rules are applied (also fixed before the first run):
   how latency changes while the book grows; asked for `buildup` and `crowded`, computed for every
   scenario), plus 20 equal chunks in order (`latency_by_position.csv`). It is processing time per
   event only, not queueing, not 1 / throughput.
+  *gc test* (`python -m bench.bench_latency --gc-test`, `results/latency_gc_test.csv`): B on `buildup`
+  with 100,000 events, gc off and gc on, each twice, canary before and after. Max latency: gc on
+  13.1 ms and 12.4 ms (at events 91,228 and 44,613, with a second spike of 7.1 and 7.8 ms), gc off
+  0.82 ms and 0.88 ms. So the ~12 ms spikes are garbage-collector pauses (full collections while
+  the book holds ~10^5 live records). With gc off the largest remaining events sit at 10,922,
+  21,845, 43,690 and 87,381, a doubling pattern that fits a dict or list resize; that explanation
+  was not tested.
 - **Memory** (`results/memory.csv`). `tracemalloc`, started after the events are loaded, with a fresh
   book. Counted: Python allocations made during the replay that are still alive at the moment of
   measuring: book structures, the order index, the current result dict and fill list (discarded

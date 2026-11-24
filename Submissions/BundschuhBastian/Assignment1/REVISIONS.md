@@ -85,8 +85,19 @@ price are as in the first B.
 
 Worst-case memory. After every operation, every level satisfies `dead * 2 <= len(queue)`, so
 `len(queue) <= 2 * live`. All queues together hold at most `2 * B` records, with B the number
-of active orders: memory is O(B), not O(number of submissions). Stale entries cannot pile up
-(the cancel-churn requirement of the assignment). Checked after EVERY event of the generated
+of active orders: the queues are O(B) and do not grow with the number of submissions. Stale
+entries cannot pile up in them (the cancel-churn requirement of the assignment).
+*Correction (Phase 6b):* the whole book is NOT O(current B). The order index (`_index`) is a
+Python dict, and a dict never gives back its hash table when keys are deleted. So the memory of
+Version B is O(peak B), the largest number of active orders at any time. Measured
+(`bench/bench_memory.py`, `insert_then_cancel`: 100,000 non-crossing orders, then 99,999 cancels,
+1 live order left): 4.05 MB are still held after the replay; the index alone is 3.84 MB
+(`sys.getsizeof`, same 100,000-key table), the two `levels` dicts 37 KB each. The same stream with
+10,000 orders leaves 0.42 MB. Version A, a plain list that is popped, holds 5.5 KB after the same
+stream. The queues themselves are freed (a level is dropped when its last live order goes). This
+memory is reused if the book grows again, so it is a one-time cost of the peak, not a leak that
+grows with more events. No engine change was made for this; a fix would be to rebuild the index
+when it is much larger than its content, at the price of an O(B) rebuild. Checked after EVERY event of the generated
 streams by `tests/test_version_b_structure.py` (also mass cancels from the front, the back and
 every second order, and a pinned order with 5,000 add/cancel pairs behind it). Two planted bugs
 (no compaction; `dead` not decremented) make this test fail; A-vs-B results would not show them.
