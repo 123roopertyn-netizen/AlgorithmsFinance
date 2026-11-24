@@ -1,8 +1,10 @@
 # Assignment 1 — Limit order book (Maurice Bonacker)
 
-Work in progress. Due 26 November 2026, 18:00.
+Submission for Assignment 1 of Algorithms in Finance (Frankfurt School), due 26 November 2026, 18:00.
+Report: `07_docs/REPORT.md`. Dashboard: `06_dashboard/dashboard.html`.
 
-Submitted commit: `<to be filled>`
+Submitted commit: `76a97a7` (full hash `76a97a7d1e61030f23f4154270f4fc3f29ba0058`, branch `bonacker/phase1`): all code, tests, results, dashboard and report.
+The only later commit adds this line to the README. The timing benchmark was measured at `4b9df5f`, the latency and memory rerun at `ade26d1`; the engines are identical in all three commits.
 
 ## Reproduce everything from a clean environment
 
@@ -17,7 +19,7 @@ tests and `matplotlib` draws the dashboard plots.
 ```bash
 git clone https://github.com/cogeorg/AlgorithmsFinance.git
 cd AlgorithmsFinance/Submissions/BonackerMaurice/Assignment1
-git checkout <submitted commit>
+git checkout 76a97a7
 python -m venv .venv
 .venv\Scripts\activate            # Windows
 source .venv/bin/activate         # macOS / Linux
