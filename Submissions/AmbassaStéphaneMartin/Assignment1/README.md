@@ -1,5 +1,5 @@
 # Assignment 1
 
-Nom : Stéphane Martin Ambassa
+Name: Stéphane Martin Ambassa
 
-Premier devoir du cours Algorithms in Finance.
+First assignment for the Algorithms in Finance course.
