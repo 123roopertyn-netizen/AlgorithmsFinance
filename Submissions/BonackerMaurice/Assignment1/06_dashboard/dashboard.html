@@ -30,7 +30,7 @@ B-sorted and B-heap (dict + FIFO queues per price; sorted key list vs heap).</p>
 <tr><td>code committed and clean at start</td><td>yes</td></tr>
 <tr><td>whole repository clean at start</td><td>yes</td></tr>
 <tr><td>code unchanged during the run</td><td>yes</td></tr>
-<tr><td>checked-out code = measured code</td><td>NO (changed since the run: 03_code/replay.py; added: 02_tests/test_robustness.py). The results describe the measured commit.</td></tr>
+<tr><td>checked-out code = measured code</td><td>NO (changed since the run: 03_code/replay.py, 04_benchmarks/export_test_results.py; added: 02_tests/test_robustness.py). The results describe the measured commit.</td></tr>
 <tr><td>run status</td><td>complete</td></tr>
 <tr><td>started / finished (UTC)</td><td>2026-11-22T20:30:20+00:00 / 2026-11-22T21:44:47+00:00</td></tr>
 <tr><td>tests before the run</td><td>40 passed</td></tr>
@@ -68,7 +68,7 @@ B-sorted and B-heap (dict + FIFO queues per price; sorted key list vs heap).</p>
 </details>
 
 <h2>Correctness</h2>
-<p>Test cases: 40 of 40 pass (tests_by_case.csv, refreshed by the benchmark run). n/a = not defined for that version (white-box tests of one variant).</p>
+<p><b>Test cases, run on commit bd5f26b</b> (branch bonacker/phase1, 2026-11-23 15:13:25 UTC, Python 3.13.15, pytest 9.1.1): <b>182 of 182 pass</b>. Command: <code>python 04_benchmarks/export_test_results.py</code>. Code committed and clean at that time. Checked-out code = tested code: yes. This test run is separate from the benchmark run (see Provenance). n/a = not defined for that version (white-box tests of one variant); a cell with several cases counts every parameter case of that test.</p>
 <table>
 <tr><th>test</th><th>source of expected values</th><th>Version A</th><th>Version B-sorted</th><th>Version B-heap</th><th>no engine needed</th></tr>
 <tr><td>test_heap_stays_bounded_under_cancel_churn</td><td>design rule: heap compaction bound (cancel_churn)</td><td>n/a</td><td>n/a</td><td>pass</td><td></td></tr>
@@ -80,6 +80,15 @@ B-sorted and B-heap (dict + FIFO queues per price; sorted key list vs heap).</p>
 <tr><td>test_Test3</td><td>Excel tab Test3 (calculated by Claude, checked by Maurice)</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
 <tr><td>test_Test4</td><td>Excel tab Test4 (calculated by Claude, checked by Maurice)</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
 <tr><td>test_Test5</td><td>Excel tab Test5 (calculated by Claude, checked by Maurice)</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
+<tr><td>test_invalid_event_is_rejected_and_changes_nothing</td><td>spec + validation rules: adversarial events are rejected</td><td>pass (37 cases)</td><td>pass (37 cases)</td><td>pass (37 cases)</td><td></td></tr>
+<tr><td>test_huge_quantity_limit_rests</td><td>spec: huge quantity is a valid integer (rests in full)</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
+<tr><td>test_huge_quantity_market_sell</td><td>spec: huge market sell takes every bid, the rest is discarded</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
+<tr><td>test_cancel_of_market_sell_id_is_not_found</td><td>spec: a market sell never rests, so cancelling its id is not_found</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
+<tr><td>test_order_id_reuse_after_the_order_is_gone</td><td>spec: only LIVE ids are duplicates; a gone id may be reused</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
+<tr><td>test_extra_fields_are_ignored</td><td>spec: unknown extra fields are ignored</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
+<tr><td>test_versions_agree_on_adversarial_stream</td><td>differential: A vs B-sorted vs B-heap on the adversarial stream</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
+<tr><td>test_replay_survives_malformed_lines</td><td>spec: malformed JSON lines are rejected, the replay continues</td><td>pass (4 cases)</td><td>pass (4 cases)</td><td>pass (4 cases)</td><td></td></tr>
+<tr><td>test_replay_prints_final_book</td><td>spec: --print-book prints the final book, one order per line</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
 <tr><td>test_limits_rest_without_trading</td><td>my Excel tab Base</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
 <tr><td>test_market_sell_result</td><td>my Excel tab Base</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
 <tr><td>test_remaining_book</td><td>my Excel tab Base</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
@@ -89,7 +98,7 @@ B-sorted and B-heap (dict + FIFO queues per price; sorted key list vs heap).</p>
 <tr><td>test_matches_supplied_json</td><td>professor JSON</td><td>pass</td><td>pass</td><td>pass</td><td></td></tr>
 </table>
 <p>Differential test (differential_tests.csv): 300 seeded random streams, 52,287 events, results and books compared after every event across A, B-sorted and B-heap: 0 mismatching events, 0 invariant failures, 0 failed streams.</p>
-<p>Queue concentration check (concentration_check.csv): results compared after every event, books and invariants at 10 checkpoints; then a 100% sale through the queues, checked against the price-time oracle (invariants.check_event). 18 of 18 streams pass. Version A takes part up to M = 10,000.</p>
+<p>Queue concentration check (concentration_check.csv, from the benchmark run at commit 4b9df5f): results compared after every event, books and invariants at 10 checkpoints; then a 100% sale through the queues, checked against the price-time oracle (invariants.check_event). 18 of 18 streams pass. Version A takes part up to M = 10,000.</p>
 <details><summary>Concentration check, every stream</summary>
 <table>
 <tr><th>stream</th><th>versions</th><th>events</th><th>book checkpoints</th><th>mismatches</th><th>invariant failures</th><th>full sale: fills</th><th>price levels</th><th>max fills at one price</th><th>price-time check</th><th>result</th></tr>
@@ -113,7 +122,7 @@ B-sorted and B-heap (dict + FIFO queues per price; sorted key list vs heap).</p>
 <tr><td>buildup_M100000_seed44_L1000</td><td>b_sorted, b_heap</td><td>100000</td><td>10</td><td>0</td><td>0</td><td>50010</td><td>1000</td><td>74</td><td>pass</td><td>pass</td></tr>
 </table>
 </details>
-<p>Checks after every timed replay, build and sale (fill count and final book size vs the dataset manifest; conservation of the sold quantity): 2,216 of 2,216 measurements agree, 0 mismatches.</p>
+<p>Checks after every timed replay, build and sale of the benchmark run at commit 4b9df5f (fill count and final book size vs the dataset manifest; conservation of the sold quantity): 2,216 of 2,216 measurements agree, 0 mismatches.</p>
 
 <h2>Replay scaling: construction and full streams</h2>
 <p>Engine replay of preloaded events on a fresh book (parsing excluded, reported separately). buildup and crowded are the submission flood (book construction: every event rests); the others are full mixed streams. Point = median over seeds 42, 43, 44 of each seed's 5-repeat median; error bar = fastest to slowest of all 15 timed repeats. Units: seconds.</p>

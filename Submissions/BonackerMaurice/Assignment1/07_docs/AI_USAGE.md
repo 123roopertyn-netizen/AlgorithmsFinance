@@ -307,5 +307,36 @@ Constraints: no change to the matching logic or to expected test values.
 |---|---|---|
 | T15 | "How to print the final book" is implemented as a new option, `--print-book`. It prints a header line, then one JSON order per line on stdout; redirect to save it. | |
 | T16 | Invalid UTF-8 and nesting too deep to parse are also reported as "malformed JSON line n". Both are lines the replay cannot parse. | |
-| T17 | The dashboard's test table still shows the 40 tests from the benchmark run (`tests_by_case.csv` was not refreshed), so it matches `benchmark_run.json`. The current suite has 182 tests. | |
+| T17 | The dashboard's test table still shows the 40 tests from the benchmark run (`tests_by_case.csv` was not refreshed), so it matches `benchmark_run.json`. The current suite has 182 tests. | **Corrected** (Maurice): re-export with all 182 tests and label the table with the commit it ran on (see "Test table re-export" below). |
 | T18 | Reject cases beyond your list were added: zero and negative values, a float `seq`, a decreasing `seq`, side `BID`, and a still-live duplicate id. The duplicate is the contrast to the "reuse after the order is gone" case. | |
+
+### Test table re-export (23 Nov 2026)
+
+Maurice asked for `tests_by_case.csv` to be re-exported with the current
+182 tests and the correctness table to be labelled with its commit. The
+benchmark was not rerun.
+
+- `04_benchmarks/export_test_results.py`:
+  - It also writes `05_results/tests_by_case_run.json`. This records the
+    commit, the branch, any uncommitted code files, the source fingerprint,
+    the time, the Python and pytest versions, the exit code and the counts.
+  - The CSV has a new `case` column with the test's other parameters, for
+    example `price as string` or `timed-.jsonl.gz`. Without it, the 37
+    reject cases of one test collapsed into one row, and a later passing
+    case could hide an earlier failing one.
+- **Result:** run on commit `c77f575`, 182 of 182 pass. The one uncommitted
+  code file at that time was the export script itself. Tests and engines
+  (`02_tests`, `03_code`, `pytest.ini`, `requirements.txt`) were as
+  committed.
+- `06_dashboard/build_dashboard.py`:
+  - The test table is headed "Test cases, run on commit c77f575". The label
+    also gives the code state, and whether the checked-out code equals the
+    tested code.
+  - A test with several parameter cases shows "pass (37 cases)", or
+    "FAIL: k of n pass".
+  - The concentration check and the per-measurement checks are labelled as
+    coming from the benchmark run at commit `4b9df5f`.
+- **Note for Maurice:** after the export script is committed, rerun
+  `python 04_benchmarks/export_test_results.py`. That takes about 3 s, and
+  the label will then read "Code committed and clean".
+

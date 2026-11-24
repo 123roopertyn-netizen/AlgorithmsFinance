@@ -12,7 +12,8 @@ Final benchmark (04_benchmarks/run_benchmark.py):
     latency_summary.csv, latency_quantiles.csv
     memory_end_state.csv, memory_samples.csv
     opcounts.csv
-Correctness: tests_by_case.csv, differential_tests.csv.
+Correctness: tests_by_case.csv + tests_by_case_run.json (commit and code state
+of the test run; 04_benchmarks/export_test_results.py), differential_tests.csv.
 The only other thing it reads is the checked-out code, to say whether it is
 the code that was measured (source fingerprint).
 Writes one self-contained HTML file; charts are PNGs embedded as base64.
@@ -281,6 +282,35 @@ def section_provenance(run, env):
             + details("Measurement definitions (from benchmark_run.json)", defs))
 
 
+def test_run_label(tests, now):
+    """Which commit and code state the test table comes from."""
+    info = read_json("tests_by_case_run.json")
+    passed = sum(r["result"] == "pass" for r in tests)
+    if not info:
+        return (f"<p><b>Test cases: {passed} of {len(tests)} pass.</b> Commit unknown "
+                "(05_results/tests_by_case_run.json is missing).</p>")
+    dirty = info.get("uncommitted_code_files") or []
+    core = [f for f in dirty if f.startswith(("02_tests/", "03_code/"))
+            or f in ("pytest.ini", "requirements.txt")]
+    if not dirty:
+        state = "Code committed and clean at that time"
+    else:
+        state = ("Uncommitted code files at that time: " + ", ".join(dirty) + "; tests and "
+                 "engines (02_tests, 03_code, pytest.ini, requirements.txt) "
+                 + ("NOT as committed" if core else "as committed"))
+    same = ("unknown" if not now else
+            "yes" if now["sha256"] == info.get("source_sha256") else "NO")
+    return (f"<p><b>Test cases, run on commit {html.escape(str(info['commit'])[:7])}</b> "
+            f"(branch {html.escape(str(info.get('branch')))}, "
+            f"{info['finished_utc'].replace('T', ' ').replace('+00:00', '')} UTC, "
+            f"Python {info['python']}, pytest {info['pytest']}): <b>{passed} of {len(tests)} "
+            f"pass</b>. Command: <code>{html.escape(info['command'])}</code>. "
+            f"{html.escape(state)}. Checked-out code = tested code: {same}. "
+            "This test run is separate from the benchmark run (see Provenance). "
+            "n/a = not defined for that version (white-box tests of one variant); "
+            "a cell with several cases counts every parameter case of that test.</p>")
+
+
 def section_correctness(run):
     tests = read_csv("tests_by_case.csv")
     parts = ["<h2>Correctness</h2>"]
@@ -289,19 +319,27 @@ def section_correctness(run):
         has_none = any(r["version"] == "none" for r in tests)
         cases = {}
         for r in tests:
-            cases.setdefault((r["test"], r["source"]), {})[r["version"]] = r["result"]
+            cases.setdefault((r["test"], r["source"]), {}).setdefault(
+                r["version"], []).append(r["result"])
+
+        def cell(results):
+            ok = results.count("pass")
+            if len(results) == 1:
+                return results[0]
+            return (f"pass ({ok} cases)" if ok == len(results)
+                    else f"FAIL: {ok} of {len(results)} pass")
+
         header = (["test", "source of expected values"] + [label(v) for v in versions]
                   + (["no engine needed"] if has_none else []))
         rows = []
         for (test, source), by_version in cases.items():
-            cols = [by_version.get(v, by_version.get("all", "n/a")) for v in versions]
+            cols = [cell(by_version[v]) if v in by_version
+                    else cell(by_version["all"]) if "all" in by_version else "n/a"
+                    for v in versions]
             if has_none:
-                cols.append(by_version.get("none", ""))
+                cols.append(cell(by_version["none"]) if "none" in by_version else "")
             rows.append([test, source] + cols)
-        passed = sum(r["result"] == "pass" for r in tests)
-        parts.append(f"<p>Test cases: {passed} of {len(tests)} pass (tests_by_case.csv, "
-                     "refreshed by the benchmark run). n/a = not defined for that version "
-                     "(white-box tests of one variant).</p>")
+        parts.append(test_run_label(tests, current_fingerprint()))
         parts.append(html_table(header, rows))
 
     diff = read_csv("differential_tests.csv")
@@ -315,6 +353,7 @@ def section_correctness(run):
             f"mismatching events, {total('invariant_failures')} invariant failures, "
             f"{bad} failed streams.</p>")
 
+    bench_commit = str(((run or {}).get("git") or {}).get("commit"))[:7]
     conc = read_csv("concentration_check.csv")
     if conc:
         header = ["stream", "versions", "events", "book checkpoints", "mismatches",
@@ -325,7 +364,8 @@ def section_correctness(run):
                  r["sale_fills"], r["sale_price_levels"], r["max_fills_at_one_price"],
                  r["sale_check"], r["result"]] for r in conc]
         fails = sum(r["result"] != "pass" for r in conc)
-        parts.append("<p>Queue concentration check (concentration_check.csv): results "
+        parts.append("<p>Queue concentration check (concentration_check.csv, from the "
+                     f"benchmark run at commit {html.escape(bench_commit)}): results "
                      "compared after every event, books and invariants at 10 checkpoints; "
                      "then a 100% sale through the queues, checked against the price-time "
                      f"oracle (invariants.check_event). {len(conc) - fails} of {len(conc)} "
@@ -337,7 +377,8 @@ def section_correctness(run):
         measured = [r for r in results if r["phase"] in ("replay", "build", "sell")
                     and r["status"] in ("ok", "mismatch")]
         mism = [r for r in measured if r["status"] == "mismatch"]
-        parts.append(f"<p>Checks after every timed replay, build and sale (fill count and "
+        parts.append(f"<p>Checks after every timed replay, build and sale of the benchmark "
+                     f"run at commit {html.escape(bench_commit)} (fill count and "
                      f"final book size vs the dataset manifest; conservation of the sold "
                      f"quantity): {len(measured) - len(mism):,} of {len(measured):,} "
                      f"measurements agree, {len(mism)} mismatches.</p>")
