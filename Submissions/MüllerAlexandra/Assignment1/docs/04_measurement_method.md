@@ -222,3 +222,22 @@ warm-up count, repeat count, timer, instrumentation mode, and stopping limits.
 Correctness failures invalidate the corresponding performance comparison. A
 revision may improve one workload while losing time or memory on another; all
 such trade-offs and stopped runs remain visible.
+
+## Optional one-million-event extension
+
+This extension was proposed only after the original Version A and Version B
+114-task matrices had completed. It is therefore labelled post-hoc and is not
+represented as part of the preregistered formal matrix.
+
+The extension contains one seed-42 input for each of the five workload
+families at `M = 1,000,000`, with 1,000 available prices. It measures
+throughput only. Both versions receive the identical generated file, one
+warm-up, five measured fresh-book repeats, and the same 60-second child-process
+limit. A baseline timeout is retained as a stopped result, not replaced by an
+estimate, and no speedup is computed when either version lacks a completed
+timing.
+
+Generated million-event JSONL files stay ignored. Their generator command,
+settings, compressed byte count, and SHA-256 checksum are stored in a separate
+input plan. Raw results and statuses live under `results/extension_1m/` so the
+original 114-task result counts remain unchanged.

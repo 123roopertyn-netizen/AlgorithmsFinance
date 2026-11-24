@@ -19,10 +19,11 @@ TaskSpec = dict[str, object]
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INPUT_PLAN = PROJECT_ROOT / "experiments" / "08_input_plan.json"
+MILLION_INPUT_PLAN = PROJECT_ROOT / "experiments" / "11_million_input_plan.json"
 
 
-def _plan_inputs() -> list[dict[str, Any]]:
-    plan = json.loads(INPUT_PLAN.read_text(encoding="utf-8"))
+def _plan_inputs(path: Path = INPUT_PLAN) -> list[dict[str, Any]]:
+    plan = json.loads(path.read_text(encoding="utf-8"))
     if plan.get("input_count") != len(plan.get("inputs", [])):
         raise ValueError("input plan count does not match its entries")
     return plan["inputs"]
@@ -82,6 +83,33 @@ def formal_task_specs(version: str) -> list[TaskSpec]:
         for spec in inputs
         if _is_retained_output_input(spec)
     )
+    return tasks
+
+
+def million_task_specs(
+    version: str,
+    *,
+    inputs: list[dict[str, Any]] | None = None,
+) -> list[TaskSpec]:
+    """Return five paired throughput tasks outside the formal 114-task matrix."""
+    if version not in {"baseline", "revised"}:
+        raise ValueError(f"unknown version: {version}")
+    selected_inputs = _plan_inputs(MILLION_INPUT_PLAN) if inputs is None else inputs
+    tasks: list[TaskSpec] = []
+    for spec in selected_inputs:
+        task = _task(version, "throughput", spec)
+        stem = (
+            f"{spec['scenario']}_{spec['event_count']}_seed{spec['seed']}_"
+            f"levels{spec['levels']}"
+        )
+        task["task_id"] = f"{version}_extension_1m_throughput_{stem}"
+        task["result_path"] = (
+            f"results/extension_1m/raw/{version}/throughput/{stem}.json.gz"
+        )
+        task["status_path"] = (
+            f"results/extension_1m/status/{version}/throughput/{stem}.json"
+        )
+        tasks.append(task)
     return tasks
 
 

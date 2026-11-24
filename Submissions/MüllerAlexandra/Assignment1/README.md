@@ -93,6 +93,22 @@ Filters such as `--phase`, `--scenario`, `--event-count`, `--seed`, and
 `--task-id` support pilots and review. Formal execution begins only from a
 committed runner checkpoint.
 
+After completing the original 114-task matrix for both versions, an optional
+one-million-event extension was defined separately. It uses seed 42, all five
+workload families, throughput only, and the same warm-up, five repeats, and
+60-second limit for both versions. Large generated inputs remain ignored; the
+verified plan and metadata are retained:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\python.exe scripts\09_prepare_million_inputs.py --generate
+..\.venv\Scripts\python.exe scripts\10_run_million.py --version baseline --resume
+..\.venv\Scripts\python.exe scripts\10_run_million.py --version revised --resume
+```
+
+Extension results are stored below `results/extension_1m/` and are not counted
+as part of the original formal matrix.
+
 ## Development status
 
 1. Specification and independent tests: strengthened by pre-revision critical review.
@@ -105,6 +121,8 @@ committed runner checkpoint.
 8. Timeout-aware formal runner: 114 Version A task statuses recorded.
 9. Liquidation and diagnostic harness: Version A formal stress run recorded.
 10. Dashboard: not implemented.
+11. Optional one-million-event extension: test-first harness implemented;
+    inputs and measurements not yet generated.
 
 Validate the baseline against all supplied 10,000-event streams:
 

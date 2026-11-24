@@ -83,3 +83,12 @@ replay under Version B with zero rejected events and valid final books. No
 Version B speed or memory improvement is claimed at this checkpoint; the same
 preregistered formal tasks and stress settings must be rerun first.
 
+## Optional million-event extension
+
+After both formal matrices and stress runs were saved, the README's request to
+try one million events if feasible was revisited. A separate paired extension
+was selected: throughput only, seed 42, all five workload families, and both
+versions under the existing 60-second limit. The original matrix remains
+unchanged. Three extension-contract tests were preserved failing before the
+harness existed and then passing as part of the 217-test full suite.
+

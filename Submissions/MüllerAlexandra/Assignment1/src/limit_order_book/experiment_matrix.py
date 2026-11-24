@@ -58,6 +58,14 @@ def queue_concentration_specs() -> list[InputSpec]:
     ]
 
 
+def million_input_specs() -> list[InputSpec]:
+    """Return the optional seed-42, one-million-event scalability inputs."""
+    return [
+        _input_spec(scenario, 1_000_000, 42, DEFAULT_LEVELS)
+        for scenario in SCENARIOS
+    ]
+
+
 def experiment_input_specs() -> list[InputSpec]:
     by_path = {
         str(spec["input_path"]): spec

@@ -64,6 +64,12 @@ rejected with the reason and the verification performed.
   persistent indexes and an `O(P)` list-shift cost when a price level is
   created or removed. Its measured effect is intentionally left open until
   the unchanged formal protocol is rerun.
+- AI advised against using a Version-B-only million-event run as comparative
+  evidence. The user accepted a limited symmetric extension instead: seed 42,
+  five workload families, throughput only, both versions, and the unchanged
+  60-second limit. It is isolated from and explicitly dated after the original
+  formal matrix; stopped baseline runs remain visible and are not assigned a
+  fabricated speedup.
 
 ## AI-assisted output corrected so far
 
