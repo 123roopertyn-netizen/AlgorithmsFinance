@@ -1,7 +1,10 @@
 """Large liquidation: the same fresh bid book, sells of 10%, 100% and 200% of its bid quantity.
 
-Book: the first N BUY limits of the generator's `buildup` stream (1000 price levels) or `crowded`
-stream (4 price levels), seed 42, N in {1,000; 10,000; 100,000}; nothing crosses, so all N rest.
+Book: the first N BUY limits of the generator's `buildup` stream (1000 price levels), seed 42,
+N in {10,000; 100,000} (`--books crowded --sizes ...` also possible); nothing crosses, so all N rest.
+gc stays enabled, as in the timing runs (gc.collect() before each trial). Phase 6c: every size is a
+block with a canary before and after (bench.blocks); every row has start time and power state.
+A at 100,000 bids runs under the same 600 s limit (stopped if exceeded, nothing estimated).
 Sale quantity = ceil(fraction * total bid quantity) (at least 1 unit), integer arithmetic.
 Every trial builds a fresh empty book (build time reported separately), then times ONLY the sell
 (`process` of one MARKET_SELL: matching, state updates and fill-list construction included).
@@ -27,6 +30,7 @@ import time
 
 import generate_orders
 from bench import common
+from bench.blocks import canary_around, stamp
 from bench.common import RESULTS, append_csv, read_csv
 from bench.harness import run_limited
 from lob import VERSIONS
@@ -35,14 +39,15 @@ RAW = RESULTS / "liquidation_raw.csv"
 SUMMARY = RESULTS / "liquidation_summary.csv"
 FRACTIONS = (("10%", 1, 10), ("100%", 1, 1), ("200%", 2, 1))
 KEYS = ["version", "book", "levels", "bids", "fraction"]
-RAW_FIELDS = KEYS + ["sale_qty_units", "total_bid_qty_units", "phase", "repeat", "status",
-                     "build_seconds", "sell_seconds", "makers_touched", "price_levels_visited",
+STAMP = ["start_utc", "power_source", "battery_percent", "low_power_mode"]
+RAW_FIELDS = STAMP + KEYS + ["sale_qty_units", "total_bid_qty_units", "phase", "repeat", "status",
+                     "build_seconds", "sell_seconds", "fills", "makers_touched", "price_levels_visited",
                      "unfilled_qty_units", "fills_digest", "limit_seconds"]
-SUMMARY_FIELDS = KEYS + ["status", "reason", "repeats", "sale_qty_units", "total_bid_qty_units",
+SUMMARY_FIELDS = STAMP + KEYS + ["status", "reason", "repeats", "sale_qty_units", "total_bid_qty_units",
                          "median_sell_seconds", "min_sell_seconds", "max_sell_seconds",
-                         "median_build_seconds", "makers_touched", "price_levels_visited",
+                         "median_build_seconds", "fills", "makers_touched", "price_levels_visited",
                          "unfilled_qty_units", "fills_digest"]
-BOOKS = (("buildup", 1000), ("crowded", 4))
+BOOKS = {"buildup": 1000, "crowded": 4}
 
 
 def bid_events(scenario: str, n: int) -> list[dict]:
@@ -66,8 +71,7 @@ def _replay_build(cls, rows):
 
 
 def _trial(cls, rows, sale_event, conn, tag) -> dict:
-    gc.collect()
-    gc.disable()
+    gc.collect()                       # gc stays enabled (as in the timing runs)
     conn.send(("phase", tag, "build"))
     t0 = time.perf_counter()
     book = _replay_build(cls, rows)
@@ -76,9 +80,8 @@ def _trial(cls, rows, sale_event, conn, tag) -> dict:
     t2 = time.perf_counter()
     result = book.process(sale_event)
     t3 = time.perf_counter()
-    gc.enable()
     fills = result["fills"]
-    return {"build_s": t1 - t0, "sell_s": t3 - t2, "makers": len(fills),
+    return {"build_s": t1 - t0, "sell_s": t3 - t2, "fills": len(fills), "makers": len(fills),
             "levels": len({f["price_ticks"] for f in fills}),
             "unfilled": result["unfilled_qty_units"], "status": result["status"],
             "digest": hashlib.sha256(json.dumps(fills, sort_keys=True).encode()).hexdigest()}
@@ -110,7 +113,7 @@ def liquidation_worker(conn, version: str, scenario: str, n: int, slow_first_s: 
 
 
 def run_book(version, scenario, levels, n, limit_s, slow_first_s, repeats) -> None:
-    base = {"version": version, "book": scenario, "levels": levels, "bids": n}
+    base = {**stamp(), "version": version, "book": scenario, "levels": levels, "bids": n}
     res = run_limited(liquidation_worker, (version, scenario, n, slow_first_s, repeats), limit_s)
     qty, mode, trials, phase_at_stop = {}, {}, {}, None
     total = None
@@ -145,7 +148,7 @@ def run_book(version, scenario, levels, n, limit_s, slow_first_s, repeats) -> No
         for phase, rep, t in rows:
             append_csv(RAW, RAW_FIELDS, {**key, "sale_qty_units": qty[name],
                        "total_bid_qty_units": total, "phase": phase, "repeat": rep, "status": "ok",
-                       "build_seconds": t["build_s"], "sell_seconds": t["sell_s"],
+                       "build_seconds": t["build_s"], "sell_seconds": t["sell_s"], "fills": t["fills"],
                        "makers_touched": t["makers"], "price_levels_visited": t["levels"],
                        "unfilled_qty_units": t["unfilled"], "fills_digest": t["digest"],
                        "limit_seconds": limit_s})
@@ -170,6 +173,7 @@ def run_book(version, scenario, levels, n, limit_s, slow_first_s, repeats) -> No
             summary.update(median_sell_seconds=statistics.median(sells), min_sell_seconds=min(sells),
                            max_sell_seconds=max(sells),
                            median_build_seconds=statistics.median(t["build_s"] for t in timed),
+                           fills=timed[0]["fills"],
                            makers_touched=timed[0]["makers"], price_levels_visited=timed[0]["levels"],
                            unfilled_qty_units=timed[0]["unfilled"], fills_digest=timed[0]["digest"])
         append_csv(SUMMARY, SUMMARY_FIELDS, summary)
@@ -179,7 +183,8 @@ def run_book(version, scenario, levels, n, limit_s, slow_first_s, repeats) -> No
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--sizes", nargs="+", type=int, default=[1000, 10000, 100000])
+    parser.add_argument("--sizes", nargs="+", type=int, default=[10000, 100000])
+    parser.add_argument("--books", nargs="+", default=["buildup"], choices=sorted(BOOKS))
     parser.add_argument("--versions", nargs="+", default=["A", "B"])
     parser.add_argument("--limit-seconds", type=float, default=common.LIMIT_SECONDS)
     parser.add_argument("--slow-first-seconds", type=float, default=common.SLOW_FIRST_SECONDS)
@@ -187,12 +192,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     done = {(r["version"], r["book"], r["bids"]) for r in read_csv(SUMMARY)}
     for n in args.sizes:
-        for scenario, levels in BOOKS:
-            for version in args.versions:
-                if (version, scenario, str(n)) in done:
-                    continue
-                run_book(version, scenario, levels, n, args.limit_seconds, args.slow_first_seconds,
-                         args.repeats)
+        todo = [(sc, v) for sc in args.books for v in args.versions
+                if (v, sc, str(n)) not in done]
+        if not todo:
+            continue
+        with canary_around(f"liquidation_{n}"):
+            for scenario, version in todo:
+                run_book(version, scenario, BOOKS[scenario], n, args.limit_seconds,
+                         args.slow_first_seconds, args.repeats)
     return 0
 
 

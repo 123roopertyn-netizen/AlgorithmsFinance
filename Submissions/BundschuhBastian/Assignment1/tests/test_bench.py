@@ -305,3 +305,45 @@ def test_scenarios_of_the_plan_are_complete():
     assert common.LIMIT_SECONDS == 600 and common.SLOW_FIRST_SECONDS == 60
     assert common.TIMED_REPEATS == 5 and common.A_MILLION_THRESHOLD == 60
     assert set(PROFILES)                                  # generator profiles still importable
+
+
+# --- Phase 6c ----------------------------------------------------------------------------------
+@pytest.mark.parametrize("profile", sorted(PROFILES))
+@pytest.mark.parametrize("seed", range(6))
+def test_a_idset_variant_gives_the_same_results_as_a_after_every_event(profile, seed):
+    from bench.variants import OrderBookAIdSet
+    plain, variant = VERSIONS["A"](), OrderBookAIdSet()
+    for event in generate(seed, 300, profile):
+        assert variant.process(event) == plain.process(event)
+        assert variant.snapshot() == plain.snapshot()
+        assert variant._live == {r["order_id"] for r in plain.snapshot()}       # set = live ids
+
+
+def test_a_idset_is_labeled_and_does_not_replace_version_a():
+    from bench.variants import NAME, OrderBookAIdSet
+    assert NAME == "A_idset" and OrderBookAIdSet.name == "A_idset"
+    assert "A_idset" not in VERSIONS and VERSIONS["A"].name == "A"
+
+
+def test_liquidation_trial_keeps_gc_enabled():
+    rows = liquidation.bid_events("buildup", 50)
+    sale = {"seq": rows[-1]["seq"] + 1, "event_id": "liq", "type": "MARKET_SELL",
+            "order_id": "liq", "qty_units": 1}
+    states = []
+
+    class Conn:
+        def send(self, msg):
+            states.append(gc.isenabled())
+    liquidation._trial(VERSIONS["B"], rows, sale, Conn(), "t")
+    assert states and all(states)
+
+
+def test_flood_table_matches_the_peak_file(tmp_path, monkeypatch):
+    from bench import bench_flood
+    monkeypatch.setattr(bench_flood, "OUT", tmp_path / "flood.csv")
+    assert bench_flood.main() == 0
+    flood = read(tmp_path / "flood.csv")
+    peaks = [r for r in read(common.RESULTS / "workload_peaks.csv")
+             if r["scenario"] in ("buildup", "crowded")]
+    assert len(flood) == len(peaks) and {r["scenario"] for r in flood} == {"buildup", "crowded"}
+    assert all(int(r["peak_active_orders_B"]) <= int(r["events"]) for r in flood)

@@ -178,14 +178,32 @@ Details of how the rules are applied (also fixed before the first run):
   the scans (`scan_is_live`, `scan_best_index`, `scan_cancel`). B: elements moved when a price
   level is inserted or deleted in the sorted price list, levels dropped, compactions and records
   moved. Both: `fills`, `levels_visited` (distinct fill prices per event, summed).
-- **Liquidation.** Book = first N BUY limits of the generator stream, N in {1,000; 10,000;
-  100,000}, with 1,000 price levels (`buildup`) or 4 (`crowded`); sells of ceil(10%), 100% and
-  200% of the bid quantity; fresh book per trial; only the sell is timed (build time saved
-  separately). If a trial is stopped at the limit, the remaining sale sizes of the same book are
-  `not_run`, because they would repeat the same construction. Rule 2 applies per (version, book,
-  sale size), with one trial (build + sell) as the "replay".
-- **Queue concentration.** `buildup`, 100,000 events, seed 42, 4 / 16 / 64 / 256 / 1,000 / 4,000
-  price levels; price-time correctness by A-vs-B comparison on 5,000-event versions of the same.
+- **Phase 6c** (`bench/liquidation.py`, `bench_concentration.py`, `bench_churn.py`, `bench_flood.py`,
+  `bench_fairness.py`): same conditions as 6a and 6b (AC power, canary before and after each block,
+  start time and power state on every row, gc enabled, 600 s limit, 60 s single-measurement rule).
+- **Liquidation** (`results/liquidation_summary.csv`, `liquidation_raw.csv`). Book = first N BUY
+  limits of the `buildup` stream (1,000 price levels), seed 42, N = 10,000 (A and B) and 100,000
+  (B; A under the same 600 s limit: if the build or sale of a trial reaches it, the trial is
+  `stopped` and the remaining sale sizes of that book are `not_run`, nothing is estimated); sells of
+  ceil(10%), 100% and 200% of the total bid quantity (integer arithmetic); fresh book per trial;
+  only the sell is timed (build time saved separately). Per trial: `fills` (= makers touched, each
+  maker appears once), `price_levels_visited` (distinct fill prices), `unfilled_qty_units`, and a
+  hash of the fill list (A and B must agree). Rule 2 applies per (version, book, sale size), with
+  one trial (build + sell) as the "replay". The first draft disabled gc during trials; it was
+  changed to enabled before any liquidation result was produced.
+- **Queue concentration** (`results/concentration_raw.csv`). `buildup`, 100,000 events, seed 42, 4 /
+  16 / 64 / 256 / 1,000 / 4,000 price levels, A and B, the usual timing rules; the 1,000-level
+  stream is measured again here so all six levels share one set of conditions. Price-time
+  correctness on these streams: A-vs-B comparison in `tests/test_generated_data.py`.
+- **Cancel churn** (`results/cancel_churn_scaling.csv`). M = 1,000 ... 1,000,000: time from timing run
+  2 (median, seconds per event) and a fresh `tracemalloc` run per M (held after the replay, peak,
+  every 10%). "No growth" = the bytes stay flat while M grows 1,000-fold.
+- **Flood** (`results/flood_peaks.csv`). Peak active orders B and peak price levels P of the
+  `buildup` and `crowded` streams, from `results/workload_peaks.csv`.
+- **Fairness check** (`results/fairness_time.csv`), 10,000 events only: A, **`A_idset`** (A plus a
+  set of live order ids so that "is this id live?" is O(1); `bench/variants.py`, everything else is
+  A's code, results identical to A after every event in `tests/test_bench.py`) and B on the five
+  scenarios. The variant is labeled in the `version` column and never replaces Version A.
 
 
 ## Measured-data definitions
