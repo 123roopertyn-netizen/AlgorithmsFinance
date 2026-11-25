@@ -1,8 +1,9 @@
-"""Shared order book API and explicit implementation selection.
+"""Shared order book routing and explicit implementation selection.
 
-BaselineOrderBook and RevisedOrderBook are separate implementation scaffolds.
-Their matching handlers remain pending. ComparedOrderBook checks both versions
-after each event, including rejected events and calls to public handlers.
+BaselineOrderBook implements matching, validation, cancellation and inspection
+using a list of individual orders. RevisedOrderBook is still a scaffold.
+ComparedOrderBook checks both versions after each event, including rejected
+events and calls to public handlers.
 """
 
 from copy import deepcopy
@@ -51,7 +52,218 @@ class OrderBook:
 
 
 class BaselineOrderBook(OrderBook):
-    """Version A: baseline matching implementation still to be written."""
+    """Version A: scan individual orders for matching, lookup and removal."""
+
+    def __init__(self):
+        self._last_seq = 0
+        self._initialize_storage()
+
+    def _initialize_storage(self):
+        self._orders = []
+
+    def AddLimitOrder(self, event: dict) -> dict:
+        """Match at eligible resting prices, then rest any incoming residual."""
+        return self._handle(event, "LIMIT")
+
+    def FillMarketSell(self, event: dict) -> dict:
+        """Sell into the best bids; discard any unsold residual."""
+        return self._handle(event, "MARKET_SELL")
+
+    def CancelOrder(self, event: dict) -> dict:
+        """Remove the target's remaining quantity, if the order is still live."""
+        return self._handle(event, "CANCEL")
+
+    def inspect_book(self) -> dict:
+        """Return independent snapshots sorted by price, then arrival sequence."""
+        bids, asks = [], []
+        for order in self._active_orders():
+            snapshot = dict(order)
+            if order["side"] == "BUY":
+                bids.append(snapshot)
+            else:
+                asks.append(snapshot)
+        bids.sort(key=lambda order: (-order["price_ticks"], order["arrival_seq"]))
+        asks.sort(key=lambda order: (order["price_ticks"], order["arrival_seq"]))
+        return {"bids": bids, "asks": asks}
+
+    @staticmethod
+    def _valid_id(value):
+        return isinstance(value, str) and bool(value.strip())
+
+    @staticmethod
+    def _positive_integer(value):
+        # bool is an int subclass, so isinstance(value, int) is too permissive.
+        return type(value) is int and value > 0
+
+    def _validate(self, event, expected_type):
+        if not isinstance(event, dict):
+            return "An event must be a dictionary."
+        for field in ("seq", "event_id", "type"):
+            if field not in event:
+                return f"Missing required field: {field}."
+        if not self._valid_id(event["event_id"]):
+            return "event_id must be a nonblank string."
+        if not self._positive_integer(event["seq"]):
+            return "seq must be a positive built-in integer."
+        if event["seq"] <= self._last_seq:
+            return "seq must exceed the last accepted sequence."
+        if event["type"] != expected_type:
+            return f"This handler requires an event of type {expected_type}."
+
+        if expected_type == "LIMIT":
+            required = ("order_id", "side", "price_ticks", "qty_units")
+        elif expected_type == "MARKET_SELL":
+            required = ("order_id", "qty_units")
+        else:
+            required = ("target_order_id",)
+        for field in required:
+            if field not in event:
+                return f"Missing required field: {field}."
+
+        if expected_type == "CANCEL":
+            if not self._valid_id(event["target_order_id"]):
+                return "target_order_id must be a nonblank string."
+            return None
+
+        if not self._valid_id(event["order_id"]):
+            return "order_id must be a nonblank string."
+        if not self._positive_integer(event["qty_units"]):
+            return "qty_units must be a positive built-in integer."
+        if expected_type == "LIMIT":
+            if event["side"] not in ("BUY", "SELL"):
+                return "side must be BUY or SELL."
+            if not self._positive_integer(event["price_ticks"]):
+                return "price_ticks must be a positive built-in integer."
+        if self._find_order(event["order_id"]) is not None:
+            return "A submission with this order_id is already live."
+        return None
+
+    @staticmethod
+    def _reject(event, reason):
+        result = {"status": "rejected", "reason": reason}
+        if isinstance(event, dict) and "event_id" in event:
+            result["event_id"] = deepcopy(event["event_id"])
+        return result
+
+    def _handle(self, event, expected_type):
+        # Complete validation before any matching, storage or sequence mutation.
+        reason = self._validate(event, expected_type)
+        if reason is not None:
+            return self._reject(event, reason)
+        if expected_type == "LIMIT":
+            result = self._apply_limit(event)
+        elif expected_type == "MARKET_SELL":
+            result = self._apply_market_sell(event)
+        else:
+            result = self._apply_cancel(event)
+        self._last_seq = event["seq"]
+        return result
+
+    @staticmethod
+    def _submission_result(event, status, fills, remaining):
+        return {
+            "event_id": event["event_id"],
+            "order_id": event["order_id"],
+            "status": status,
+            "unfilled_qty_units": remaining,
+            "fills": fills,
+        }
+
+    def _match(self, side, quantity, taker_id, price_limit=None):
+        opposite = "SELL" if side == "BUY" else "BUY"
+        fills = []
+        remaining = quantity
+        while remaining > 0:
+            maker = self._best_order(opposite)
+            if maker is None:
+                break
+            price = maker["price_ticks"]
+            if price_limit is not None:
+                if side == "BUY" and price > price_limit:
+                    break
+                if side == "SELL" and price < price_limit:
+                    break
+
+            executed = min(remaining, maker["qty_units"])
+            fills.append({
+                "maker_id": maker["order_id"],
+                "taker_id": taker_id,
+                "price_ticks": price,
+                "qty_units": executed,
+            })
+            remaining -= executed
+            maker["qty_units"] -= executed
+            if maker["qty_units"] == 0:
+                self._remove_order(maker["order_id"])
+            # A partial maker stays in its original list/queue position.
+        return fills, remaining
+
+    def _apply_limit(self, event):
+        fills, remaining = self._match(
+            event["side"], event["qty_units"], event["order_id"],
+            price_limit=event["price_ticks"],
+        )
+        if remaining:
+            self._rest_order({
+                "order_id": event["order_id"],
+                "side": event["side"],
+                "price_ticks": event["price_ticks"],
+                "qty_units": remaining,
+                "arrival_seq": event["seq"],
+            })
+        status = "filled" if remaining == 0 else "resting"
+        return self._submission_result(event, status, fills, remaining)
+
+    def _apply_market_sell(self, event):
+        fills, remaining = self._match(
+            "SELL", event["qty_units"], event["order_id"],
+        )
+        if remaining == 0:
+            status = "filled"
+        else:
+            status = "partial" if fills else "unfilled"
+        return self._submission_result(event, status, fills, remaining)
+
+    def _apply_cancel(self, event):
+        target = self._find_order(event["target_order_id"])
+        if target is None:
+            status, quantity = "not_found", 0
+        else:
+            status, quantity = "cancelled", target["qty_units"]
+            self._remove_order(event["target_order_id"])
+        return {
+            "event_id": event["event_id"],
+            "target_order_id": event["target_order_id"],
+            "status": status,
+            "cancelled_qty_units": quantity,
+        }
+
+    # Baseline storage: every lookup, best-price selection and removal scans.
+    def _active_orders(self):
+        return iter(self._orders)
+
+    def _find_order(self, order_id):
+        return next(
+            (order for order in self._orders if order["order_id"] == order_id),
+            None,
+        )
+
+    def _best_order(self, side):
+        candidates = (order for order in self._orders if order["side"] == side)
+        if side == "BUY":
+            key = lambda order: (-order["price_ticks"], order["arrival_seq"])
+        else:
+            key = lambda order: (order["price_ticks"], order["arrival_seq"])
+        return min(candidates, key=key, default=None)
+
+    def _rest_order(self, order):
+        self._orders.append(order)
+
+    def _remove_order(self, order_id):
+        for index, order in enumerate(self._orders):
+            if order["order_id"] == order_id:
+                return self._orders.pop(index)
+        return None
 
 
 class RevisedOrderBook(OrderBook):

@@ -7,13 +7,40 @@ The teacher's instructions are in [ASSIGNMENT.md](ASSIGNMENT.md).
 
 ## Current status
 
-This project is at the test-first stage. The categorized tests, implementation
-selector, comparison wrapper and external file dispatcher are present.
-BaselineOrderBook and RevisedOrderBook are separate scaffolds: their matching,
-cancellation, event validation and book inspection methods still raise
-NotImplementedError. Behavioral tests are expected to fail until those methods
-are implemented. Passing tests against test doubles only verifies the supporting
-comparison and file-handling code.
+BaselineOrderBook implements event validation, crossing limit buys and sells,
+market sells, cancellation and canonical book inspection. It inherits the shared
+routing in OrderBook.process_event(). The existing 49 test cases are preserved.
+
+Run the Baseline tests with an explicit selection:
+
+~~~console
+python -B test_order_book.py --implementation baseline
+~~~
+
+RevisedOrderBook remains a scaffold. Its behavioral tests and comparison against
+the real Revised version still require that implementation. Comparison tests
+using test doubles exercise the comparison wrapper independently.
+
+## Baseline design
+
+The Baseline stores individual resting orders in a list. It scans for the best
+opposite-side price and earliest arrival at that price for each maker fill.
+Executions use integer quantities and the resting maker's price. A partial maker
+retains its arrival sequence; an exhausted maker is removed. Incoming limit
+residuals rest, while market sell residuals are returned without resting.
+
+Validation completes before changing the book or accepted sequence. Unknown
+cancellations are accepted with not_found; rejected events leave both unchanged.
+Inspection returns independent dictionaries in canonical price-time order.
+
+With B active orders at the start of an operation and F maker fills:
+
+- Live-ID lookup and cancellation scan the list: O(B).
+- A limit or market sell takes O((F + 1) * B), including scans and removals.
+- Inspection sorts and copies the active orders: O(B log B) time and O(B) output.
+- Live storage is O(B); the current event's returned fill list uses O(F) space.
+
+These are algorithm bounds, not measured benchmark results.
 
 ## Common interface
 
