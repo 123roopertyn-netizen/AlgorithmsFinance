@@ -27,9 +27,9 @@ The external dispatcher exposes replay_file(path, book), for .jsonl and
 .jsonl.gz files, returning results in input order. Invalid file paths and
 malformed records raise informative exceptions.
 
-Baseline and Revised use the same list-based matching and validation rules.
-Revised additionally indexes active resting orders in orders_by_id.
-Both implementations and the comparison wrapper run the same behavioral tests.
+Baseline uses list storage; Revised uses a FIFO deque per side and price.
+Both preserve the same validation, integer units and price-time matching rules.
+The same behavioral tests cover each implementation and comparison mode.
 """
 import argparse
 from copy import deepcopy

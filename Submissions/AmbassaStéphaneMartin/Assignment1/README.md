@@ -7,14 +7,17 @@ The teacher's instructions are in [ASSIGNMENT.md](ASSIGNMENT.md).
 
 ## Current status
 
-BaselineOrderBook implements matching, validation, cancellation and inspection
-using a list of individual resting orders. RevisedOrderBook now reuses those
-rules and adds only an orders_by_id dictionary. Its matching and removal storage
-is still the same list. FIFO queues and price heaps have not been introduced.
+BaselineOrderBook retains its original list-based implementation. RevisedOrderBook
+now stores resting orders in side-specific price dictionaries:
+bids_by_price for BUY orders and asks_by_price for SELL orders. Each price maps to
+a collections.deque, and orders_by_id indexes the same live order objects.
 
-Both versions inherit the shared routing in OrderBook.process_event(). Compare
-mode checks ordered results and canonical books after every event. The existing
-49 behavioral test cases retain their assertions and expected results.
+Both versions share routing, validation, integer matching arithmetic and result
+construction. Revised overrides storage operations. It scans occupied prices
+with max() or min(); price heaps and benchmarking are later stages.
+
+Compare mode checks ordered results and canonical books after every event.
+The existing 49 behavioral test cases retain their assertions and expected results.
 
 ## Baseline design
 
@@ -37,110 +40,156 @@ With B active orders at the start of an operation and F maker fills:
 
 These are algorithm bounds, not measured benchmark results.
 
-## Revised, stage 1: orders_by_id
+## Revised, stage 2: FIFO queues by price
 
-orders_by_id maps each active resting order ID to the same order dictionary held
-in the existing list. It is an index into the live book, rather than a copy of
-the order or a record of past submissions. For example, A bidding for 2 BTC at
-$100 per BTC is represented as:
+The previous stage added orders_by_id while retaining the Baseline list.
+This stage replaces Revised's flat storage with two dictionaries of FIFO deques:
+
+- bids_by_price[price_ticks]: BUY orders at that price.
+- asks_by_price[price_ticks]: SELL orders at that price.
+- orders_by_id[order_id]: the same active order object stored in exactly one deque.
+
+The Baseline class is preserved. Revised inherits its validation and matching
+rules and overrides the storage hooks called by those rules.
+
+### Matching and index lifecycle
+
+1. Storage initialization creates the three empty dictionaries.
+2. A resting limit residual is appended to its side's deque at its integer price
+   and added to orders_by_id. Accepted arrival sequences strictly increase, so
+   appending preserves original arrival order, including for residual limits.
+3. _best_order() chooses max(bids_by_price) for bids or min(asks_by_price) for asks,
+   then returns that deque's first order. Dictionary insertion order and
+   identifier spelling do not determine execution priority.
+4. A partial maker remains at the queue head with its original arrival sequence.
+   Its quantity changes on the shared object, immediately updating the index view.
+5. An exhausted head is removed with popleft(). A cancellation removes the target
+   from its actual deque. The index entry is deleted, and an empty price level is
+   removed immediately.
+
+Execution still occurs at the resting maker's price. Incoming limit residuals
+rest at their own limit price; unfilled market sell quantities never enter a queue
+or the ID index. Rejected events leave the queues, index and accepted sequence
+unchanged. Unknown cancellations retain their valid not_found behavior.
+
+Inspection still returns independent snapshots in canonical price-time order.
+It iterates the live ID index, then applies the same sorting as Baseline.
+
+### Integer representation
+
+All submitted prices, quantities and arrival sequences remain strictly positive
+built-in Python int values. Booleans, floats, zero and negative submitted numeric
+values are rejected by the inherited validation.
+
+- price_ticks represents USD cents per BTC: USD 60,000 is 6000000 ticks.
+- qty_units represents units of 10^-8 BTC: one BTC is 100000000 units.
+- seq is the strictly increasing original arrival sequence.
+
+Queues and indexes store those integers unchanged. Matching uses only integer
+comparisons, min() and subtraction; no float conversions or rescaling were added.
+
+### Tiny FIFO and cancellation example
 
 ~~~python
-orders_by_id = {
-    "A": {
-        "order_id": "A",
-        "side": "BUY",
-        "price_ticks": 10_000,
-        "qty_units": 200_000_000,
-        "arrival_seq": 1,
-    }
-}
-~~~
-
-The Revised implementation changes four small storage hooks:
-
-1. Construction creates an empty orders_by_id dictionary.
-2. _find_order() looks up an active ID in that dictionary.
-3. _rest_order() first adds the residual order to the existing list, then indexes
-   that exact object. A fully executed incoming limit never enters the index;
-   incoming market orders and their unsold residuals never rest.
-4. _remove_order() uses the existing list removal, then removes the ID from the
-   dictionary after a full maker fill or successful cancellation.
-
-A partial maker fill changes the shared order object's qty_units, so the list
-and dictionary immediately show the same remaining quantity. Matching still scans
-the list and chooses by price and original arrival sequence. No priority depends
-on dictionary iteration order.
-
-Validation still runs before matching or storage changes. Rejected events leave
-the list, index and accepted sequence unchanged. An unknown cancellation is valid,
-returns not_found, and leaves both storage views unchanged.
-
-### Tiny cancellation example
-
-~~~python
+from collections import deque
 from order_book import RevisedOrderBook
 
 book = RevisedOrderBook()
-book.process_event({
-    "seq": 1, "event_id": "add-A", "type": "LIMIT",
-    "order_id": "A", "side": "BUY",
-    "price_ticks": 10_000, "qty_units": 200_000_000,
-})
-book.process_event({
-    "seq": 2, "event_id": "sell-1", "type": "MARKET_SELL",
-    "order_id": "S", "qty_units": 100_000_000,
-})
-assert book.orders_by_id["A"]["qty_units"] == 100_000_000
+for seq, order_id in enumerate(("Z", "A"), start=1):
+    book.process_event({
+        "seq": seq, "event_id": f"add-{order_id}", "type": "LIMIT",
+        "order_id": order_id, "side": "BUY",
+        "price_ticks": 6_000_000, "qty_units": 100_000_000,
+    })
 
-result = book.process_event({
-    "seq": 3, "event_id": "cancel-A", "type": "CANCEL",
+queue = book.bids_by_price[6_000_000]
+assert isinstance(queue, deque)
+assert [order["order_id"] for order in queue] == ["Z", "A"]
+
+sale = book.process_event({
+    "seq": 3, "event_id": "sell-half", "type": "MARKET_SELL",
+    "order_id": "S1", "qty_units": 50_000_000,
+})
+assert sale["fills"][0]["maker_id"] == "Z"
+assert queue[0] is book.orders_by_id["Z"]
+assert queue[0]["qty_units"] == 50_000_000
+assert queue[0]["arrival_seq"] == 1
+
+cancel = book.process_event({
+    "seq": 4, "event_id": "cancel-A", "type": "CANCEL",
     "target_order_id": "A",
 })
-assert result == {
-    "event_id": "cancel-A", "target_order_id": "A",
-    "status": "cancelled", "cancelled_qty_units": 100_000_000,
-}
+assert cancel["cancelled_qty_units"] == 100_000_000
+assert [order["order_id"] for order in queue] == ["Z"]
+assert set(book.orders_by_id) == {"Z"}
+
+book.process_event({
+    "seq": 5, "event_id": "fill-Z", "type": "MARKET_SELL",
+    "order_id": "S2", "qty_units": 50_000_000,
+})
 assert book.orders_by_id == {}
-assert book.inspect_book() == {"bids": [], "asks": []}
+assert book.bids_by_price == {}
+assert book.asks_by_price == {}
 ~~~
 
-A starts with 2 BTC. The sale consumes 1 BTC. Cancelling A removes only its
-remaining 1 BTC from both the index and the list.
+Z trades before A because Z arrived first. Its partial fill retains that priority.
+Cancelling A leaves Z in place. Completing Z removes the now-empty bid price level.
 
-### Lookup versus removal cost
+### Lookup, removal and cleanup costs
 
-For B active orders, dictionary lookup and deletion take expected O(1) time.
-However, the existing list removal still takes O(B): it scans for the order's
-position and may shift the remaining list entries. Therefore cancellation as a
-whole remains O(B). This stage speeds ID lookup and live-ID validation; it does
-not make list removal or best-price selection constant time.
+Let B be active orders, P occupied prices on the selected side, Q the length of
+the target price queue, and F the number of maker fills.
 
-The index adds O(B) references. The resting order dictionaries are shared,
-so their field data is not duplicated. Matching retains the Baseline's
-O((F + 1) * B) bound for F maker fills; canonical inspection still sorts the
-active orders. FIFO queues are reserved for a later stage.
+| Operation | Cost in this stage |
+| --- | --- |
+| Find an active order by ID | Expected O(1) |
+| Select the highest bid or lowest ask | O(P) price scan |
+| Append to an existing price queue | Expected O(1), including index update |
+| Remove a completed maker or cancel the queue head | Expected O(1) |
+| Cancel an order elsewhere in its deque | O(Q) |
+| Canonical book inspection | O(B log B) time and O(B) output |
+
+Cancellation finds the target and its price queue directly through the index,
+without scanning prices. Finding the order is expected O(1), but searching and
+removing a non-head order from deque is O(Q). Total cancellation is therefore
+expected O(1) at the head and O(Q) otherwise. It is not uniformly constant time.
+
+Removal is eager: cancelled and fully filled orders leave both the queue and the
+index immediately. Empty price levels are deleted immediately. There are no
+inactive queue entries, tombstones or deferred cleanup costs in this stage.
+
+Matching pays the O(P) best-price scan for each selected maker, plus queue updates
+and O(F) fill-list construction: O((F + 1) * (P + 1)) is an upper bound. Live
+storage uses O(B + P); queue and index entries reference the same order objects.
+No price heaps or timing/memory benchmarks are part of this stage.
 
 ### Verification for this stage
 
-The same 49 existing test methods were run in each mode before and after adding
-the index. Their assertions, code and expected results are unchanged; only the
-test module's status description was updated.
+The same existing 49 tests were run with Python 3.14.5 before and after this stage.
 
-| Mode | Before this stage | After this stage |
+| Mode | Before FIFO queues | After FIFO queues |
 | --- | --- | --- |
 | Baseline | 49 passed | 49 passed |
-| Revised | 39 methods errored | 49 passed |
-| Compare | 39 methods errored | 49 passed |
+| Revised | 49 passed | 49 passed |
+| Compare | 49 passed | 49 passed |
 
-Before the change, Revised and Compare each produced 639 error records across
-those 39 methods because generated cases include repeated subtests. Every error
-was NotImplementedError from the unfinished Revised handlers. After the change,
-all three modes completed with zero failures and zero errors.
+All six runs completed with zero failures, errors or skips. The collected test
+names were identical. The Baseline class source fingerprint was unchanged.
+The existing test code, assertions and expected results were verified unchanged;
+only the test module's storage-description docstring was updated.
 
-Additional checks verified index membership and shared object identity after
-1,500 generated events, unchanged state after six rejected events, full-fill
-cleanup, incoming residual handling and the cancellation example above.
-The Baseline class source hash was identical before and after this stage.
+Additional checks compared Baseline and Revised after each event and verified
+that queue membership and orders_by_id contain the same shared live objects:
+
+- 3,000 generated events across the five existing scenarios and three seeds.
+- 27 directed events covering bid/ask FIFO, middle and head cancellations,
+  partial-maker priority, full-fill cleanup, limit/market residuals and exact
+  integers larger than 2^53.
+- 36 rejected numeric inputs with unchanged queues, index and accepted sequence.
+- 404 structural cleanup events checking immediate removal of empty price levels.
+- The runnable FIFO/cancellation example above.
+
+These are correctness checks; no timing or memory benchmarks were performed.
 
 ## Common interface
 
