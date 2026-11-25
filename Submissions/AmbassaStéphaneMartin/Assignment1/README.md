@@ -8,16 +8,17 @@ The teacher's instructions are in [ASSIGNMENT.md](ASSIGNMENT.md).
 ## Current status
 
 BaselineOrderBook retains its original list-based implementation. RevisedOrderBook
-now stores resting orders in side-specific price dictionaries:
-bids_by_price for BUY orders and asks_by_price for SELL orders. Each price maps to
-a collections.deque, and orders_by_id indexes the same live order objects.
+uses an order-ID index, FIFO deques by side and price, and standard-library heapq
+price indexes. Ask heap keys are positive prices; bid heap keys are negated prices.
+Original prices in orders, fills and canonical snapshots remain positive integers.
 
 Both versions share routing, validation, integer matching arithmetic and result
-construction. Revised overrides storage operations. It scans occupied prices
-with max() or min(); price heaps and benchmarking are later stages.
+construction. Revised overrides storage and best-price selection. Per-order
+cancellation still removes orders immediately from their deques and orders_by_id.
 
 Compare mode checks ordered results and canonical books after every event.
-The existing 49 behavioral test cases retain their assertions and expected results.
+The original 49 behavioral tests and expected results are preserved. Focused
+heap regressions are in test_price_heaps.py. This stage adds no benchmarks.
 
 ## Baseline design
 
@@ -40,156 +41,191 @@ With B active orders at the start of an operation and F maker fills:
 
 These are algorithm bounds, not measured benchmark results.
 
-## Revised, stage 2: FIFO queues by price
+## Revised, stage 3: price heaps
 
-The previous stage added orders_by_id while retaining the Baseline list.
-This stage replaces Revised's flat storage with two dictionaries of FIFO deques:
+The previous stage used max() and min() over occupied price levels. Revised now
+selects prices with heapq while preserving the existing FIFO deques and matching
+rules. Baseline and the shared validation and matching code are unchanged.
 
-- bids_by_price[price_ticks]: BUY orders at that price.
-- asks_by_price[price_ticks]: SELL orders at that price.
-- orders_by_id[order_id]: the same active order object stored in exactly one deque.
+### Live levels versus retained heap entries
 
-The Baseline class is preserved. Revised inherits its validation and matching
-rules and overrides the storage hooks called by those rules.
+- bids_by_price and asks_by_price contain only active, nonempty price queues.
+  Their keys are original positive price_ticks.
+- orders_by_id contains exactly the active resting orders and shares each order
+  object with its deque. Partial fills update that shared object's quantity.
+- bid_price_heap is a min-heap of negated integer bid prices.
+- ask_price_heap is a min-heap of original positive integer ask prices.
+- _bid_heap_keys and _ask_heap_keys record every retained heap key, including
+  inactive keys. Each price has at most one retained key per side.
 
-### Matching and index lifecycle
+The live price dictionaries are authoritative. A heap stores only prices, never
+orders or arrival sequences. Its retained entries can therefore outnumber active
+price levels without retaining cancelled orders.
 
-1. Storage initialization creates the three empty dictionaries.
-2. A resting limit residual is appended to its side's deque at its integer price
-   and added to orders_by_id. Accepted arrival sequences strictly increase, so
-   appending preserves original arrival order, including for residual limits.
-3. _best_order() chooses max(bids_by_price) for bids or min(asks_by_price) for asks,
-   then returns that deque's first order. Dictionary insertion order and
-   identifier spelling do not determine execution priority.
-4. A partial maker remains at the queue head with its original arrival sequence.
-   Its quantity changes on the shared object, immediately updating the index view.
-5. An exhausted head is removed with popleft(). A cancellation removes the target
-   from its actual deque. The index entry is deleted, and an empty price level is
-   removed immediately.
+### Price lifecycle and recreation
 
-Execution still occurs at the resting maker's price. Incoming limit residuals
-rest at their own limit price; unfilled market sell quantities never enter a queue
-or the ID index. Rejected events leave the queues, index and accepted sequence
-unchanged. Unknown cancellations retain their valid not_found behavior.
+1. Appending to an active level changes only its deque and orders_by_id.
+2. Creating a level pushes its signed price key only if that key is not already
+   retained. The resting order joins the tail using its original arrival sequence.
+3. A partial maker stays at the head. A full fill or cancellation immediately
+   removes the order from its deque and the ID index. An empty live level is
+   deleted immediately; its heap key may temporarily remain.
+4. _best_order() inspects the heap root. If its decoded price is inactive, it pops
+   the key and removes it from the retained-key set, continuing until a live price
+   is found. The live deque's head is the next maker.
+5. If a deleted price becomes active again before its key was removed, the new
+   queue reuses that retained key. If root cleanup or rebuilding already removed
+   it, creation pushes a fresh key. There are no duplicate heap keys and no heap
+   references to the old queue or cancelled makers.
 
-Inspection still returns independent snapshots in canonical price-time order.
-It iterates the live ID index, then applies the same sorting as Baseline.
+FIFO at a price, partial-maker priority and execution at the resting maker's
+price are unchanged. Incoming limit residuals rest at their limit price; market
+sell residuals do not enter the book. Validation completes before any heap or
+queue mutation, so rejected events leave all indexes and the accepted seq intact.
+
+### Bounded cleanup policy
+
+For each side independently, let P be the number of active price levels and H
+the number of retained heap entries.
+
+- When P is zero, the heap and retained-key set are cleared immediately.
+- When H > 2 * P + 32, the heap is rebuilt from the current live price keys using
+  heapq.heapify(), and its retained-key set is rebuilt to match.
+- Otherwise stale keys remain until root cleanup or a later rebuild.
+
+The bound H <= 2 * P + 32 holds after every public event, with H = 0 when P = 0.
+The constant 32 is _HEAP_REBUILD_SLACK. Membership sets prevent repeated recreation
+of one retained price from adding duplicate keys. The threshold also bounds growth
+from churn over many distinct inactive prices hidden behind a better live price.
+
+Only price-key cleanup is lazy. Per-order cancellation remains eager:
+popleft() for a head order, deque.remove() for an order elsewhere in its queue,
+immediate deletion from orders_by_id, and deletion of empty live price levels.
 
 ### Integer representation
 
-All submitted prices, quantities and arrival sequences remain strictly positive
-built-in Python int values. Booleans, floats, zero and negative submitted numeric
-values are rejected by the inherited validation.
+Number representation and matching arithmetic are unchanged:
 
-- price_ticks represents USD cents per BTC: USD 60,000 is 6000000 ticks.
-- qty_units represents units of 10^-8 BTC: one BTC is 100000000 units.
-- seq is the strictly increasing original arrival sequence.
+- price_ticks is a strictly positive built-in Python int in USD cents per BTC.
+  USD 60,000 is 6000000 ticks.
+- qty_units is a strictly positive built-in Python int in units of 10^-8 BTC.
+  One BTC is 100000000 units.
+- seq is a strictly increasing positive built-in Python int.
 
-Queues and indexes store those integers unchanged. Matching uses only integer
-comparisons, min() and subtraction; no float conversions or rescaling were added.
+Floats, booleans and nonpositive submitted numeric values remain rejected.
+Negation is confined to bid heap keys. Orders, fills, queues and snapshots retain
+their original positive prices, including integers larger than 2^53.
 
-### Tiny FIFO and cancellation example
+### Tiny price recreation example
 
 ~~~python
-from collections import deque
 from order_book import RevisedOrderBook
 
 book = RevisedOrderBook()
-for seq, order_id in enumerate(("Z", "A"), start=1):
+for seq, order_id, price in ((1, "better", 6_100_000), (2, "old", 6_000_000)):
     book.process_event({
         "seq": seq, "event_id": f"add-{order_id}", "type": "LIMIT",
         "order_id": order_id, "side": "BUY",
-        "price_ticks": 6_000_000, "qty_units": 100_000_000,
+        "price_ticks": price, "qty_units": 100_000_000,
     })
 
-queue = book.bids_by_price[6_000_000]
-assert isinstance(queue, deque)
-assert [order["order_id"] for order in queue] == ["Z", "A"]
-
-sale = book.process_event({
-    "seq": 3, "event_id": "sell-half", "type": "MARKET_SELL",
-    "order_id": "S1", "qty_units": 50_000_000,
+book.process_event({
+    "seq": 3, "event_id": "cancel-old", "type": "CANCEL",
+    "target_order_id": "old",
 })
-assert sale["fills"][0]["maker_id"] == "Z"
-assert queue[0] is book.orders_by_id["Z"]
-assert queue[0]["qty_units"] == 50_000_000
-assert queue[0]["arrival_seq"] == 1
-
-cancel = book.process_event({
-    "seq": 4, "event_id": "cancel-A", "type": "CANCEL",
-    "target_order_id": "A",
-})
-assert cancel["cancelled_qty_units"] == 100_000_000
-assert [order["order_id"] for order in queue] == ["Z"]
-assert set(book.orders_by_id) == {"Z"}
+assert 6_000_000 not in book.bids_by_price
+assert -6_000_000 in book.bid_price_heap
 
 book.process_event({
-    "seq": 5, "event_id": "fill-Z", "type": "MARKET_SELL",
-    "order_id": "S2", "qty_units": 50_000_000,
+    "seq": 4, "event_id": "recreate-price", "type": "LIMIT",
+    "order_id": "new", "side": "BUY",
+    "price_ticks": 6_000_000, "qty_units": 100_000_000,
 })
+assert book.bid_price_heap.count(-6_000_000) == 1
+
+result = book.process_event({
+    "seq": 5, "event_id": "sell-two", "type": "MARKET_SELL",
+    "order_id": "S", "qty_units": 200_000_000,
+})
+assert [fill["maker_id"] for fill in result["fills"]] == ["better", "new"]
+assert [fill["price_ticks"] for fill in result["fills"]] == [6_100_000, 6_000_000]
 assert book.orders_by_id == {}
 assert book.bids_by_price == {}
-assert book.asks_by_price == {}
+assert book.bid_price_heap == []
 ~~~
 
-Z trades before A because Z arrived first. Its partial fill retains that priority.
-Cancelling A leaves Z in place. Completing Z removes the now-empty bid price level.
+The recreated level uses the new order's queue. The retained price key neither
+restores the cancelled maker nor changes the order of prices or FIFO arrivals.
 
-### Lookup, removal and cleanup costs
+### Costs and remaining limitations
 
-Let B be active orders, P occupied prices on the selected side, Q the length of
-the target price queue, and F the number of maker fills.
+Let B be active orders, P active price levels on one side, H retained heap entries,
+Q the target deque's length, and S the stale roots discarded by one selection.
 
-| Operation | Cost in this stage |
+| Operation | Cost excluding a threshold rebuild |
 | --- | --- |
 | Find an active order by ID | Expected O(1) |
-| Select the highest bid or lowest ask | O(P) price scan |
-| Append to an existing price queue | Expected O(1), including index update |
+| Read the best price when the root is live | Expected O(1) |
+| Discard S stale roots while finding the best price | O(S log(H + 1)) |
+| Create a price with a new heap key | O(log(H + 1)) |
+| Recreate a price whose key is still retained | Expected O(1) |
+| Append to an active price queue | Expected O(1) |
 | Remove a completed maker or cancel the queue head | Expected O(1) |
 | Cancel an order elsewhere in its deque | O(Q) |
 | Canonical book inspection | O(B log B) time and O(B) output |
 
-Cancellation finds the target and its price queue directly through the index,
-without scanning prices. Finding the order is expected O(1), but searching and
-removing a non-head order from deque is O(Q). Total cancellation is therefore
-expected O(1) at the head and O(Q) otherwise. It is not uniformly constant time.
+Price dictionaries and retained-key sets use expected O(1) hash operations.
+H is not the same as P: inactive price keys can remain in a heap.
 
-Removal is eager: cancelled and fully filled orders leave both the queue and the
-index immediately. Empty price levels are deleted immediately. There are no
-inactive queue entries, tombstones or deferred cleanup costs in this stage.
+A threshold rebuild costs O(H + P): constructing and heapifying the live keys
+costs O(P), while discarding old heap/set entries can cost O(H). Clearing an empty
+side costs O(H). Rebuilding is amortized across accumulated stale keys, but an
+individual operation can still pay that linear cleanup cost. Root pops likewise
+cost O(log(H + 1)) each; their cost is not a free constant-time lookup.
 
-Matching pays the O(P) best-price scan for each selected maker, plus queue updates
-and O(F) fill-list construction: O((F + 1) * (P + 1)) is an upper bound. Live
-storage uses O(B + P); queue and index entries reference the same order objects.
-No price heaps or timing/memory benchmarks are part of this stage.
+Thus total cancellation is not uniformly O(1). Its order lookup is expected O(1);
+its deque removal is O(1) at the head or O(Q) elsewhere. If the level disappears
+and triggers rebuilding or clearing, that cancellation also pays O(H + P) cleanup.
+A conservative worst-case bound is O(Q + H + P), with Q replaced by 1 at the head.
+
+Matching still builds F fill records and can trigger stale-root pops and rebuilds.
+A single event has no universal O(log P) bound. Live storage is O(B + P + H);
+the cleanup bound reduces retained price-index storage to O(P + 1) per side.
+FIFO queues and orders_by_id remain synchronized without inactive order entries.
+
+Arbitrary-order cancellation optimization and measured performance comparisons
+remain later stages. No timing or memory benchmark results are claimed here.
 
 ### Verification for this stage
 
-The same existing 49 tests were run with Python 3.14.5 before and after this stage.
+The starting revision was 2d7a68b with a clean working tree. Python 3.14.5 ran the
+same original 49 tests before and after adding heaps, explicitly selecting each
+implementation mode.
 
-| Mode | Before FIFO queues | After FIFO queues |
+| Mode | Before price heaps | After price heaps |
 | --- | --- | --- |
 | Baseline | 49 passed | 49 passed |
 | Revised | 49 passed | 49 passed |
 | Compare | 49 passed | 49 passed |
 
-All six runs completed with zero failures, errors or skips. The collected test
-names were identical. The Baseline class source fingerprint was unchanged.
-The existing test code, assertions and expected results were verified unchanged;
-only the test module's storage-description docstring was updated.
+All six runs had zero failures, errors or skips. The Baseline class source hash
+was unchanged, and the complete original test_order_book.py file was byte-for-byte
+unchanged, including every assertion and expected result.
 
-Additional checks compared Baseline and Revised after each event and verified
-that queue membership and orders_by_id contain the same shared live objects:
+All 10 additional regressions in test_price_heaps.py passed. They cover cancelled
+best prices, bid/ask ordering, positive original prices and large exact integers,
+recreation before and after stale-root cleanup, recreation after rebuilding,
+same-price and distinct-price cancellation churn, preservation of every live
+price during rebuilding, empty-book cleanup, rejected-event immutability,
+partial-maker priority and immediate per-order cancellation.
 
-- 3,000 generated events across the five existing scenarios and three seeds.
-- 27 directed events covering bid/ask FIFO, middle and head cancellations,
-  partial-maker priority, full-fill cleanup, limit/market residuals and exact
-  integers larger than 2^53.
-- 36 rejected numeric inputs with unchanged queues, index and accepted sequence.
-- 404 structural cleanup events checking immediate removal of empty price levels.
-- The runnable FIFO/cancellation example above.
+The regressions check heap order, unique retained keys, the H <= 2 * P + 32 bound,
+queue/index membership and shared order identity after each event, comparing
+public results and snapshots against Baseline.
 
-These are correctness checks; no timing or memory benchmarks were performed.
+Additional correctness checks applied those same invariants after 3,000 generated
+events across the five existing scenarios and seeds 42, 43 and 44. The runnable
+README price-recreation example also passed. No benchmark measurements were made.
 
 ## Common interface
 
@@ -236,6 +272,12 @@ python -B test_order_book.py --implementation compare --category market-sells
 
 Selectors: market-sells, price-time, limit-orders, cancellations, validation,
 integration. Omitting --category runs all six categories.
+
+Run the focused heap regression tests separately:
+
+~~~console
+python -B -m unittest -v test_price_heaps
+~~~
 
 Optional, if pytest is already installed:
 

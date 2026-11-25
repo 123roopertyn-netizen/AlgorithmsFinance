@@ -2,13 +2,14 @@
 
 BaselineOrderBook implements matching, validation, cancellation and inspection
 using a list of individual orders. RevisedOrderBook stores active orders in FIFO
-deques grouped by side and integer price, alongside an order-ID index.
+deques grouped by side and integer price, with an order-ID index and price heaps.
 ComparedOrderBook checks both versions after each event, including rejected
 events and calls to public handlers.
 """
 
 from collections import deque
 from copy import deepcopy
+import heapq
 
 
 IMPLEMENTATIONS = ("baseline", "revised", "compare")
@@ -269,12 +270,19 @@ class BaselineOrderBook(OrderBook):
 
 
 class RevisedOrderBook(BaselineOrderBook):
-    """Stage 2: an ID index and FIFO deques grouped by side and price."""
+    """Stage 3: FIFO price queues with bounded, lazily cleaned price heaps."""
+
+    _HEAP_REBUILD_SLACK = 32
 
     def _initialize_storage(self):
         self.orders_by_id = {}
         self.bids_by_price = {}
         self.asks_by_price = {}
+        self.bid_price_heap = []
+        self.ask_price_heap = []
+        # These sets include retained inactive keys and prevent duplicate pushes.
+        self._bid_heap_keys = set()
+        self._ask_heap_keys = set()
 
     def _active_orders(self):
         return self.orders_by_id.values()
@@ -282,24 +290,37 @@ class RevisedOrderBook(BaselineOrderBook):
     def _find_order(self, order_id):
         return self.orders_by_id.get(order_id)
 
+    def _price_index(self, side):
+        if side == "BUY":
+            return self.bids_by_price, self.bid_price_heap, self._bid_heap_keys
+        return self.asks_by_price, self.ask_price_heap, self._ask_heap_keys
+
     def _best_order(self, side):
-        levels = self.bids_by_price if side == "BUY" else self.asks_by_price
-        if not levels:
-            return None
-        # Scan occupied prices for now; price heaps belong to a later stage.
-        price = max(levels) if side == "BUY" else min(levels)
-        return levels[price][0]
+        levels, heap, retained_keys = self._price_index(side)
+        while heap:
+            key = heap[0]
+            price = -key if side == "BUY" else key
+            queue = levels.get(price)
+            if queue is not None:
+                return queue[0]
+            # Only prices are lazy; per-order removal remains immediate.
+            heapq.heappop(heap)
+            retained_keys.remove(key)
+        return None
 
     def _rest_order(self, order):
-        levels = (
-            self.bids_by_price if order["side"] == "BUY" else self.asks_by_price
-        )
-        price = order["price_ticks"]
+        side, price = order["side"], order["price_ticks"]
+        levels, heap, retained_keys = self._price_index(side)
         if price not in levels:
             levels[price] = deque()
-        # Accepted seq values increase, so a new residual joins the queue tail.
+            key = -price if side == "BUY" else price
+            if key not in retained_keys:
+                heapq.heappush(heap, key)
+                retained_keys.add(key)
+            # A retained key safely refers to the newly active queue at this price.
         levels[price].append(order)
         self.orders_by_id[order["order_id"]] = order
+        self._maybe_rebuild_price_heap(side)
 
     def _remove_order(self, order_id):
         order = self.orders_by_id.get(order_id)
@@ -318,7 +339,20 @@ class RevisedOrderBook(BaselineOrderBook):
         if not queue:
             del levels[price]
         del self.orders_by_id[order_id]
+        self._maybe_rebuild_price_heap(order["side"])
         return order
+
+    def _maybe_rebuild_price_heap(self, side):
+        """Bound retained keys to 2 * active levels + slack after each operation."""
+        levels, heap, retained_keys = self._price_index(side)
+        if not levels:
+            heap.clear()
+            retained_keys.clear()
+        elif len(heap) > 2 * len(levels) + self._HEAP_REBUILD_SLACK:
+            heap[:] = [-price if side == "BUY" else price for price in levels]
+            heapq.heapify(heap)
+            retained_keys.clear()
+            retained_keys.update(heap)
 
 
 def _same_value(left, right):
