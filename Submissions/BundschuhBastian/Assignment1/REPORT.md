@@ -1,7 +1,7 @@
 # Assignment 1: limit order book, Version A against Version B
 
 Bastian Bundschuh. Algorithms in Finance, Frankfurt School. All numbers come from files in `results/`
-(the dashboard shows the same files). Notation: **M** events, **B** active (resting) orders, **P** price
+(the dashboard shows the same files). Code version: commit `23b6e74` (see the end of `README.md`). Notation: **M** events, **B** active (resting) orders, **P** price
 levels, **F** fills.
 
 ## 1. Specification and model limits

@@ -289,4 +289,9 @@ of price levels the generator was set to (1,000 unless a concentration stream). 
 
 ## Submitted code version
 
-CODE_COMMIT_PLACEHOLDER
+**Code commit: `23b6e74`** (branch `assignment1-BundschuhBastian`): the last commit that changed code, tests,
+results or `requirements.txt`. Commits after it change only documentation (README, REPORT, AI_LOG, CLAUDE.md).
+Checked in a fresh clone of the pushed branch with a new Python 3.11.0 virtual environment:
+`pip install -r requirements.txt`, `pytest -q` (454 passed), `tools/verify_data.py` (all supplied files match),
+the worked-example replay for A and B (gross value 359,400.00 USD), and `streamlit run dashboard/app.py --server.headless true`
+(health check 200, pages render).
