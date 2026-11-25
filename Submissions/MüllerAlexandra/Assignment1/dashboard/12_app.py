@@ -268,48 +268,51 @@ with tab_throughput:
     )
     if not phase_scaling.empty:
         st.markdown("#### Empty-book initialization and event replay")
-        phase_chart = (
-            alt.Chart(phase_scaling)
-            .mark_line(point=alt.OverlayMarkDef(filled=True, size=80))
-            .encode(
-                x=alt.X(
-                    "event_count:Q",
-                    title="Event count (log scale)",
-                    scale=alt.Scale(type="log"),
-                ),
-                y=alt.Y(
-                    "seconds:Q",
-                    title="Seconds (log)",
-                    scale=alt.Scale(type="log"),
-                ),
-                color=alt.Color(
-                    "version:N",
-                    title="Version",
-                    sort=["baseline", "revised"],
-                ),
-                tooltip=[
-                    alt.Tooltip("phase:N", title="Phase"),
-                    alt.Tooltip("version:N", title="Version"),
-                    alt.Tooltip("event_count:Q", title="Events", format=","),
-                    alt.Tooltip("seconds:Q", title="Seconds", format=".6f"),
-                ],
-            )
-            .facet(
-                column=alt.Column(
-                    "phase:N",
-                    title=None,
-                    sort=["Empty-book initialization", "Event replay"],
+        shared_phase_domain = [
+            float(phase_scaling["seconds"].min()) * 0.8,
+            float(phase_scaling["seconds"].max()) * 1.25,
+        ]
+        for phase_name in ["Empty-book initialization", "Event replay"]:
+            phase_view = phase_scaling[phase_scaling["phase"] == phase_name]
+            phase_chart = (
+                alt.Chart(phase_view)
+                .mark_line(point=alt.OverlayMarkDef(filled=True, size=80))
+                .encode(
+                    x=alt.X(
+                        "event_count:Q",
+                        title="Event count (log scale)",
+                        scale=alt.Scale(type="log"),
+                    ),
+                    y=alt.Y(
+                        "seconds:Q",
+                        title="Seconds (log)",
+                        scale=alt.Scale(type="log", domain=shared_phase_domain),
+                    ),
+                    color=alt.Color(
+                        "version:N",
+                        title="Version",
+                        sort=["baseline", "revised"],
+                    ),
+                    tooltip=[
+                        alt.Tooltip("phase:N", title="Phase"),
+                        alt.Tooltip("version:N", title="Version"),
+                        alt.Tooltip("event_count:Q", title="Events", format=","),
+                        alt.Tooltip("seconds:Q", title="Seconds", format=".6f"),
+                    ],
+                )
+                .properties(
+                    title=phase_name,
+                    height=260,
+                    padding={"left": 55, "right": 10, "top": 10, "bottom": 10},
                 )
             )
-            .resolve_scale(y="shared")
-            .properties(padding={"left": 55, "right": 10, "top": 10, "bottom": 10})
-        )
-        st.altair_chart(phase_chart, width="stretch")
+            st.altair_chart(phase_chart, width="stretch")
         st.caption(
             "Each point is the median across completed seed-level task medians. "
             "Initialization creates a fresh empty engine only. Event replay then "
             "processes the entire preloaded stream, including book growth, matching, "
-            "and cancellations; input parsing remains outside both phases."
+            "and cancellations; input parsing remains outside both phases. The two "
+            "full-width panels share one logarithmic y-domain."
         )
 
     throughput_repeats = frame(data, "throughput_repeats")
@@ -320,41 +323,57 @@ with tab_throughput:
     ].copy()
     if not repeat_view.empty:
         st.markdown("#### Raw-repeat throughput distribution")
-        repeat_chart = (
-            alt.Chart(repeat_view)
-            .mark_boxplot(extent="min-max", size=35)
-            .encode(
-                x=alt.X(
-                    "event_count:O",
-                    title="Event count",
-                    sort="ascending",
-                ),
-                y=alt.Y(
-                    "throughput_events_per_second:Q",
-                    title="Events/second (log)",
-                    scale=alt.Scale(type="log"),
-                ),
-                color=alt.Color(
-                    "version:N",
-                    title="Version",
-                    sort=["baseline", "revised"],
-                ),
-            )
-            .facet(
-                column=alt.Column(
-                    "version:N",
-                    title=None,
-                    sort=["baseline", "revised"],
+        repeat_view["event_label"] = repeat_view["event_count"].map(
+            lambda value: f"{int(value):,}"
+        )
+        event_order = [
+            f"{int(value):,}" for value in sorted(status_view["event_count"].unique())
+        ]
+        shared_repeat_domain = [
+            float(repeat_view["throughput_events_per_second"].min()) * 0.8,
+            float(repeat_view["throughput_events_per_second"].max()) * 1.25,
+        ]
+        for version_name in ["baseline", "revised"]:
+            version_repeats = repeat_view[repeat_view["version"] == version_name]
+            if version_repeats.empty:
+                continue
+            repeat_chart = (
+                alt.Chart(version_repeats)
+                .mark_boxplot(extent="min-max", size=45)
+                .encode(
+                    x=alt.X(
+                        "event_label:N",
+                        title="Event count",
+                        scale=alt.Scale(domain=event_order),
+                        axis=alt.Axis(labelAngle=0),
+                    ),
+                    y=alt.Y(
+                        "throughput_events_per_second:Q",
+                        title="Events/second (log)",
+                        scale=alt.Scale(type="log", domain=shared_repeat_domain),
+                    ),
+                    color=alt.Color(
+                        "version:N",
+                        legend=None,
+                        scale=alt.Scale(
+                            domain=["baseline", "revised"],
+                            range=["#0B57D0", "#5AB7EB"],
+                        ),
+                    ),
+                )
+                .properties(
+                    title=f"{version_name.capitalize()} raw repeats",
+                    height=260,
+                    padding={"left": 55, "right": 10, "top": 10, "bottom": 10},
                 )
             )
-            .resolve_scale(y="shared")
-            .properties(padding={"left": 55, "right": 10, "top": 10, "bottom": 10})
-        )
-        st.altair_chart(repeat_chart, width="stretch")
+            st.altair_chart(repeat_chart, width="stretch")
         st.caption(
-            "Boxes summarize every saved raw repeat across the available seeds; "
-            "whiskers show the saved minimum and maximum. Stopped tasks contribute "
-            "no fabricated samples."
+            "Full-width version panels share the same logarithmic y-domain. Boxes "
+            "summarize every saved raw repeat across the available seeds; whiskers "
+            "show the saved minimum and maximum. Requested event counts remain on "
+            "the axis, while stopped tasks appear as honest gaps with no fabricated "
+            "samples."
         )
 
     st.markdown("#### Completed-run timing details")
@@ -487,60 +506,80 @@ with tab_latency:
     latency_long["percentile"] = latency_long["percentile"].map(
         {"median_us": "Median", "p95_us": "P95", "p99_us": "P99"}
     )
+    latency_long["scope_label"] = latency_long["scope"].map(
+        {
+            "overall": "Overall",
+            "early_10_percent": "Early 10%",
+            "late_10_percent": "Late 10%",
+            "event_type:LIMIT": "LIMIT events",
+            "event_type:CANCEL": "CANCEL events",
+            "event_type:MARKET_SELL": "MARKET_SELL events",
+        }
+    ).fillna(latency_long["scope"])
     scope_order = [
         scope
-        for scope in ["overall", "early_10_percent", "late_10_percent"]
-        if scope in set(latency_long["scope"])
+        for scope in ["Overall", "Early 10%", "Late 10%"]
+        if scope in set(latency_long["scope_label"])
     ] + sorted(
         scope
-        for scope in set(latency_long["scope"])
-        if scope not in {"overall", "early_10_percent", "late_10_percent"}
+        for scope in set(latency_long["scope_label"])
+        if scope not in {"Overall", "Early 10%", "Late 10%"}
     )
     if latency_long.empty:
         st.info("No completed latency measurement exists for this selection.")
     else:
-        latency_chart = (
-            alt.Chart(latency_long)
-            .mark_point(filled=True, size=100)
-            .encode(
-                x=alt.X("scope:N", title="Scope", sort=scope_order),
-                xOffset=alt.XOffset(
-                    "version:N", sort=["baseline", "revised"]
-                ),
-                y=alt.Y(
-                    "latency_us:Q",
-                    title="Microseconds (log)",
-                    scale=alt.Scale(type="log"),
-                ),
-                color=alt.Color(
-                    "version:N",
-                    title="Version",
-                    sort=["baseline", "revised"],
-                ),
-                tooltip=[
-                    alt.Tooltip("percentile:N", title="Percentile"),
-                    alt.Tooltip("version:N", title="Version"),
-                    alt.Tooltip("scope:N", title="Scope"),
-                    alt.Tooltip(
-                        "latency_us:Q", title="Microseconds", format=",.3f"
+        shared_latency_domain = [
+            float(latency_long["latency_us"].min()) * 0.8,
+            float(latency_long["latency_us"].max()) * 1.25,
+        ]
+        for percentile_name in ["Median", "P95", "P99"]:
+            percentile_view = latency_long[
+                latency_long["percentile"] == percentile_name
+            ]
+            latency_chart = (
+                alt.Chart(percentile_view)
+                .mark_point(filled=True, size=100)
+                .encode(
+                    x=alt.X(
+                        "scope_label:N",
+                        title="Scope",
+                        sort=scope_order,
+                        axis=alt.Axis(labelAngle=0, labelLimit=180),
                     ),
-                ],
-            )
-            .facet(
-                column=alt.Column(
-                    "percentile:N",
-                    title=None,
-                    sort=["Median", "P95", "P99"],
+                    xOffset=alt.XOffset(
+                        "version:N", sort=["baseline", "revised"]
+                    ),
+                    y=alt.Y(
+                        "latency_us:Q",
+                        title="Microseconds (log)",
+                        scale=alt.Scale(type="log", domain=shared_latency_domain),
+                    ),
+                    color=alt.Color(
+                        "version:N",
+                        title="Version",
+                        sort=["baseline", "revised"],
+                    ),
+                    tooltip=[
+                        alt.Tooltip("percentile:N", title="Percentile"),
+                        alt.Tooltip("version:N", title="Version"),
+                        alt.Tooltip("scope_label:N", title="Scope"),
+                        alt.Tooltip(
+                            "latency_us:Q", title="Microseconds", format=",.3f"
+                        ),
+                    ],
+                )
+                .properties(
+                    title=percentile_name,
+                    height=240,
+                    padding={"left": 55, "right": 10, "top": 10, "bottom": 10},
                 )
             )
-            .resolve_scale(y="shared")
-            .properties(padding={"left": 55, "right": 10, "top": 10, "bottom": 10})
-        )
-        st.altair_chart(latency_chart, width="stretch")
+            st.altair_chart(latency_chart, width="stretch")
         st.caption(
             "Median, p95, and p99 use the saved nearest-rank convention. The "
-            "logarithmic axis keeps both versions visible; these are processing "
-            "times, not network or queuing latency."
+            "three full-width panels share one logarithmic y-domain and keep both "
+            "versions visible; these are processing times, not network or queuing "
+            "latency."
         )
     st.dataframe(latency_view, width="stretch", hide_index=True)
 

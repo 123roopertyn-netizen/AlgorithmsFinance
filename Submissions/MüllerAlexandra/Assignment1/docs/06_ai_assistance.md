@@ -119,6 +119,18 @@ rejected with the reason and the verification performed.
   application tests passing. AI replaced the side-by-side facets with two
   full-width stacked charts, simplified the percentage labels, preserved a
   shared logarithmic y-domain, and strengthened the regression contract.
+- The user then found that the raw-throughput version facets had the same
+  narrow-layout defect. AI replaced them with full-width stacked version
+  panels, horizontal event-count labels, one shared logarithmic domain, and
+  explicit empty positions for requested sizes whose runs stopped. Regression
+  checks now fix both panel titles, axes, requested sizes, and shared scale.
+- The user requested an overall check for the same defect elsewhere in the
+  dashboard. AI audited every Altair chart and found the only remaining narrow
+  facets in construction/replay scaling and latency percentiles. Those were
+  replaced by full-width stacked panels with shared logarithmic domains;
+  latency scopes received readable horizontal labels. The other chart groups
+  were already structurally full-width. No measurement or expected engine
+  result was changed.
 
 ## AI-assisted output corrected so far
 

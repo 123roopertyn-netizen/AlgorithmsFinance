@@ -198,3 +198,22 @@ Both charts retain one shared logarithmic y-domain, so the layout correction
 does not create incomparable scales. Regression checks now require both named
 panels, their padding, and identical y-domains.
 
+The user's following screenshot found the same narrow-facet problem in the raw
+throughput distributions: version panels were compressed, event counts were
+vertical, and x-axis titles were duplicated. Those facets were replaced by
+full-width stacked baseline/revised box plots with horizontal labels. Both
+panels use the same logarithmic y-domain and display every requested event
+count; a stopped size is therefore an empty position rather than a hidden or
+zero-valued sample. The implementation identifier was deliberately left
+unrecorded until this visual correction receives its own commit.
+
+An ensuing dashboard-wide audit searched for the same responsive-layout defect
+rather than treating the raw-repeat screenshot as an isolated case. It found
+the only two remaining side-by-side facets: empty-book initialization versus
+replay, and the Median/P95/P99 latency panels. Both were replaced by full-width
+stacked panels with shared logarithmic y-domains. Latency scope labels are now
+human-readable and horizontal. Throughput scaling, memory, liquidation, and
+the tabular views were already full-width; no saved measurement was changed.
+Regression checks now reject reintroduction of narrow facets or unequal scales
+in all three corrected chart groups.
+

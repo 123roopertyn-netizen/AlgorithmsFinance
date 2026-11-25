@@ -65,14 +65,28 @@ def test_default_dashboard_is_paired_status_aware_and_log_scaled() -> None:
     assert set(latency_table["version"]) == {"baseline", "revised"}
 
     specs = chart_specs(app)
-    latency_spec = next(
+    assert all("facet" not in spec for spec in specs)
+    assert all(spec.get("padding", {}).get("left", 0) >= 55 for spec in specs)
+
+    latency_specs = [
         spec
         for spec in specs
-        if spec.get("facet", {}).get("column", {}).get("field") == "percentile"
+        if spec.get("encoding", {}).get("x", {}).get("field") == "scope_label"
+    ]
+    assert {spec["title"] for spec in latency_specs} == {"Median", "P95", "P99"}
+    assert all(
+        spec["encoding"]["y"]["scale"]["type"] == "log"
+        and spec["encoding"]["xOffset"]["field"] == "version"
+        and spec["encoding"]["x"]["axis"]["labelAngle"] == 0
+        and spec["padding"]["left"] == 55
+        for spec in latency_specs
     )
-    latency_encoding = latency_spec["spec"]["encoding"]
-    assert latency_encoding["y"]["scale"]["type"] == "log"
-    assert latency_encoding["xOffset"]["field"] == "version"
+    assert len(
+        {
+            tuple(spec["encoding"]["y"]["scale"]["domain"])
+            for spec in latency_specs
+        }
+    ) == 1
 
     throughput_spec = next(
         spec
@@ -85,15 +99,46 @@ def test_default_dashboard_is_paired_status_aware_and_log_scaled() -> None:
     assert throughput_spec["encoding"]["y"]["title"] == "Events/second (log)"
     assert throughput_spec["padding"]["left"] == 55
 
-    repeat_distribution_spec = next(
+    repeat_distribution_specs = [
         spec
         for spec in specs
-        if spec.get("facet", {}).get("column", {}).get("field") == "version"
-        and spec.get("spec", {}).get("mark", {}).get("type") == "boxplot"
+        if spec.get("mark", {}).get("type") == "boxplot"
+        and spec.get("encoding", {}).get("x", {}).get("field") == "event_label"
+    ]
+    assert {spec["title"] for spec in repeat_distribution_specs} == {
+        "Baseline raw repeats",
+        "Revised raw repeats",
+    }
+    assert all(
+        spec["encoding"]["y"]["scale"]["type"] == "log"
+        and spec["encoding"]["x"]["axis"]["labelAngle"] == 0
+        and spec["encoding"]["x"]["scale"]["domain"]
+        == ["1,000", "10,000", "100,000"]
+        for spec in repeat_distribution_specs
     )
     assert (
-        repeat_distribution_spec["spec"]["encoding"]["y"]["scale"]["type"]
-        == "log"
+        repeat_distribution_specs[0]["encoding"]["y"]["scale"]["domain"]
+        == repeat_distribution_specs[1]["encoding"]["y"]["scale"]["domain"]
+    )
+
+    phase_specs = [
+        spec
+        for spec in specs
+        if spec.get("title") in {"Empty-book initialization", "Event replay"}
+    ]
+    assert {spec["title"] for spec in phase_specs} == {
+        "Empty-book initialization",
+        "Event replay",
+    }
+    assert all(
+        spec["encoding"]["x"]["scale"]["type"] == "log"
+        and spec["encoding"]["y"]["scale"]["type"] == "log"
+        and spec["padding"]["left"] == 55
+        for spec in phase_specs
+    )
+    assert (
+        phase_specs[0]["encoding"]["y"]["scale"]["domain"]
+        == phase_specs[1]["encoding"]["y"]["scale"]["domain"]
     )
 
     liquidation_specs = [
