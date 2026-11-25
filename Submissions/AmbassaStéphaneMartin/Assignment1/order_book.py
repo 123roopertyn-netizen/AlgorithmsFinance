@@ -3,6 +3,7 @@
 BaselineOrderBook implements matching, validation, cancellation and inspection
 using a list of individual orders. RevisedOrderBook stores active orders in FIFO
 deques grouped by side and integer price, with an order-ID index and price heaps.
+Cancellation is logical and immediate; inactive queue entries have bounded cleanup.
 ComparedOrderBook checks both versions after each event, including rejected
 events and calls to public handlers.
 """
@@ -270,9 +271,10 @@ class BaselineOrderBook(OrderBook):
 
 
 class RevisedOrderBook(BaselineOrderBook):
-    """Stage 3: FIFO price queues with bounded, lazily cleaned price heaps."""
+    """Stage 4: lazy order cancellation with bounded queue and heap storage."""
 
     _HEAP_REBUILD_SLACK = 32
+    _QUEUE_REBUILD_SLACK = 32
 
     def _initialize_storage(self):
         self.orders_by_id = {}
@@ -280,9 +282,10 @@ class RevisedOrderBook(BaselineOrderBook):
         self.asks_by_price = {}
         self.bid_price_heap = []
         self.ask_price_heap = []
-        # These sets include retained inactive keys and prevent duplicate pushes.
         self._bid_heap_keys = set()
         self._ask_heap_keys = set()
+        self._bid_live_counts = {}
+        self._ask_live_counts = {}
 
     def _active_orders(self):
         return self.orders_by_id.values()
@@ -290,10 +293,17 @@ class RevisedOrderBook(BaselineOrderBook):
     def _find_order(self, order_id):
         return self.orders_by_id.get(order_id)
 
+    def _is_active(self, order):
+        # Identity prevents a reused ID from reviving an older cancelled object.
+        return self.orders_by_id.get(order["order_id"]) is order
+
     def _price_index(self, side):
         if side == "BUY":
             return self.bids_by_price, self.bid_price_heap, self._bid_heap_keys
         return self.asks_by_price, self.ask_price_heap, self._ask_heap_keys
+
+    def _live_counts(self, side):
+        return self._bid_live_counts if side == "BUY" else self._ask_live_counts
 
     def _best_order(self, side):
         levels, heap, retained_keys = self._price_index(side)
@@ -302,8 +312,11 @@ class RevisedOrderBook(BaselineOrderBook):
             price = -key if side == "BUY" else key
             queue = levels.get(price)
             if queue is not None:
+                while queue and not self._is_active(queue[0]):
+                    queue.popleft()
+                if not queue:
+                    raise AssertionError("An active price level has no live maker.")
                 return queue[0]
-            # Only prices are lazy; per-order removal remains immediate.
             heapq.heappop(heap)
             retained_keys.remove(key)
         return None
@@ -311,36 +324,51 @@ class RevisedOrderBook(BaselineOrderBook):
     def _rest_order(self, order):
         side, price = order["side"], order["price_ticks"]
         levels, heap, retained_keys = self._price_index(side)
+        counts = self._live_counts(side)
         if price not in levels:
             levels[price] = deque()
+            counts[price] = 0
             key = -price if side == "BUY" else price
             if key not in retained_keys:
                 heapq.heappush(heap, key)
                 retained_keys.add(key)
-            # A retained key safely refers to the newly active queue at this price.
         levels[price].append(order)
         self.orders_by_id[order["order_id"]] = order
+        counts[price] += 1
         self._maybe_rebuild_price_heap(side)
 
     def _remove_order(self, order_id):
-        order = self.orders_by_id.get(order_id)
+        # Logical removal is immediate and never searches for the deque position.
+        order = self.orders_by_id.pop(order_id, None)
         if order is None:
             return None
-        levels = (
-            self.bids_by_price if order["side"] == "BUY" else self.asks_by_price
-        )
-        price = order["price_ticks"]
+        side, price = order["side"], order["price_ticks"]
+        levels, _, _ = self._price_index(side)
+        counts = self._live_counts(side)
         queue = levels[price]
+        counts[price] -= 1
         if queue[0] is order:
             queue.popleft()
-        else:
-            # Arbitrary cancellation requires an O(Q) search within this deque.
-            queue.remove(order)
-        if not queue:
+        if counts[price] == 0:
+            # Release inactive entries when the final live order leaves a level.
+            queue.clear()
             del levels[price]
-        del self.orders_by_id[order_id]
-        self._maybe_rebuild_price_heap(order["side"])
+            del counts[price]
+        else:
+            self._maybe_rebuild_price_queue(side, price)
+        self._maybe_rebuild_price_heap(side)
         return order
+
+    def _maybe_rebuild_price_queue(self, side, price):
+        """Bound a price queue even while an old live order remains at its head."""
+        levels, _, _ = self._price_index(side)
+        queue = levels[price]
+        live_count = self._live_counts(side)[price]
+        if len(queue) > 2 * live_count + self._QUEUE_REBUILD_SLACK:
+            active_orders = [order for order in queue if self._is_active(order)]
+            # Stable filtering retains FIFO and the original shared order objects.
+            queue.clear()
+            queue.extend(active_orders)
 
     def _maybe_rebuild_price_heap(self, side):
         """Bound retained keys to 2 * active levels + slack after each operation."""

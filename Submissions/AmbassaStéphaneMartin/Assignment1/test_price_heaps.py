@@ -54,7 +54,7 @@ class TestPriceHeaps(unittest.TestCase):
         return self.add(order_id, "BUY", 10_000_000, quantity)
 
     def check_indexes(self):
-        queued_ids = set()
+        live_ids = set()
         for side in ("BUY", "SELL"):
             levels, heap, retained = self.price_index(side)
             self.assertEqual(len(heap), len(set(heap)))
@@ -68,6 +68,7 @@ class TestPriceHeaps(unittest.TestCase):
                 self.assertTrue(key < 0 if side == "BUY" else key > 0)
                 if index:
                     self.assertLessEqual(heap[(index - 1) // 2], key)
+            counts = {}
             for price, queue in levels.items():
                 self.assertIs(type(price), int)
                 self.assertGreater(price, 0)
@@ -75,19 +76,30 @@ class TestPriceHeaps(unittest.TestCase):
                 self.assertIsInstance(queue, deque)
                 self.assertTrue(queue)
                 previous_seq = 0
+                live_count = 0
                 for order in queue:
-                    self.assertNotIn(order["order_id"], queued_ids)
-                    queued_ids.add(order["order_id"])
                     self.assertEqual(order["side"], side)
                     self.assertIs(type(order["price_ticks"]), int)
                     self.assertEqual(order["price_ticks"], price)
                     self.assertIs(type(order["qty_units"]), int)
-                    self.assertGreater(order["qty_units"], 0)
+                    self.assertGreaterEqual(order["qty_units"], 0)
                     self.assertIs(type(order["arrival_seq"]), int)
                     self.assertGreater(order["arrival_seq"], previous_seq)
                     previous_seq = order["arrival_seq"]
-                    self.assertIs(self.book.orders_by_id[order["order_id"]], order)
-        self.assertEqual(queued_ids, set(self.book.orders_by_id))
+                    if self.book.orders_by_id.get(order["order_id"]) is order:
+                        self.assertNotIn(order["order_id"], live_ids)
+                        live_ids.add(order["order_id"])
+                        self.assertGreater(order["qty_units"], 0)
+                        live_count += 1
+                self.assertGreater(live_count, 0)
+                self.assertLessEqual(len(queue), 2 * live_count + 32)
+                counts[price] = live_count
+            actual_counts = getattr(
+                self.book, "_bid_live_counts" if side == "BUY" else "_ask_live_counts", None
+            )
+            if actual_counts is not None:
+                self.assertEqual(actual_counts, counts)
+        self.assertEqual(live_ids, set(self.book.orders_by_id))
 
     def raw_state(self):
         queues = {
@@ -101,6 +113,8 @@ class TestPriceHeaps(unittest.TestCase):
             self.book._last_seq, deepcopy(self.book.orders_by_id), queues,
             list(self.book.bid_price_heap), list(self.book.ask_price_heap),
             set(self.book._bid_heap_keys), set(self.book._ask_heap_keys),
+            deepcopy(getattr(self.book, "_bid_live_counts", None)),
+            deepcopy(getattr(self.book, "_ask_live_counts", None)),
         )
 
     def test_bid_heap_skips_cancelled_best_price(self):
@@ -176,7 +190,11 @@ class TestPriceHeaps(unittest.TestCase):
                 queue = self.price_index(side)[0][price]
                 self.assertIsNot(queue, old_queue)
                 self.assertEqual(self.price_index(side)[1].count(key), 1)
-                self.assertEqual([order["order_id"] for order in queue], ["Z", "A"])
+                self.assertEqual(
+                    [order["order_id"] for order in queue
+                     if self.book.orders_by_id.get(order["order_id"]) is order],
+                    ["Z", "A"],
+                )
                 self.assertEqual(self.take(side, BTC_UNITS)["fills"][0]["maker_id"], "anchor")
                 self.assertEqual(self.take(side, BTC_UNITS)["fills"][0]["maker_id"], "Z")
                 self.assertIs(queue[0], self.book.orders_by_id["Z"])
@@ -297,7 +315,11 @@ class TestPriceHeaps(unittest.TestCase):
                 self.assertEqual(self.book.orders_by_id["Z"]["arrival_seq"], original_seq)
                 self.cancel("M")
                 queue = self.price_index(side)[0][6_000_000]
-                self.assertEqual([order["order_id"] for order in queue], ["Z", "A"])
+                self.assertEqual(
+                    [order["order_id"] for order in queue
+                     if self.book.orders_by_id.get(order["order_id"]) is order],
+                    ["Z", "A"],
+                )
                 result = self.take(side, 2 * BTC_UNITS)
                 self.assertEqual([fill["maker_id"] for fill in result["fills"]], ["Z", "A"])
                 self.assertEqual([fill["price_ticks"] for fill in result["fills"]], [6_000_000, 6_000_000])
