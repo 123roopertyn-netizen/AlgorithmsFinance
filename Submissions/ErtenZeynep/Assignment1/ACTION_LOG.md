@@ -1211,3 +1211,35 @@ No matching engine, test, existing benchmark controller/worker, workload, raw me
 - A privacy scan found no personal absolute path in the new scripts, parsing result, processed result, manifest, dashboard, README or AI decisions. Existing machine-specific paths remain only in the historical action evidence, where they were intentionally preserved.
 
 No matching benchmark was rerun. No engine, correctness test, dataset, existing benchmark controller/worker, or prior raw evidence was modified. No dependency, network, Git or GitHub operation occurred.
+
+## 2026-11-24 - Dashboard presentation closure
+
+### 127. Corrected four display-only defects
+
+- Modified only `06_dashboard/index.html`. Null numeric table cells now render an em dash rather than coercing their wrapper object to `[object Object]`.
+- Replaced full-width warning bars for absent/censored values with an empty striped track and explicit `TIMEOUT / CENSORED` text. Added a visible logarithmic-scale note to every chart rendered with logarithmic bar lengths.
+- Added fixed diagnostic-column proportions and wrapping rules without changing diagnostic data or analytical claims.
+- Lightweight verification parsed the HTML, found 41 unique IDs and 32 resolved JavaScript element references, confirmed six logarithmic chart calls were labelled, and served both dashboard and processed JSON through a short-lived loopback server with HTTP 200 responses.
+- Cold-primary, warmed-primary, parsing, and processed-result hashes remained unchanged. Final dashboard SHA-256: `ba43c1c1e828abf1bc405c31e1894db9c609c6eb33a68cc330acf3e88385f7c3`.
+
+## 2026-11-24 - Final technical report
+
+### 128. Mapped instructor requirements and retained evidence
+
+- Read the complete preserved instructor README, persistent project instructions, both engine implementations, shared validation/contracts/replay, environment metadata, results manifest, aggregate, correctness/decision evidence, and relevant action history.
+- Attempted fresh original-PDF inspection with `pdfinfo`/`pdftotext`; both executables were unavailable. Attempts with installed Python for `pypdf` and `PyPDF2` also reported missing modules. No dependency was installed. The report therefore uses the complete instructor README for mandatory requirement wording and the prior recorded direct PDF slide review only as corroboration; it makes no new visual-layout claim.
+- Built an internal requirement map covering specification, actual revision, invariants/pseudocode/complexity, unchanged correctness tests, timing/memory/profiling methodology, interpretation, AI assistance, reproducibility, report contents, and submission commit identification.
+- Extracted representative primary, latency, memory, liquidation, concentration, parsing, controller-wall, and diagnostic values from `07_results/processed/aggregated_results.json`. Pilot, cold-primary, warmed-primary, parsing, and instrumented evidence remained distinctly labelled.
+
+### 129. Created and verified the report draft
+
+- Created `08_documentation/technical_report.md` with the approved structure: executive summary; system design; baseline/revision; complexity; correctness; methodology; results; decisions; limitations; AI assistance; reproducibility; conclusion.
+- Updated README current-status wording, linked the report, recorded verified Python-version compatibility evidence, corrected its optimized complexity notation from active levels alone to actual heap length `H` with explicit `O(P)` rebuilding, and replaced three remaining pre-completion statements with current project-relative instructions/evidence.
+- Added DEC-053 to `AI_DECISIONS.md`; the canonical Risk Register was not changed.
+- The first report-consistency script stopped on an exact wording check for `supplementary cold-primary`; the report already separated the evidence but used a space rather than the expected compound label. The wording was corrected without changing data. A later broad coverage assertion expected the literal phrase `Supported event types` rather than the report's equivalent `three event types`; only the read-only checker was corrected.
+- Detailed numerical validation then exposed one real draft defect: the stated Version A concentration range omitted the seed-44 minimum. The report was corrected from `1.020-1.064x` to the verified all-seed range `1.017-1.064x`. A subsequent checker assumption that excluded the seed-42 table value was corrected; it did not change the report.
+- Final verification confirmed all required headings and topics, balanced Markdown fences, exactly three `[STUDENT REVIEW REQUIRED]` placeholders, no absolute personal path, project-relative evidence links, explicit censoring, representative primary/latency/memory/liquidation/concentration/parsing/controller/diagnostic values, source-grounded complexity, and the retained 51-test correctness outcome.
+- Final draft size: 4,949 words, 379 lines, 35,122 bytes. SHA-256: `c3100b4f2dadc6d96eeae91dabda0b6d6461ac1a25fdbb97ff3aeecc23c82d5d`.
+- Preservation inventories remained exact: engines/shared source `5c6fd47cbaadc018a397435394344785c9abbe3264ea1d42031b289ce1b0062c`; tests `294998a21fd061ab4f83371ffc77c2fd8bc11b2a2031c9f62214d45187812cd2`; datasets `804739b7aaab3577b185779fe2d043de763539aa4487cc9a13296ee8b0bf0e57`; prior raw measurements `67b05a1cec977cba583edeca0e714620a7895470c075de2d0740de902a46f70d`.
+
+No benchmark, workload generation, engine/test edit, raw-evidence edit, dependency installation, external network access, Git command, or GitHub operation occurred.

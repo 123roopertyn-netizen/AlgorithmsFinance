@@ -8,17 +8,17 @@ This project implements, tests, compares, and benchmarks two Python limit order 
 4. Implementation and benchmarking
 5. Documentation and reproducibility
 
-Stages 1-3 and Stage 4A/4B correctness work are complete. Both independently implemented engines pass the complete deterministic, fixed-seed randomized, internal-invariant, worked-example, and pre-generated differential suite. Benchmarks remain deliberately unexecuted.
+All five project stages are complete. Both independently implemented engines pass the complete deterministic, fixed-seed randomized, internal-invariant, worked-example, and pre-generated differential suite. Warmed-primary, supplementary cold-primary, latency, memory, liquidation, concentration, diagnostics, and parsing evidence are retained under `07_results`; the final technical report is `08_documentation/technical_report.md`.
 
 ## Environment
 
 - Observed interpreter: CPython 3.13.17, 64-bit
 - Operating system: Windows 11
 - Generator reference environment: Python 3.11.9
-- Status: the installed interpreter differs from the generator's checked version. Compatibility must be verified during Stage 2; no incompatibility has yet been demonstrated.
+- Status: the installed interpreter differs from the generator's checked version. Supplied and generated data passed structural, checksum, and deterministic verification under the installed interpreter; no incompatibility was observed.
 - Required Stage 1 standard-library imports: successful (`unittest`, `json`, `gzip`, `csv`, `statistics`, and `tracemalloc`)
 
-No dependency has been installed. Python's standard-library `unittest` framework will be used.
+No dependency has been installed. Python's standard-library `unittest` framework is used.
 
 ## Financial model boundaries
 
@@ -54,9 +54,9 @@ Heap storage is bounded by the provisional engineering rule:
 heap_length > 2 * active_level_count + 64
 ```
 
-The condition is evaluated after new-level insertion and after level deletion by cancellation or exhaustion. When true, the heap is rebuilt with exactly one current entry per active level. This threshold is not an instructor requirement, and its empirical effect has not yet been benchmarked.
+The condition is evaluated after new-level insertion and after level deletion by cancellation or exhaustion. When true, the heap is rebuilt with exactly one current entry per active level. This threshold is not an instructor requirement. Separate diagnostics observed 769 rebuilds and 15 final stale entries during the 100,000-event cancellation-churn run; those counters are not part of primary timing.
 
-Let `B` be active orders, `P` active price levels, `F` makers filled, `L` levels exhausted, and `S` stale entries removed. Expected direct lookup and cancellation within a nonempty level are `O(1)`; insertion into an existing level is `O(1)`, while creating a level is `O(log P)`. Matching is `O(F + (L + S) log P)`, excluding an occasional rebuild. Rebuilding is `O(P)` and is amortized over accumulated stale entries. A single operation can therefore still cost `O(P)` in the worst case. Canonical inspection is `O(B log B)` and is excluded from primary timing. Persistent indexed storage is `O(B + P)` under the compaction rule. Python dictionary operations have their usual theoretical pathological worst cases.
+Let `B` be active orders, `P` active price levels, `H` actual heap entries including stale entries, `F` makers filled, `L` levels exhausted, and `S` stale entries removed. Expected direct lookup and cancellation within a nonempty level are `O(1)`; insertion into an existing level is `O(1)`, while creating a level pushes to the heap in `O(log H)`. Matching is `O(F + S log H)` excluding output construction, level-deletion bookkeeping, and an occasional rebuild. Rebuilding is `O(P)` and is amortized over accumulated stale entries. A single operation can therefore still cost `O(P)` in the worst case. Canonical inspection is `O(B log B)` and is excluded from primary timing. Persistent indexed storage is `O(B + P + H)`, with `H` bounded by the compaction policy after its trigger points. Python dictionary operations have their usual theoretical pathological worst cases.
 
 These are algorithmic expectations, not measured speed or memory improvements.
 
@@ -83,7 +83,7 @@ Assignment1/
 `-- 08_documentation/
 ```
 
-Python modules, tests, datasets, benchmark programs, result files, and the final report will be added only in their approved stages.
+Python modules, tests, datasets, benchmark programs, result files, dashboard, and final report are contained in their numbered stage directories.
 
 ## Import and execution policy
 
@@ -119,7 +119,7 @@ PYTHONPATH="$(pwd -P)/04_implementation${PYTHONPATH:+:$PYTHONPATH}" \
 python3 -m unittest discover -s "03_tests" -p "test_*.py" -v
 ```
 
-The documented replay entry point will be `python -m orderbook.replay`. Benchmark and dashboard commands will use absolute paths under `05_benchmarks` and `06_dashboard`. Exact commands will be added only when those approved files exist.
+The replay entry point is `python -m orderbook.replay`. Benchmark and dashboard commands below use project-relative paths under `05_benchmarks` and `06_dashboard` after changing to the project root.
 
 ### Version A correctness commands
 
