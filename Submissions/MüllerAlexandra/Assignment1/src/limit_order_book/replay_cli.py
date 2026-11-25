@@ -87,4 +87,3 @@ def main(arguments: Sequence[str] | None = None) -> int:
     with args.out.open("x", encoding="utf-8", newline="\n") as stream:
         stream.write(text)
     return 0
-
