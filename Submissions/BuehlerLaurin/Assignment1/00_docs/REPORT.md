@@ -2,7 +2,7 @@
 
 Laurin Bühler · Algorithms in Finance (FIN71055) · Frankfurt School · November 2026
 
-**Final Version B = B3r**: per-price FIFO queues with lazy cancellation, a heap price index and a per-side heap rebuild. On the four non-churn official workloads at 10,000 events B3r is 21x to 186x faster than the baseline A (median speedup across seeds); at 100,000 events A exceeds the declared 600 s limit on three workloads while B3r needs under half a second (median across seeds). A is faster on `cancel_churn`, where the live book stays tiny. Every number in this report comes from committed result files (section 11) and can be inspected in the dashboard (`python -m streamlit run 04_dashboard/app.py`).
+**Final Version B = B3r**: per-price FIFO queues with lazy cancellation, a heap price index and a per-side heap rebuild. On the four non-churn official workloads at 10,000 events B3r is 21x to 186x faster than the baseline A (median speedup across seeds); at 100,000 events A exceeds the declared 600 s limit on three workloads while B3r needs under half a second (median across seeds). A is faster on `cancel_churn`, where the live book stays tiny. Performance figures come from saved measurement files (section 11) and can be inspected in the dashboard (`python -m streamlit run 04_dashboard/app.py`). Independent reference, validator-equivalence and profile checks are archived in [chat_reference](../05_evidence/chat_reference/README.md).
 
 ## 1. Task and model boundaries
 
@@ -90,10 +90,10 @@ Price levels with FIFO queues and an order-id map are the standard order-book or
 | Check | Result |
 |---|---|
 | Contract checks with hand-calculated results (worked example, every README edge case, 18 own datasets, 81 invalid-event cases) | all pass for A, B1, B2, B3, B3r, B3r_fast |
-| Committed Phase 5b full test suite / attack suite | 1,032 / 1,995 tests pass |
+| Current full suite / preserved attack suite | [Final fix evidence](FINAL_FIX_VERIFICATION.md); historical Phase 5b: 1,032 at c4cfc25-dirty / 1,995 attack tests at dd88f22-dirty |
 | Mutants (deliberately broken versions, e.g. LIFO, partial maker re-queued, wrong book side) | 17/17 killed; 2 rebuild-trap scenarios checked by work-count tests |
 | A vs every B variant after every event (Hypothesis state machine) | no difference |
-| Independent reference (written separately from the engines) vs B3r: supplied 50,000 events + 135,000 stress events | 0 differences |
+| Independent reference (written separately from the engines) vs B3r: supplied 50,000 events + 135,000 stress events | 0 differences; [reference script and log](../05_evidence/chat_reference/README.md) |
 | Red-team attack on the final B: fuzzer power check, then 1,152,000 every-event comparisons | 7/7 planted bugs found; 0 differences |
 
 Agreement between two implementations is only supporting evidence; it is backed here by independent hand-calculated results and an independent oracle.
@@ -140,19 +140,29 @@ At 1M events B3r needs about 5-7 s per workload; A was stopped at 600 s on four 
 
 ## 7. Memory
 
-Measured with `tracemalloc` in separate runs. **Included**: the book after construction and the current event's returned result; **excluded**: the pre-parsed input and any history of past results. Traced allocations are neither auxiliary space alone nor total process memory.
+Measured with `tracemalloc` in separate runs. **Included**: the book after construction and the current event's returned result; **excluded**: the pre-parsed input and any history of past results. Traced allocations are neither auxiliary space alone nor total process memory: tracemalloc records live Python allocation blocks within this boundary, auxiliary space is an asymptotic extra-storage bound, and process memory also includes interpreter/native allocations and retained allocator pages.
 
 - Peak traced memory on the official workloads at 10k (medians across seeds, excluding cancel_churn): A 0.3-1.9 MB, B3r 0.95-2.9 MB; B3r at 100k: 3.7-15.6 MB; on cancel_churn A stays around 1.4 KB and B3r around 6.8 KB. B3r usually pays for speed with per-order records, the id index and level objects; on crowded it needs less than A (1.1 vs 1.9 MB).
 - **After cancellation churn** the book returns to its live size: B3r ends at about 3 KB with zero live orders even after 1,000,000 events; no history accumulates.
 - **Stale entries and delayed cleanup.** B3 (the version before the revision) kept emptied price keys in its heap until they reached the top. With prices drifting away from the best price they never did: **37 MB for 2 live orders after 1M events**. B3r's rebuild bounds this to about 5 KB (heap of 18 entries). Lazy queue entries are bounded by the compaction rule; the attack showed up to 32 dead records can remain pinned per live level, a constant-factor cost we document.
 
+Official 100k B3r peaks (maximum of each per-run peak across seeds 42/43/44; [counts.csv](../03_results/runs/20261122T130145Z_00bb1ad_phase4_b3r_20261122/counts.csv)):
+
+| Workload | Active-order peak | Price-level peak |
+|---|---:|---:|
+| buildup | 100,000 | 2,000 |
+| crowded | 100,000 | 8 |
+| mixed | 15,358 | 908 |
+| sweep | 80,000 | 2,000 |
+| cancel_churn | 1 | 1 |
+
 ## 8. Profiling and bottlenecks
 
 **A's bottleneck** is the rescan after every fill: matching an incoming order with F fills scans the whole side up to F+1 times, and the duplicate-id check scans every order on each insert. Operation counters (separate `counts` runs, dashboard tab *Bottleneck explained*) make this visible: on buildup with seed 42, A's duplicate-id check scans 499,500 records for 1,000 events and 49,995,000 for 10,000 events, exactly M(M-1)/2, and its best-order search scans another 249,964 and 24,999,375. Ten times more events cost a hundred times more work, which is why A's measured exponent is about 2 and why it stops at 100k.
 
-**B1's bottleneck** (a sorted price list) is the insert far from the best price: every new deep level shifts the list (O(P) per insert). It is invisible on the supplied data (≤ ~1,000 levels near the best price) but makes B1 3x slower than B3 on `deep_book` and 18x slower on the attack scenario `far_end_flicker`.
+**B1's bottleneck** (a sorted price list) is the insert far from the best price: every new deep level shifts the list (O(P) per insert). It is invisible on the supplied data (≤ ~1,000 levels near the best price) but makes B1 about 3x slower than B3 on `deep_book`. The original Phase 4 candidate run (`20261122T012525Z_5eaeb03_phase4/summary.csv`) gives 3.05x from the ratio of seed-median times; [ATK-P0](../07_attack/ATTACK_REPORT.md) quotes that rounded comparison as 3.06x and its attack re-run as 2.80x. `far_end_flicker` is 18.4x in the Phase 4 post-attack comparator session (`20261122T130145Z_00bb1ad_phase4_b3r_20261122/summary.csv`), versus 20.8x in the separate attack ATK-P1 run. These are different runs, not interchangeable estimates.
 
-**B3r's profile**: on the supplied 10k streams about one third of per-event time is input validation (up to three `isinstance`-based integer checks per event) rather than book work, and at 100k events JSON parsing costs as much as the whole replay (461 vs 463 ms on buildup, seed 42). This motivated B3r_fast (section 9).
+**B3r's profile**: on the supplied 10k streams input validation accounts for 27–41 % of per-event time ([archived profile script and output](../05_evidence/chat_reference/log_profile_b3r.txt); Linux CPython 3.13, separate from the Windows benchmark runs) (up to three `isinstance`-based integer checks per event) rather than book work, and at 100k events JSON parsing costs as much as the whole replay (461 vs 463 ms on buildup, seed 42). This motivated B3r_fast (section 9).
 
 ## 9. Revision and selection
 
@@ -160,16 +170,16 @@ The selection rule was fixed in `SPEC.md` **before** the candidate measurements:
 
 | Candidate | Official 100k geomean | Violation |
 |---|---:|---|
-| B1 sorted price list + deques | 0.4244 s | `deep_book` 3.06x slower than B3 (borderline; 2.80x in a re-run; 18.4x on `far_end_flicker`) |
+| B1 sorted price list + deques | 0.4244 s | `deep_book` 3.06x in the attack report's rounded Phase 4 comparison (exact seed-median CSV ratio 3.05x); 2.80x in the attack re-run; `far_end_flicker` 18.4x in the Phase 4 post-attack session (20.8x in attack ATK-P1) |
 | B2 sorted list + OrderedDict levels | 0.4726 s | `deep_book` 3.02x; 10-15 % slower overall |
 | B3 heap + deques | 0.4289 s | memory grows with history (37 MB, section 7) |
 | **B3r** = B3 + heap rebuild | **0.4247 s** | none in throughput; see the spike below |
 
-No candidate passed, so the fallback produced **B3r**. Its rebuild avoids two pitfalls found by our red-team attack: rebuilding from the `levels` dict (13x slower than B3, because a Python dict keeps its peak capacity) and counting stale keys over both sides while rebuilding one (299x slower than B3). Tests now check that rebuild work stays at most 2 heap entries per cancel; measured: exactly 2.00.
+No candidate passed, so the fallback produced **B3r**. Its rebuild avoids two pitfalls found by our red-team attack: rebuilding from the `levels` dict (13x slower than B3, because a Python dict keeps its peak capacity) and counting stale keys over both sides while rebuilding one (299x slower than B3). Rebuild work is at most 2 heap entries per cancel (bound checked by the work-count tests; worst observed 1.999 on dead_slot_rebuild 100k construction in the [B3r-session counts](../03_results/runs/20261122T130145Z_00bb1ad_phase4_b3r_20261122/counts.csv)).
 
 **One interpretation made after measuring, stated openly.** In `spike_purge_at_threshold` the timed replay is a single sell that purges 100,000 stale heap keys: 57.7 ms for B3r vs 0.03 ms for B1. Read literally, the 3x filter excludes B3r too. We keep B3r because this single-event spike was declared as an accepted tail-latency cost before measuring, and because over the stream that creates the situation B3r is faster (construction + sell 1.78 s vs 4.63 s for B1).
 
-**Controlled optimisation: B3r_fast — tried and rejected.** Profiling showed validation as the largest single cost, so we built B3r_fast: the same algorithm, with a fast path for ordinary valid events that falls back to the unchanged validator for everything else. Identical behaviour was shown by 146,514 every-event comparisons, 300,000 random validator cases and all test suites. Rule fixed before measuring: at least 10 % faster on the official grid and no scenario more than 5 % slower.
+**Controlled optimisation: B3r_fast — tried and rejected.** Profiling showed validation as the largest single cost, so we built B3r_fast: the same algorithm, with a fast path for ordinary valid events that falls back to the unchanged validator for everything else. Identical behaviour was shown by 146,514 every-event comparisons, 300,000 random validator cases ([equivalence script and log](../05_evidence/chat_reference/log_validator_equivalence.txt)) and all test suites. Rule fixed before measuring: at least 10 % faster on the official grid and no scenario more than 5 % slower.
 1. Cross-session comparison: 11.3 % faster, but rejected; several cells exceeded 5 %, and analysis showed session noise (two B3r reference cells were about 2x faster than the same cell for every other version and seed).
 2. Binding same-session rematch, with alternating order per case and the method fixed and committed beforehand: **12.7 % faster**, faster on 25 of 27 scenarios and within the bound on 26, but one cell failed (`dead_slot_rebuild` at 1k: 3.66 vs 3.42 ms, ratio 1.068). **Rejected; B3r stays final.**
 
@@ -190,7 +200,7 @@ The lesson: per-scenario bounds need a minimum measured duration or confidence i
 ```
 python -m pip install -r requirements.txt
 python -m pytest                                           # full suite
-python run.py lob.replay 06_data/supplied/worked_example.jsonl   # final Version B by default
+python -m run lob.replay 06_data/supplied/worked_example.jsonl   # final Version B by default
 python -m streamlit run 04_dashboard/app.py                # dashboard from committed results
 ```
 Large inputs are regenerated with the supplied `generate_orders.py` and our own generators (commands and SHA-256 in `00_docs/DATA_MANIFEST.json` and `00_docs/POST_ATTACK_MANIFEST.json`); million-event files are not committed. Result folders: `03_results/runs/20261122T012525Z_5eaeb03_phase4/` (candidates), `03_results/runs/20261122T130145Z_00bb1ad_phase4_b3r_20261122/` (B3r, A baseline, post-attack), `03_results/runs/20261122T200528Z_8a22753_phase4_b3r_fast_20261122/` and `03_results/runs/20261122T210801Z_e4fd928_phase4_b3r_fast_rematch_20261122/` (B3r_fast). Each records machine, Python and dependency versions in `env.json`. The selection is documented in `00_docs/FINAL_SELECTION.md`, the attack in `07_attack/ATTACK_REPORT.md`.

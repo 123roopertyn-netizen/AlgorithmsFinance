@@ -25,7 +25,7 @@ if [[ ! -x .venv/bin/python ]]; then printf 'FAIL: .venv has no Unix Python\n' >
 export PATH="$PWD/.venv/bin:$PATH"
 mkdir -p scratch
 
-# 2. Full standard suite. Expected: 1033 passed; about 13 minutes on the author's laptop.
+# 2. Full standard suite. Expected: 1040 passed; about 13 minutes on the author's laptop.
 step='full test suite'
 python -m pytest -q --tb=short --basetemp=scratch/pytest-run-all --junitxml=scratch/run_all-tests.xml
 

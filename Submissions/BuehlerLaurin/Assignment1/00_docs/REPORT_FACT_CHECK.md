@@ -2,7 +2,7 @@
 
 Draft reviewed at d885f6e. Only factual replacements; structure and style retained.
 All benchmark values read from committed blobs, not local/new smoke results.
-The historical FINAL_SELECTION.md is unchanged, including its older 26-faster wording.
+At the original d885f6e cross-check FINAL_SELECTION.md was unchanged; it was subsequently edited in 5785e9f (including 25/27 wording) and corrected in the latest fix, 3e9ebfe. This ledger describes the original report replacements, not an unchanged selection document.
 
 | # | Old | New | Source |
 |---|---|---|---|

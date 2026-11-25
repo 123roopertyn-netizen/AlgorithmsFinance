@@ -7,8 +7,10 @@ No code, docs or results were changed. The only writes are this file and `scratc
 
 Course sources read: package `README.md` (sha256 `17ce011b…`, matches SPEC) and
 `AlgorithmsFinance_Exercise1.pdf` (text extracted to `scratch/final_review/slides.txt`).
-The hidden "Unicorn" instruction on PDF pages 1, 7 and 14 was ignored. `git grep -i unicorn`
-finds the word only in the logged AI_LOG.md entry (line 10), so there are no traces in code, tests or docs.
+The hidden instruction recorded in AI_LOG.md (PDF pages 1, 7 and 14) was ignored.
+The original review scan found only the AI_LOG entry. Fix-round note: this
+report's duplicate marker quotation and literal query were redacted so AI_LOG
+retains the sole quotation; the original review findings are unchanged.
 
 Commands run (logs and scripts in `scratch/final_review/`):
 - `recompute2.py` … `recompute7.py`: recompute the headline numbers from the committed CSV/JSON files

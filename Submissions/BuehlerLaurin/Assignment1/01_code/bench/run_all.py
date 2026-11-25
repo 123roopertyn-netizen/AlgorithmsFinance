@@ -45,7 +45,19 @@ def fingerprint():
                                     for p in files).encode()).hexdigest()
 
 
+class NoCommittedCheckout(ValueError):
+    """Git or a committed HEAD is unavailable; source cannot be commit-verified."""
+
+
 def source_dirty():
+    try:
+        subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=ROOT,
+                       capture_output=True, text=True, check=True)
+        # An ignored scratch copy can inherit HEAD without containing tracked source.
+        subprocess.run(["git", "ls-files", "--error-unmatch", "--", "01_code/bench/run_all.py"],
+                       cwd=ROOT, capture_output=True, text=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        raise NoCommittedCheckout("no git checkout (source not commit-verified)") from exc
     cp = subprocess.run(["git", "status", "--porcelain=v1", "--untracked-files=all", "--", "."],
                         cwd=ROOT, capture_output=True, text=True, check=True)
     allowed = ("03_results/", "05_evidence/", "06_data/generated/", "00_docs/DATA_MANIFEST.json")
@@ -150,6 +162,18 @@ def summarize(directory):
 
 
 def get_run(args):
+    # Check provenance even when resuming: a saved pointer is not a checkout.
+    try:
+        dirty = source_dirty()
+    except NoCommittedCheckout as exc:
+        if args.part != "smoke":
+            raise ValueError("official runs require committed source in a git checkout") from exc
+        dirty = None
+    if args.part != "smoke" and dirty:
+        raise ValueError("official runs require committed source; changed paths: " + ", ".join(dirty))
+    provenance = ("no git checkout (source not commit-verified)" if dirty is None else
+                  "git checkout (source modified)" if dirty else "git checkout (source commit-verified)")
+    print("SOURCE_PROVENANCE=" + provenance, flush=True)
     code = fingerprint()
     pointer = Path("scratch") / f"bench_session_{args.session}.json" if args.session else None
     if pointer and pointer.exists():
@@ -159,13 +183,12 @@ def get_run(args):
         if (data["limit_s"], data["limit_bytes"]) != (args.limit_s, args.limit_bytes):
             raise ValueError("limits changed since this session; choose a NEW --session name")
         return Path(data["run_dir"])
-    dirty = source_dirty()
-    if args.part != "smoke" and dirty:
-        raise ValueError("official runs require committed source; changed paths: " + ", ".join(dirty))
     directory = new_run_dir(tag="smoke" if args.part == "smoke" else args.session or "official")
     env_path = directory/"env.json"
     env = json.loads(env_path.read_text(encoding="utf-8"))
-    env.update(source_sha256=code, source_dirty_paths=dirty, gc_policy="enabled for every version",
+    env.update(source_sha256=code, source_dirty_paths=dirty,
+               source_provenance=provenance, source_commit_verified=(dirty == []),
+               gc_policy="enabled for every version",
                per_replay_limit_s=args.limit_s, traced_peak_limit_bytes=args.limit_bytes,
                baseline_protocol=BASELINE_PROTOCOL,
                baseline_deviation="A: single trial without warm-up at 100k/1M; warm-up + 5 at 1k/10k",

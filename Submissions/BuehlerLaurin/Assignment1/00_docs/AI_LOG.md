@@ -1323,3 +1323,81 @@ or move. No open questions; stop for review. Proposed, not executed:
 git add -- 04_dashboard/saved_results.py 04_dashboard/views.py 02_tests/test_dashboard.py SPEC.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 05_evidence/INDEX.md '05_evidence/*selection-primary*'
 git commit -m "Assignment1: simplify primary selection bars and show session effects"
 ```
+
+
+## 2026-11-25 — Final review portability/documentation fixes (base 3e9ebfe, Codex)
+
+Laurin authorized M1/M2 fixes, a fresh archive acceptance, current documentation,
+full/dashboard evidence and Git proposals only. Applied aif-exercise, aif-debug,
+aif-tdd and aif-verify. No delegation or Git mutation. The known PDF instruction
+remains ignored; no new embedded instruction was followed.
+
+Accepted: the existing dashboard loader test retains its committed-store
+assertions in a checkout, and now checks DiskStore revision None, the unchanged
+allowlist and the top warning without a checkout. Seven new cases run the real
+loader test and smoke in copies without .git / without Git, and check official
+new/resumed runs plus dirty-source refusal. The runner records a fingerprint,
+explicit unverified provenance and source_dirty_paths=None for no-checkout
+smokes. A tracked-source probe prevents ignored copies inheriting a false
+verified label from an ancestor checkout. Official/resumed runs remain strict.
+Only source_dirty/get_run changed; timing/aggregation/worker ASTs are unchanged.
+
+Test-first evidence: final-fix-portability-red-confirmed is 6 failed / 1 passed.
+The initial red fixture lacked fingerprint inputs and failed for the wrong
+reason in one new test; that fixture was corrected, preserving the original
+log. The first targeted green was 9 passed in 90.84 s. Review then reproduced
+a misleading ancestor-checkout label (1 failed in 58.00 s); the tracked-source
+probe fixed it, and final portability/resume verification is 8 passed in
+88.09 s. The earlier full/overlay runs were intentionally interrupted for this
+last guard change; they are not final pass evidence. No engine expected result
+was altered.
+
+Fresh final suite: 1040 passed in 908.12 s, no failures/errors/skips;
+[full log](../05_evidence/20261125T220142Z_3e9ebfe-dirty_final-fix-all-tests-final.txt). Dashboard/robustness:
+50 passed in 56.31 s, no failures/errors/skips;
+[dashboard log](../05_evidence/20261125T220130Z_3e9ebfe-dirty_final-fix-dashboard-tests.txt). XML hashes and per-file
+counts are in [verification JSON](../05_evidence/final-fix-verification.json).
+
+Fresh external archive plus hashed working-file overlays: exit 0 in
+982.16 s; 1040 tests, worked example OK, 108/108 smoke workers OK,
+explicit NoDashboard completion. Nine no-Git AppTest tabs, the individual
+worked command and all 134 catalog / 125 physical input hashes passed.
+[Detailed acceptance](FINAL_FIX_VERIFICATION.md) records each step and duration.
+The exact unchanged HEAD archive was separately run from zero: exit 1 in
+1046.00 s, still the old M1 (1032 passed / 1 failed). It cannot contain
+these uncommitted fixes; Laurin must commit then repeat that exact HEAD gate.
+No .git was initialized in any temporary copy. The first archive helper was
+started from the wrong cwd and exported an empty subtree; no submission code
+ran in that attempt. It was corrected with read-only git -C at the repo root,
+and the actual HEAD-only failure is preserved separately.
+
+Docs: current README reference, results-only path, execution-policy fallback,
+nine tabs and current collection; Submitted commit remains for Laurin. Current
+requirement statuses cite saved full sessions and fresh evidence. REPORT now
+cites committed reference/validator/profile checks (27–41 percent per-event
+validation), separates Phase 4/attack ratios, states the at-most-2 rebuild
+bound (worst observed 1.999), and explains memory boundaries/100k peaks.
+REPORT_FACT_CHECK records later selection edits. Laurin selected deletion of
+the unused LEARNING scaffold; only that requested file was deleted.
+
+The repeated hygiene scan found a duplicate literal marker/query introduced
+by the committed Claude review itself. Only that redundant wording was
+redacted, with an explicit note preserving the original findings, so AI_LOG
+again holds the sole literal quotation. This caused the supplementary helper's
+final hygiene assertion to fail after all seven command checks passed; its
+full output is retained and the successful command results were preserved,
+then the corrected final hygiene scan passed. No repeated data generation
+was needed. No other-student names, likely secret patterns or submitted files
+over 20 MB were found; historical personal paths and 648 tracked worker
+diagnostics remain disclosed as limitations.
+
+Current upstream/main 43ff26c35cb9a27439b86ed5054e188639609903 comparison has zero paths outside
+Submissions/BuehlerLaurin; the old 56-path finding used an older local ref.
+This fix performed no fetch or remote action. Engine/validator/registry,
+expected fixtures, generator sources, dependency pins, stored measurements,
+dashboard implementation, FINAL_SELECTION and chat-reference evidence are
+unchanged. Installations were only the authorized pinned packages in fresh
+temporary environments. Final runtime hashes match the tested overlay.
+
+STOP. Exact git add / commit and the 648-file git rm --cached proposal are in
+[FINAL_FIX_VERIFICATION.md](FINAL_FIX_VERIFICATION.md); none was executed.

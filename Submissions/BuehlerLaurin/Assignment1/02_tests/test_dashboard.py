@@ -75,7 +75,17 @@ def test_fit_uses_measured_points_only():
 
 def test_loader_restricts_paths_and_uses_a_fixed_commit(bundle):
     store = bundle['store']
-    assert len(store.revision) == 40
+    if saved.head() is not None:
+        assert isinstance(store,saved.CommittedStore) and not isinstance(store,saved.DiskStore)
+        assert len(store.revision) == 40
+    else:
+        assert isinstance(store,saved.DiskStore)
+        assert store.revision is None
+        app = AppTest.from_file(str(ROOT/'04_dashboard/app.py'),default_timeout=120).run()
+        assert not app.exception,[e.message for e in app.exception]
+        banner = 'Reading files from disk (no git checkout): values are not verified against a commit.'
+        assert banner in [w.value for w in app.warning]
+        assert app.main.children[0].value == banner
     with pytest.raises(ValueError): store.text('01_code/lob/book_a.py')
     with pytest.raises(ValueError): store.text('03_results/runs/../../README.md')
     assert store.text('05_evidence/not_a_committed_evidence_file.txt') is None

@@ -2,7 +2,8 @@
 
 ## Start here (two minutes)
 
-Requires Python 3.13 and Git. From Assignment1:
+Requires Python 3.13. Git is required for official long measurements; the
+results dashboard and 1k smoke also work without a checkout. From Assignment1:
 
 ```powershell
 .\run_all.ps1                 # Windows PowerShell
@@ -11,7 +12,19 @@ Requires Python 3.13 and Git. From Assignment1:
 bash run_all.sh                # macOS/Linux
 ```
 
-Creates `.venv` and installs pinned packages if absent; prints **1,033 passed**
+If PowerShell blocks the script: `powershell -ExecutionPolicy Bypass -File .\run_all.ps1`.
+
+**Results only (1 minute).** With Python 3.13 and your environment active:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m streamlit run 04_dashboard/app.py
+```
+
+Read Final selection → Overview → Bottleneck explained. Grade A against
+B (= B3r); B1–B3 are measured candidates and B3r_fast is a rejected optimisation.
+
+The run-all command creates `.venv` and installs pinned packages if absent; prints **1,040 passed**
 (about 13 minutes here), worked-example **OK**, then **1k smoke OK** (a few
 minutes, outputs under `scratch/`). Stops at the first error with **FAIL**;
 otherwise opens localhost:8501. Terminal-only: `.\run_all.ps1 -NoDashboard` /
@@ -32,7 +45,7 @@ then activate with `.\.venv\Scripts\Activate.ps1` / `source .venv/bin/activate`.
 python -m pip install -r requirements.txt
 # Expected: pinned packages installed/already satisfied; hypothesis 6.155.7.
 python -m pytest -q --basetemp=scratch/pytest-manual
-# Expected: 1033 passed.
+# Expected: 1040 passed.
 python -m run lob.replay 06_data/supplied/worked_example.jsonl --version B
 # Expected: six JSON result lines; final B = B3r. A: use --version A.
 python -m streamlit run 04_dashboard/app.py
@@ -72,161 +85,57 @@ Submitted commit: `<to be filled at submission>`
 
 ## Detailed reference
 
-
-> Status (2026-11-23): final Version B is B3r. The binding rematch rejected B3r_fast.
-> B1/B2/B3/B3r/B3r_fast remain available under explicit names. No adaptive switching.
+This section describes the current submission. Dated checkpoint counts and
+superseded plans are retained in [AI_LOG.md](00_docs/AI_LOG.md), rather than
+presented as current instructions here.
 
 ## Final Version B
 
-**`B` = `B3r`**. [FINAL_SELECTION.md](00_docs/FINAL_SELECTION.md) records the
-decision, measurements and qualifications, including both rejected fast
-comparisons. B3r uses deque FIFO levels, lazy cancellation, heap prices and
-per-side heap rebuilds. This registry update changes no engine logic.
-
-| Replay / registry name | Implementation |
-|---|---|
-| `B`, `B3r` | Final Version B, `OrderBookB3r` |
-| `A` | Baseline, `OrderBookA` |
-| `B1` | Original sorted prices + deque, `OrderBookB` (formerly B) |
-| `B2` | Sorted prices + OrderedDict levels, `OrderBookB2` |
-| `B3` | Heap prices without rebuild, `OrderBookB3` |
-| `B3r_fast` | Tested optimisation, tried and rejected, `OrderBookB3rFast` |
-
-From Assignment1 with the venv below active:
-
-Replay defaults to final Version B (B3r) when `--version` is omitted. Use
-`--version A` explicitly for the baseline; all explicit names remain available.
+**B = B3r**, `OrderBookB3r`; replay defaults to it. Use `--version A` for the
+baseline. Explicit `B1`, `B2`, `B3`, `B3r` and `B3r_fast` remain available.
+Historical saved labels `B` meant B1 at those recorded commits. The final
+decision and its literal-filter qualification are in
+[FINAL_SELECTION.md](00_docs/FINAL_SELECTION.md).
 
 ```powershell
-python run.py lob.replay 06_data/supplied/worked_example.jsonl
-python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B
-python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3r
-python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
-python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B1
-python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B2
-python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3
-python run.py lob.replay 06_data/supplied/worked_example.jsonl --version B3r_fast
-python run.py lob.replay 06_data/supplied/mixed_10000.jsonl.gz --version B
+python -m run lob.replay 06_data/supplied/worked_example.jsonl --version A
+python -m run lob.replay 06_data/supplied/worked_example.jsonl --version B
 ```
 
-Saved result labels keep their meaning at the recorded commit: historical B
-means B1. Nothing under `03_results` is renamed or remeasured by this update.
+`run.py` adds `01_code/` to the import path; `pytest.ini` adds the test paths.
+No package installation step is needed for the engine itself.
 
-Registry verification (2026-11-23): [983 standard tests](05_evidence/20261123T162212Z_dd88f22-dirty_final-b-all-tests.txt)
-passed in 909.96 s; [1,995 attack tests](05_evidence/20261123T162213Z_dd88f22-dirty_final-b-attack-suite.txt)
-passed in 125.90 s. Both suites have zero failures/skips, including all 17 mutant
-kills and all seven registered names. [Registry/source verification](05_evidence/final-b-registry-verification.json)
-records source and XML hashes; no engine logic or historical result changed.
+## Dashboard: nine tabs
 
-## Dashboard (Phase 5)
-
-From Assignment1 with the existing venv active:
+Final selection; Overview; Scaling; Original vs revised & variants;
+Throughput & latency; Memory; Correctness; Bottleneck explained; Method & data.
+It reads saved files only. In a checkout, it prefers committed blobs; without
+Git or a checkout it uses allowlisted disk files and prominently warns that
+values are not commit-verified. It never starts a benchmark.
 
 ```powershell
-python -m streamlit run 04_dashboard/app.py
+python -m pytest -q 02_tests/test_dashboard.py
+python -m pytest -q 02_tests/test_checkout_portability.py
 ```
 
-Nine tabs cover Final selection (first), Overview, Scaling, Original vs revised
-& variants, Throughput & latency, Memory, Correctness, Bottleneck explained,
-and Method & data. Q7
-construction and individual sales have separate views; 1M results, actual
-latency histogram bins, early/late segments and post-cancellation state are
-included. Sources, recorded engine commits and units accompany the views.
-
-Final selection renders the full decision plus candidate timings/violations
-and both B3r_fast outcomes. Overview keeps three metrics, one compact table
-of median A/B3r speedups across seeds (with explicit stopped-A lower bounds),
-one log-log chart and the cancel_churn loss. Its links open the selection,
-raw repeats and workload settings. The original per-seed detail, repeat
-completeness and coverage tables are in Method & data.
-
-Every chart has a How to read caption. Scaling offers log-log/linear axes;
-dashed slope-1/2 guides on log-log views are labelled references, not observations.
-Memory separates B3 from the other versions with independent y-scales and a
-linear/log-y toggle. The latency histogram distinguishes runtime GC pauses
-(attributed to ATK-P7) from the declared algorithmic heap-purge spike; GC was
-enabled for all versions. ATK-P7 also records non-GC allocation outliers.
-Method & data lets you select a case/version/phase and inspect every raw repeat
-in seconds, its marked warm-up and the adjacent median (or A single trial).
-Workload settings list generator parameters/commands, own/supplied origin,
-input SHA-256, protocol, run folder and commit.
-
-When Git and a checkout are available, the app reads a fixed HEAD snapshot using read-only `git show`: only committed
-files under `03_results/runs/`, `05_evidence/`, `00_docs/FINAL_SELECTION.md` and
-`07_attack/ATTACK_REPORT.md`. Working-tree changes and new local runs are
-ignored in that mode. In a ZIP download/copied submission without a checkout,
-or when Git is unavailable, it reads those same allowlisted paths from disk and
-shows this banner at the top:
-
-> Reading files from disk (no git checkout): values are not verified against a commit.
-
-Disk paths are resolved within the submission root. Recorded run commits remain
-visible as metadata, explicitly unverified in disk mode. Engine modules and
-generators are never imported or executed.
-`.streamlit/config.toml` disables usage telemetry and binds the local server
-to 127.0.0.1; there are no remote data, font or chart requests in the app code.
-
-Only complete raw-repeat sets with a matching saved summary and completed
-worker enter medians, throughput or fits. Missing, invalid, stopped and not_run
-cells stay explicit. A replay `phase_time_limit` can produce `> 600 s` and a
-strict speedup lower bound; a subprocess/other timeout cannot. A large-cell
-observation remains labelled **A: single trial**. Exponents use the measured
-size range only. Memory peak/order is explicitly normalized by the maximum
-sampled live count, never by an almost-empty final state.
-
-Both fast comparisons remain visible; the same-session ratio and binding
-rejection come from the committed rematch. Correctness counts refer to the
-labelled committed evidence source, not uncommitted tests running locally.
-Generator commands in Method & data are reconstructions from saved settings,
-with local output paths; recorded archive hashes are not presented as hashes
-of a regenerated file. Raw repeats, settings, environment and inclusion flags
-are available in the tables.
-
-Dashboard smoke/interaction and numerical checks:
-
-```powershell
-python -m pytest 02_tests/test_dashboard.py -q
-python 04_dashboard/verify_saved.py                  # optional developer audit; requires Git
-```
-
-The [current per-tab audit](05_evidence/clarity-audit.json) traces sample displayed
-values to their CSV/JSON/XML files. It is saved-file analysis, not measurement.
-The original [Phase 5 audit](05_evidence/dashboard-audit.json) is retained.
-
-Phase 5 verification: [999 standard tests](05_evidence/20261123T190332Z_87ed911-dirty_dashboard-all-tests.txt)
-passed in 785.23 s; [16 dashboard gates on the latest committed snapshot](05_evidence/20261123T191536Z_337cc61-dirty_dashboard-current-head-smoke.txt)
-passed in 17.79 s. [Final verification](05_evidence/dashboard-verification.json)
-records source and XML hashes. All eight tabs and interactive selections render;
-headline numbers match CSVs. No new benchmark or engine change.
-
-Phase 5b (2026-11-25): [49 dashboard/portability checks](05_evidence/20261125T115403Z_c4cfc25-dirty_clarity-dashboard-pass.txt)
-passed in 47.91 s (21 dashboard, 28 submission robustness), including all nine
-tabs, both axis toggles, unchanged moved tables, raw repeats/settings and
-conservative bound labels. [Nine-tab numerical audit](05_evidence/20261125T115416Z_c4cfc25-dirty_clarity-audit-final.txt):
-PASS. Full-suite evidence is linked in the Phase 5b AI log/checkpoint record.
-[Standard suite](05_evidence/20261125T114813Z_c4cfc25-dirty_clarity-all-tests.txt):
-1,032 passed in 769.35 s. The full run started before the final display-only
-cleanup; the final 49-case run covers the completed presentation changes.
-[Checkpoint verification](05_evidence/clarity-verification.json) records source
-hashes, per-file counts and the unchanged protected engine/data/result files.
-
-## Clean-environment run path (PowerShell, from this folder)
-```powershell
-python -m venv "$env:USERPROFILE\.venvs\aif-a1"
-& "$env:USERPROFILE\.venvs\aif-a1\Scripts\Activate.ps1"
-python -m pip install -r requirements.txt
-python -m pytest -q                                   # latest checkpoint: 1027 passed
-python run.py lob.replay 06_data/supplied/worked_example.jsonl --version A
-python run.py bench.run_all                           # (planned) writes 03_results/runs/<run>/
-python -m streamlit run 04_dashboard/app.py           # localhost:8501; labelled disk fallback without Git
-```
-`run.py` puts `01_code/` on the import path and runs a module; `pytest.ini` does the same for tests. No install step.
+The first tab shows both primary-session and binding same-session comparisons.
+Every plot explains its units and reading convention. Method & data exposes
+raw repeats, warm-ups, provenance and stopped/not-run coverage. Audit trail:
+[clarity audit](05_evidence/clarity-audit.json),
+[selection verification](05_evidence/selection-primary-verification.json),
+and [current fix verification](00_docs/FINAL_FIX_VERIFICATION.md).
 
 ## Environment
-- Developed on Windows 11 with Python 3.13.15 (the course generator was checked with 3.11.9; it reproduces the supplied files byte for byte under 3.13.15, see below).
-- **Tools are always called as modules** (`python -m pytest`, `python -m pip`, `python -m streamlit`), never through `pytest.exe` and similar launchers: Windows Smart App Control on the author's machine blocks unsigned executables.
-- **`hypothesis` is pinned to 6.155.7 (< 6.156) on purpose.** Newer versions ship a native extension module that Smart App Control blocks, so the test suite would not start. All test evidence in `05_evidence/` is produced with the pinned version.
-- The engine, the event reader and the data generator use the Python standard library only; `pandas` and `streamlit` are used only by the dashboard.
+
+- Windows 11, Python 3.13.15; requirements are pinned in `requirements.txt`.
+- Use modules (`python -m pytest`, `python -m pip`, `python -m streamlit`):
+  Windows Smart App Control can block standalone tool launchers.
+- `hypothesis==6.155.7` is deliberate: newer native modules were blocked on the
+  author's machine. The matching engine and generators use the standard library.
+- If `python` resolves to a disabled Store alias, activate the Python 3.13
+  environment or put that installed interpreter on PATH before starting.
+- Streamlit normally opens port 8501; if occupied, use its printed URL or
+  `python -m streamlit run 04_dashboard/app.py --server.port=8502`.
 
 ## Expected output (worked example)
 
@@ -255,212 +164,86 @@ still use the unchanged validator and may produce normal JSON rejections.
 One leading UTF-8 BOM, CRLF/bare-CR newlines, gzip and unbounded integers remain
 supported. A BOM character inside a JSON string is ordinary data.
 
-Pre-report robustness verification: [1,027 standard tests](05_evidence/20261123T194432Z_47c0048-dirty_robustness-all-tests.txt)
-passed in 713.57 s; [1,995 attack tests](05_evidence/20261123T194432Z_47c0048-dirty_robustness-attack-suite.txt)
-passed in 95.10 s. This includes 28 new regression cases and all eight tabs in
-temporary no-checkout/no-Git copies. [Final review and source/XML hashes](05_evidence/robustness-verification.json)
-confirm unchanged engines, validator, existing expectations and stored results.
+## Measurement definitions and saved results
 
-Phase 3b verification and the authorized one-shot sanity command:
+One untimed warm-up and five measured repeats for B variants; medians are
+computed only from complete successful cells. Events are generated and parsed
+outside engine timing, with a fresh book for every replay. Parsing,
+construction, replay and total are separate phases; a fixed-book sale includes
+matching, updates and result construction, with its construction reported
+separately. Counter, tracemalloc and latency instrumentation use separate runs.
 
-```powershell
-python evidence.py phase3b-internals -- python -m pytest 02_tests/test_b_internal.py -q
-python evidence.py phase3b-sanity-not-a-benchmark -- python run.py bench.sanity
-```
+A's declared deviation is single trials without warm-up at 100k/1M and a 10k
+ceiling for supplementary scenarios. The replay limit is 600 s and the traced
+peak limit 4 GiB. Stopped A cells yield lower bounds, never measured times.
+Throughput is replayed events / replay seconds; service-time latency uses
+nearest-rank p50/p95/p99 by event type and early/late segment. It excludes
+queueing and network delay. Memory includes the live book/current result,
+excludes pre-parsed inputs and retained history, and is not process RSS.
 
-`02_tests/test_b_internal.py` runs automatically with the full suite. It checks
-A/plain/counted parity on all 18 original own expected files, internal structure
-and applicable cancellation/compaction/heap boundaries for each B variant.
-`python run.py lob.check_b` is retained as a thin launcher for those same pytest
-checks. Stateful and CLI tests are parametrized across variants; original
-contract assertions, expected data, A, B1 and shared validation remain unchanged.
-
-`bench.sanity` runs A/B1/B2/B3 once each per supplied file, fresh books, counters
-off, parsing/setup/replay separate and correctness checks outside timing. It
-uses the shared harness with warmup=0/repeats=1 (Laurin's authorized sanity
-exception). Returned result lists are retained equally for comparison; engine
-objects keep no history. The observations are **sanity, not a benchmark**.
-
-B1 uses slot records, an id index, deque FIFO levels and signed sorted prices;
-compaction requires stale > live and stale > 32. B2 uses OrderedDict FIFO levels
-and direct cancellation, with no stale records. B3 keeps B1's deques but uses
-lazy price heaps/in_heap sets; stale heap prices can accumulate until they reach
-the root. All default to counters off; use `count_operations=True` and
-`.counters.as_dict()` for diagnostic work counts. B3 adds heap work counters;
-public quote cleanup does not change counters. SPEC.md documents complete
-complexity bounds, tradeoffs and predictions.
-
-Raw sanity data/environment/tests:
-`03_results/runs/20261121T234816Z_b5411d4-dirty_phase3b_sanity_not_benchmark/`.
-The per-file test/timing tables are in `00_docs/AI_LOG.md` (Phase 3b).
-Phase 4 compares A, B1, B2 and B3 and chooses the final B from measurements.
-An adaptive online index with hysteresis and a measured threshold (no lookahead)
-is considered only after Phase 4. Fresh-venv and official runtime/memory work
-remain later phases; see `05_evidence/INDEX.md` for current evidence.
-
-## Layout (read in this order)
-| Folder | Contents |
+| Saved session under `03_results/runs/` | Role |
 |---|---|
-| `SPEC.md`, `README.md` | what is asked, how to run it |
-| `00_docs/` | report, requirements → evidence map, hand trace, AI log, revision log, learning note |
-| `01_code/<pkg>/` | the implementations (registry `METHODS` in `__init__.py`) |
-| `01_code/datagen/`, `01_code/bench/` | own data generators; measurement scripts + `harness.py` |
-| `02_tests/` | contract checks, tests, mutant / differential tests |
-| `03_results/runs/` | one folder per benchmark run (raw CSVs, `env.json`, `tests.txt`) |
-| `04_dashboard/` | dashboard; reads saved results only |
-| `05_evidence/` | saved test/check logs with commit and timestamp, `INDEX.md` |
-| `06_data/` | `supplied/` sample files (course); `own/` own edge-case datasets with expected results; `generated/` is git-ignored (commands + sha256 below) |
+| `20261122T012525Z_5eaeb03_phase4/` | Original B1/B2/B3 candidate grid |
+| `20261122T130145Z_00bb1ad_phase4_b3r_20261122/` | Final B3r, scoped A baseline and post-attack comparators |
+| `20261122T200528Z_8a22753_phase4_b3r_fast_20261122/` | First fast comparison; cross-session |
+| `20261122T210801Z_e4fd928_phase4_b3r_fast_rematch_20261122/` | Binding same-session fast rematch |
 
-## Data generation (commands + sha256)
-All data are synthetic teaching data from the course package, not historical exchange records.
+These measurements were completed; no full grid is awaiting a later phase.
+They are preserved unchanged by this portability fix. Settings, source/data
+hashes and machine/package metadata remain with each run.
 
-**Supplied package check** (2026-11-21): all 20 entries of the course `MANIFEST.json` plus the five `*.metadata.json` checksums match (`.DS_Store` listed in the manifest is absent, OS clutter):
-```powershell
-python evidence.py manifest-package -- python verify_manifest.py "<package dir>" --metadata
-```
-The five 10,000-event samples and the worked example pair are copied unchanged to `06_data/supplied/` and re-checked there (`05_evidence/*manifest-supplied-copies*`, `*worked-files-sha*`).
+## Results and revision summary
 
-**Generator reproduction**: the supplied `generate_orders.py` (sha256 `ef7f3154…7fe7d`) regenerates all five seed-42 / 10k / 1,000-level samples with identical sha256 (`05_evidence/*generator-reproduces-seed42-10k*`):
-```powershell
-python run.py datagen.check_reproduction --generator 06_data/supplied/generate_orders.py
-```
+At 10k, final B3r is 21–186x faster than A on the four non-churn official
+workloads; A wins cancel_churn. At 100k, stopped A cells provide the lower
+bounds reported in [REPORT §6](00_docs/REPORT.md#6-runtime). B3r's heap rebuild
+replaces B3's history-sized drift heap, with a declared single-event cleanup
+spike. The binding rematch rejected B3r_fast despite its 12.7 % aggregate gain,
+because one scenario exceeded the fixed 5 % loss bound. B remains B3r.
 
-| Supplied file (streams: seed 42, 10,000 events, levels 1000) | sha256 |
-|---|---|
-| `generate_orders.py` (4019 bytes, unchanged; Q11) | `ef7f31545addf576e6071cc20a5930f3e2ed93bfef96d4968150fad763d7fe7d` |
-| `buildup_10000.jsonl.gz` | `441db8ecf37103113abfed079fbe4bdbe212bb7acbc31be0d344bab67c9b95b5` |
-| `crowded_10000.jsonl.gz` | `112bc3ad120eb436e45608ef11ff804aed35aef24e43d4c10e5adda3b26577b6` |
-| `mixed_10000.jsonl.gz` | `f5a027da6b31209d5e83c56bfbf8626604bb5f91e4176b784ff8a1dac1974a16` |
-| `sweep_10000.jsonl.gz` | `c50755964212445574359b0fe4011f908ad2833edc900d49ecfa25948cca334f` |
-| `cancel_churn_10000.jsonl.gz` | `7aef5f014e6d1e5d01cb37c7ff7b02cfcc5a30f185de8a4b33db2d32b3d9d933` |
-
-**Own data (labelled *own*, separate from the supplied files):**
-- `06_data/own/`: 18 small hand-designed edge-case streams with hand-calculated expected results (`<case>.expected.json`), written by `python run.py datagen.own_cases`; `python run.py datagen.own_cases --check` verifies that the committed files match the generator. Overview: `06_data/own/INDEX.md`.
-- `01_code/datagen/adversarial.py`: own adversarial benchmark scenarios (`deep_book`, `mid_queue_cancels`, `repeated_full_sweeps`; see SPEC.md). Phase 4 inputs are generated under ignored `06_data/generated/phase4/own/`.
-
-Phase 4a generated the full planned data grid outside timing: official 1k/10k/100k
-at seeds 42/43/44, 1M seed 43, queue concentration and own adversarial/Q7/drift
-inputs. [DATA_MANIFEST.json](00_docs/DATA_MANIFEST.json) contains 114 catalog
-entries (105 distinct gzip files), exact commands, settings and sha256. Generated
-data remain ignored; commit the manifest. Generate and verify with:
+## Data generation and optional reproduction
 
 ```powershell
-python run.py bench.catalog
-python run.py bench.catalog --verify
+python -m submission_tools data
+python -m submission_tools data --verify-only
 ```
 
-## Measurement definitions
-The complete protocol, limits, estimates and exact long-run PowerShell commands
-are in [BENCHMARK_PLAN.md](00_docs/BENCHMARK_PLAN.md). Fixed selection criteria
-are in SPEC.md. Primary replay uses pre-parsed events, fresh books, counters off,
-GC enabled, one warm-up and five measured repeats for B and small A; seconds and raw trials are
-saved. Parsing and construction are separate. Liquidation rebuilds each bid
-book before the measured sale. Throughput is events / median replay seconds.
-Declared 2026-11-22 before long measurements: A at 100k/1M uses one measured
-trial, no warm-up (or stopped at 600 s); speedups must say **A: single trial**.
-For these A cells, throughput uses that sole observation. Selection fallback
-and the CSV/metadata commit policy are in BENCHMARK_PLAN.md. Future per-cell
-jobs/journals/logs stay local through .gitignore; the superseded smoke is archived
-intact in scratch. Historical final smoke results remain unchanged.
+[DATA_MANIFEST.json](00_docs/DATA_MANIFEST.json) and
+[POST_ATTACK_MANIFEST.json](00_docs/POST_ATTACK_MANIFEST.json) record generation
+commands and SHA-256. The supplied generator remains byte-for-byte preserved;
+own synthetic generators are labelled. Regeneration writes only ignored
+inputs/local manifests, verifies decoded content and explicitly labels any
+gzip-byte differences across zlib versions. Million-event files stay ignored.
+The full catalog has 134 entries / 125 physical files.
 
-Optional B3r_fast (2026-11-22): B3r remains final unless every correctness gate
-passes, the 15-cell official 100k geometric-mean replay time falls by at least 10%,
-and no matched scenario median rises by more than 5%. This is a separate
-constant-factor variant: exact-builtin common-case validation with reference
-fallback, inlined process dispatch and local bindings in unchanged matching.
-It preserves B3r's structures, thresholds, API, output order and counters.
-Direct methods retain the inherited reference validator. No speedup is claimed
-from correctness tests. The completed optional B-only session and its original
-cross-session rejection remain historical. The corrected comparison follows.
+The safe short reproduction is `python -m submission_tools smoke`: 1k events,
+seed 42, A/B3r, 108 workers in a unique scratch copy. Without a checkout its
+provenance is `no git checkout (source not commit-verified)` and a source
+fingerprint is retained. Official long runs and official session resumes
+still require committed source in a checkout. `--plan-only` lists coverage
+without executing engine measurements.
 
-Historical rematch protocol (2026-11-22, fixed before that measurement): the completed
-cross-session trial stays **tried and rejected**. Session noise confounded its
-per-cell 5% bound, so Laurin permits ONE binding same-session timing-only attempt.
-Both versions alternate order by case on official + post_attack, warm-up+5.
-Require current correctness proof, 15-cell official 100k geometric mean <= 0.90,
-and median(seed ratios) <= 1.05 for every workload x size scenario. Otherwise
-B3r stays final; no further re-measurement. The historical entry point was
-`01_code/bench/rematch_fast.ps1`; its single measurement attempt is consumed.
-The old cross-session wrapper/result remain historical; do not rerun them.
-BENCHMARK_PLAN.md records the corrected method, one-attempt guard and report
-that preserves both comparisons. The attempt is now complete and rejected;
-FINAL_SELECTION.md is authoritative. Do not restart the rematch.
-Historical rematch [standard tests](05_evidence/20261122T205138Z_ddbc434-dirty_rematch-all-tests.txt)
-passed (848 in 713.71 s), as did the [attack suite](05_evidence/20261122T205139Z_ddbc434-dirty_rematch-attack-suite.txt)
-(1,697 in 80.63 s). The [rematch proof](05_evidence/b3r_fast_rematch_correctness.json)
-binds those tests to the rematch source, before the final registry update.
+`.\run_all.ps1 -Full` / `bash run_all.sh --full` repeat the saved grid in new
+sessions after `RUN FULL` confirmation; allow 6–10 h on the original laptop.
+Commit source first. The binding selection is not repeated. The detailed
+protocol and declared A scope are in [BENCHMARK_PLAN.md](00_docs/BENCHMARK_PLAN.md).
 
-Independent runs measure nearest-rank latency p50/p95/p99 in ns, traced memory
-including book/current fills but excluding parsed input/history, and operation
-counts. Traced memory is not RSS. Missing/stopped values remain explicit.
+## Verification and reading order
 
-Safe default (only M=1000, seed 42, all experiments and versions):
+Current expected collection: **1,040 standard tests** (seven portability cases
+added to the 1,033 collected as of `3e9ebfe`). Commands and actual full-suite,
+dashboard and fresh-environment results are linked from
+[FINAL_FIX_VERIFICATION.md](00_docs/FINAL_FIX_VERIFICATION.md) and
+[final-fix-verification.json](05_evidence/final-fix-verification.json).
+An exact `git archive HEAD` contains only committed files; before Laurin's
+commit, passing tests of hashed working-file overlays are explicitly labelled
+pre-commit evidence. They are not described as an unchanged committed archive.
+Bash syntax is checked; a successful native macOS/Linux run is not claimed.
 
-```powershell
-python evidence.py phase4-smoke -- python run.py bench.run_all --part smoke
-```
-
-Long runs require explicit authorization flags and committed source. Laurin runs
-the six commands in BENCHMARK_PLAN.md after review/commit; they have not been
-executed here. The wrapper uses the existing venv and supports B-only batches,
-A pilots and resumption without reducing B repeats.
-
-## Results summary (3–5 lines)
-
-Phase 4a final smoke: `03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/`.
-All 216 cells and sampled A comparisons pass; 988 raw timing records and separate
-latency/memory/count CSVs are saved. B3's drift heap grows with a two-order live
-book (501 retained heap entries at event 1000); investigate using the planned
-growth experiment. Smoke does not choose the final B. Long runs remain pending.
-
-## Revision summary
-
-## Evidence block
-Commit to audit: <hash> (filled in by Laurin)
-Tests (optional fast checkpoint): `python -m pytest -q -s --tb=short --basetemp=scratch/pytest-b3r-fast --junitxml=05_evidence/b3r-fast-all-tests.xml` -> `848 passed in 648.79s` (per-file table in `00_docs/AI_LOG.md`); committed attack suite -> `1697 passed in 79.31s` with --runxfail.
-Benchmark (Phase 4a smoke only): `python run.py bench.run_all --part smoke --session phase4a_smoke_final` -> `03_results/runs/20261122T004602Z_5d8d15a-dirty_smoke/`, 216/216 cells OK; full grid pending.
-Fresh-venv check: pending Phase 7 (existing pinned venv used through Phase 4a)
-
-Q11 completed 2026-11-22: `06_data/supplied/generate_orders.py` was copied
-byte-for-byte from the course package and checked against its MANIFEST.json
-(entry size 4019 bytes and the sha256 above). Evidence:
-`05_evidence/20261121T233959Z_b5411d4_phase3b-q11-generator-sha.txt`.
-The evidence timestamp is UTC; the local session date is 2026-11-22.
-The exercise-local `.gitattributes` marks this supplied file `-text` to preserve
-its exact bytes under Windows Git line-ending conversion.
-
-## Post-attack fallback B3r (2026-11-22)
-
-B3r is registered alongside A/B1/B2/B3 (`--version B3r`). It inherits B3 and
-adds one change: when a side has more stale heap keys than live levels AND more
-than 32 stale keys, filter that side's existing heap list, heapify, and rebuild
-in_heap. No levels-dict iteration or cross-side threshold is used. This adds
-expected amortized O(1) cleanup per staled key, with a single-event
-O(live+stale) logical-key spike. The per-side heap bound is 2*live_levels+32;
-allocated hash capacity and GC remain separate costs. Default-off counters
-record heap_rebuilds, heap_rebuild_keys_scanned and heap_rebuild_stale_removed.
-
-Replay now accepts UTF-8 BOMs (plain/gzip) and arbitrary-length integers. Entering
-the shared reader disables CPython's process-wide decimal conversion digit
-guard, covering both JSON input and returned integer output; SPEC has no bound.
-
-No price cap is added. Valid prices k*(2**61-1) collide in CPython integer hashes,
-so dict/set costs lose their expected constant-time guarantee. At16000 levels
-the committed attack measured A 5.75 s, B1 4.30s, B2 4.31s, B3 9.10s versus B3's
-0.085s normal-hash control (107x slowdown, quadratic exponent 2.00). B3r retains
-these hash structures. These are attributed attack results, independently
-re-verified by Claude (chat) according to Laurin, not fresh Codex timings.
-hash_full is not included in the added benchmark catalog.
-
-B2's rotating-burst memory saturates with per-level historical peak capacity:
-it is a reported weakness, not a filter violation. Deep_book is borderline
-(official 3.05, attack re-run 2.80); far_end_flicker gives stronger evidence
-(about 20.8x B1/B3). Post-attack cases cannot retroactively change the original
-exclusions; B3r must pass them as additional requirements.
-
-The current human-run schedule, source/data provenance and limits are in
-[BENCHMARK_PLAN.md](00_docs/BENCHMARK_PLAN.md), section "Tonight's B3r session".
-It runs B3r on all parts, B1/B2/B3 only on added cases, then A under its declared
-baseline protocol. A new combined manifest is
-[POST_ATTACK_MANIFEST.json](00_docs/POST_ATTACK_MANIFEST.json); generated files
-remain ignored. Current checkpoint starts no long engine run.
+Read Start here → [REPORT](00_docs/REPORT.md) → dashboard Final selection /
+Overview → [FINAL_SELECTION](00_docs/FINAL_SELECTION.md). Requirements, AI and
+revision logs are the audit trail. `00_docs/TRACE.md` contains the hand trace;
+`01_code/`, `02_tests/`, `03_results/`, `04_dashboard/`, `05_evidence/` and
+`06_data/` hold implementation, tests, saved measurements, dashboard, evidence
+and fixtures respectively. The unused learning scaffold was removed at
+Laurin's request.

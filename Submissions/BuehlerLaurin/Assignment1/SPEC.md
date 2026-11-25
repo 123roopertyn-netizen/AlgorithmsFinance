@@ -11,7 +11,7 @@
 | Versions | A baseline/oracle; final B = B3r; explicit B1/B2/B3/B3r/B3r_fast | FINAL_SELECTION.md records the measured decision; registry naming completed 2026-11-23. No adaptive index. |
 | Benchmarks | Full: time, throughput, latency percentiles, memory, operation counts | All five are explicitly required (R §Benchmark experiments, §Time and latency, §Memory; S16–S20). |
 | Dashboard | Full contract (`aif-bench` §8) | Dashboard from saved results is required (R §Results and dashboard, S22). |
-| Report artifacts | All: README, REPORT, TRACE, REQUIREMENTS_MAP, AI_LOG, LEARNING | README + report + AI record required (R §Submit, §Implement and revise); TRACE/MAP/LEARNING are Laurin's study and audit aids. |
+| Report artifacts | README, REPORT, TRACE, REQUIREMENTS_MAP, AI_LOG (unused LEARNING removed by Laurin) | README + report + AI record required (R §Submit, §Implement and revise); TRACE/MAP/LEARNING are Laurin's study and audit aids. |
 | Second agent | Claude (chat) reviews every phase; Codex builds from Phase 2 | Laurin handover, 2026-11-21; Laurin runs all git commands. |
 | Checkpoints | Every phase | Learning goal; Laurin approves each phase ("go"). |
 
@@ -999,3 +999,21 @@ Laurin's exact wording; the corrected final decision remains verbatim. Values
 come from committed CSVs/acceptance files only; no measurements or selection
 changes. Verify rendered bars, ratios, table blanks/provenance, captions and
 no-Git copies with AppTest, save evidence and stop for the human checkpoint.
+
+## Final portability fix round (2026-11-25)
+
+Scope: dashboard/provenance tests, smoke orchestration and documentation only;
+no engine, validation, expected-result, generator or stored measurement changes.
+The suite must verify committed-store semantics in a checkout and disk-store
+semantics (revision None, allowlist, top warning) in a copied submission. A 1k
+smoke outside a checkout must retain its source fingerprint and explicitly say
+"no git checkout (source not commit-verified)"; official runs, including resumes,
+still require a committed checkout without changed source. Seven regressions
+exercise these boundaries in copies without .git or without Git on PATH.
+The exact HEAD archive remains pre-fix until Laurin commits; an archive with
+explicitly hashed working-file overlays is separate pre-commit evidence.
+Laurin chose deletion of the unused LEARNING scaffold in this session.
+
+A tracked-source probe prevents an ignored scratch copy from inheriting a false
+commit-verified label from an ancestor repository; the smoke regression clears
+the inherited Git ceiling to exercise this case.

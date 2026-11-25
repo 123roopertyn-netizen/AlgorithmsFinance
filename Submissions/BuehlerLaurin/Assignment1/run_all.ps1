@@ -16,7 +16,7 @@ try {
     $env:PATH = (Join-Path $PSScriptRoot '.venv/Scripts') + [IO.Path]::PathSeparator + $env:PATH
     New-Item -ItemType Directory -Force -Path scratch | Out-Null
 
-    # 2. Full standard correctness suite. Expected: 1033 passed; about 13 minutes here.
+    # 2. Full standard correctness suite. Expected: 1040 passed; about 13 minutes here.
     $step = 'full test suite'
     python -m pytest -q --tb=short --basetemp=scratch/pytest-run-all --junitxml=scratch/run_all-tests.xml
     if ($LASTEXITCODE -ne 0) { throw 'pytest failed' }
