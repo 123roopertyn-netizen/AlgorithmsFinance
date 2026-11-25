@@ -7,19 +7,14 @@ The teacher's instructions are in [ASSIGNMENT.md](ASSIGNMENT.md).
 
 ## Current status
 
-BaselineOrderBook implements event validation, crossing limit buys and sells,
-market sells, cancellation and canonical book inspection. It inherits the shared
-routing in OrderBook.process_event(). The existing 49 test cases are preserved.
+BaselineOrderBook implements matching, validation, cancellation and inspection
+using a list of individual resting orders. RevisedOrderBook now reuses those
+rules and adds only an orders_by_id dictionary. Its matching and removal storage
+is still the same list. FIFO queues and price heaps have not been introduced.
 
-Run the Baseline tests with an explicit selection:
-
-~~~console
-python -B test_order_book.py --implementation baseline
-~~~
-
-RevisedOrderBook remains a scaffold. Its behavioral tests and comparison against
-the real Revised version still require that implementation. Comparison tests
-using test doubles exercise the comparison wrapper independently.
+Both versions inherit the shared routing in OrderBook.process_event(). Compare
+mode checks ordered results and canonical books after every event. The existing
+49 behavioral test cases retain their assertions and expected results.
 
 ## Baseline design
 
@@ -41,6 +36,111 @@ With B active orders at the start of an operation and F maker fills:
 - Live storage is O(B); the current event's returned fill list uses O(F) space.
 
 These are algorithm bounds, not measured benchmark results.
+
+## Revised, stage 1: orders_by_id
+
+orders_by_id maps each active resting order ID to the same order dictionary held
+in the existing list. It is an index into the live book, rather than a copy of
+the order or a record of past submissions. For example, A bidding for 2 BTC at
+$100 per BTC is represented as:
+
+~~~python
+orders_by_id = {
+    "A": {
+        "order_id": "A",
+        "side": "BUY",
+        "price_ticks": 10_000,
+        "qty_units": 200_000_000,
+        "arrival_seq": 1,
+    }
+}
+~~~
+
+The Revised implementation changes four small storage hooks:
+
+1. Construction creates an empty orders_by_id dictionary.
+2. _find_order() looks up an active ID in that dictionary.
+3. _rest_order() first adds the residual order to the existing list, then indexes
+   that exact object. A fully executed incoming limit never enters the index;
+   incoming market orders and their unsold residuals never rest.
+4. _remove_order() uses the existing list removal, then removes the ID from the
+   dictionary after a full maker fill or successful cancellation.
+
+A partial maker fill changes the shared order object's qty_units, so the list
+and dictionary immediately show the same remaining quantity. Matching still scans
+the list and chooses by price and original arrival sequence. No priority depends
+on dictionary iteration order.
+
+Validation still runs before matching or storage changes. Rejected events leave
+the list, index and accepted sequence unchanged. An unknown cancellation is valid,
+returns not_found, and leaves both storage views unchanged.
+
+### Tiny cancellation example
+
+~~~python
+from order_book import RevisedOrderBook
+
+book = RevisedOrderBook()
+book.process_event({
+    "seq": 1, "event_id": "add-A", "type": "LIMIT",
+    "order_id": "A", "side": "BUY",
+    "price_ticks": 10_000, "qty_units": 200_000_000,
+})
+book.process_event({
+    "seq": 2, "event_id": "sell-1", "type": "MARKET_SELL",
+    "order_id": "S", "qty_units": 100_000_000,
+})
+assert book.orders_by_id["A"]["qty_units"] == 100_000_000
+
+result = book.process_event({
+    "seq": 3, "event_id": "cancel-A", "type": "CANCEL",
+    "target_order_id": "A",
+})
+assert result == {
+    "event_id": "cancel-A", "target_order_id": "A",
+    "status": "cancelled", "cancelled_qty_units": 100_000_000,
+}
+assert book.orders_by_id == {}
+assert book.inspect_book() == {"bids": [], "asks": []}
+~~~
+
+A starts with 2 BTC. The sale consumes 1 BTC. Cancelling A removes only its
+remaining 1 BTC from both the index and the list.
+
+### Lookup versus removal cost
+
+For B active orders, dictionary lookup and deletion take expected O(1) time.
+However, the existing list removal still takes O(B): it scans for the order's
+position and may shift the remaining list entries. Therefore cancellation as a
+whole remains O(B). This stage speeds ID lookup and live-ID validation; it does
+not make list removal or best-price selection constant time.
+
+The index adds O(B) references. The resting order dictionaries are shared,
+so their field data is not duplicated. Matching retains the Baseline's
+O((F + 1) * B) bound for F maker fills; canonical inspection still sorts the
+active orders. FIFO queues are reserved for a later stage.
+
+### Verification for this stage
+
+The same 49 existing test methods were run in each mode before and after adding
+the index. Their assertions, code and expected results are unchanged; only the
+test module's status description was updated.
+
+| Mode | Before this stage | After this stage |
+| --- | --- | --- |
+| Baseline | 49 passed | 49 passed |
+| Revised | 39 methods errored | 49 passed |
+| Compare | 39 methods errored | 49 passed |
+
+Before the change, Revised and Compare each produced 639 error records across
+those 39 methods because generated cases include repeated subtests. Every error
+was NotImplementedError from the unfinished Revised handlers. After the change,
+all three modes completed with zero failures and zero errors.
+
+Additional checks verified index membership and shared object identity after
+1,500 generated events, unchanged state after six rejected events, full-fill
+cleanup, incoming residual handling and the cancellation example above.
+The Baseline class source hash was identical before and after this stage.
 
 ## Common interface
 

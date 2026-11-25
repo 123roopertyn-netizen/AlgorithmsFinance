@@ -27,9 +27,9 @@ The external dispatcher exposes replay_file(path, book), for .jsonl and
 .jsonl.gz files, returning results in input order. Invalid file paths and
 malformed records raise informative exceptions.
 
-Baseline implements matching and validation; run with --implementation baseline.
-Revised is still a scaffold. Behavioral runs in revised or compare mode require
-its implementation. The comparison wrapper is also tested with test doubles.
+Baseline and Revised use the same list-based matching and validation rules.
+Revised additionally indexes active resting orders in orders_by_id.
+Both implementations and the comparison wrapper run the same behavioral tests.
 """
 import argparse
 from copy import deepcopy

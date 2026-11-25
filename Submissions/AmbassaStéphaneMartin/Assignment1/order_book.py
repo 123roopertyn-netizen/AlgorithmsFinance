@@ -1,7 +1,8 @@
 """Shared order book routing and explicit implementation selection.
 
 BaselineOrderBook implements matching, validation, cancellation and inspection
-using a list of individual orders. RevisedOrderBook is still a scaffold.
+using a list of individual orders. RevisedOrderBook adds an active-order ID index
+while retaining that list and its price-time matching rules.
 ComparedOrderBook checks both versions after each event, including rejected
 events and calls to public handlers.
 """
@@ -266,8 +267,27 @@ class BaselineOrderBook(OrderBook):
         return None
 
 
-class RevisedOrderBook(OrderBook):
-    """Version B: revised matching implementation still to be written."""
+class RevisedOrderBook(BaselineOrderBook):
+    """Stage 1: add an ID index while keeping the Baseline list and matching."""
+
+    def __init__(self):
+        super().__init__()
+        self.orders_by_id = {}
+
+    def _find_order(self, order_id):
+        return self.orders_by_id.get(order_id)
+
+    def _rest_order(self, order):
+        super()._rest_order(order)
+        # Index the same object: partial fills update its quantity in both views.
+        self.orders_by_id[order["order_id"]] = order
+
+    def _remove_order(self, order_id):
+        # Finding by ID is fast; removal from the existing list still scans it.
+        order = super()._remove_order(order_id)
+        if order is not None:
+            del self.orders_by_id[order_id]
+        return order
 
 
 def _same_value(left, right):
