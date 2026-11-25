@@ -18,7 +18,7 @@ Per-price live-order counts drive bounded cleanup, including behind a live head.
 Both versions share routing, validation, integer arithmetic and matching rules.
 The original 49 behavioral tests remain unchanged. Heap regressions distinguish
 live orders from inactive entries; lazy-cancellation regressions cover the new
-storage and cleanup behavior. Benchmarks remain a separate stage.
+storage and cleanup behavior. The benchmark runner is documented below.
 
 ## Baseline design
 
@@ -254,6 +254,203 @@ Additional checks verified the same live-queue, heap, ID-index and count
 invariants after 3,000 generated events across all five scenarios and seeds
 42, 43 and 44. The runnable lazy-cancellation example above also passed.
 These are correctness checks, not timing or memory benchmarks.
+
+## Benchmark runner
+
+benchmark.py uses only the standard library. It measures the implemented Baseline
+and Revised directly. The dashboard is a later stage. Run these commands from
+this Assignment1 directory.
+
+### Reproduce the smoke and small path checks
+
+Use a new output directory for each run; existing results are never overwritten.
+
+~~~console
+python -B benchmark.py run --counts 1000 --seeds 42 --scenarios buildup crowded mixed sweep cancel_churn --experiments replay --out results/smoke_repeat --worker-seconds 60 --campaign-seconds 300 --label smoke-validation
+python -B benchmark.py run --counts 120 --seeds 42 --experiments market-sell queue-concentration cancel-churn --out results/small_repeat --worker-seconds 60 --campaign-seconds 300 --label small-path-validation
+python -B -m unittest -v test_benchmark
+python -B -m unittest -v test_order_book test_price_heaps test_lazy_cancellation
+~~~
+
+### Prepare the required larger campaign
+
+The saved results/full_campaign_plan.json describes 45 workload cases:
+five scenarios, counts 1000/10000/100000, and seeds 42/43/44. Each case runs
+both versions, giving 90 version cases. Planning does not generate or measure data.
+These larger preparation and execution commands are provided for later use;
+they have not been launched in this stage.
+
+~~~console
+python -B benchmark.py plan --out results/full_plan_repeat.json
+python -B benchmark.py prepare --out results/full_prepared.json
+python -B benchmark.py run --out results/full_campaign --worker-seconds 3600 --campaign-seconds 86400 --label full-campaign
+python -B benchmark.py run --experiments market-sell queue-concentration cancel-churn --out results/full_experiments --worker-seconds 3600 --campaign-seconds 86400 --label full-experiments
+~~~
+
+Defaults select the required three counts, three seeds, five scenarios and both
+versions. --versions accepts only baseline and revised. --experiments defaults
+to replay. The controlled experiments use the same counts and seeds by default.
+The extra experiment names use hyphens; the supplied cancel_churn scenario uses
+an underscore.
+
+All selected missing datasets are generated before measurement starts. Matching
+supplied data files are reused only after metadata and SHA-256 checks. Files with
+other settings are preserved; newly generated files and their metadata go under
+data/benchmark/. Replay workloads use generate_orders.events and its supplied
+write_stream function. The controlled passive bid books and anchored churn stream
+use benchmark.py generators and the supplied write_stream; metadata identifies
+their distinct construction. Teacher fixtures, including worked_example.jsonl
+and worked_expected.json, are preserved.
+
+### Measurement boundaries and calculations
+
+Every primary timing case has one untimed full warm-up and five measured
+repetitions. Each repetition constructs a fresh empty book. Events are loaded and
+validated before engine timing. Garbage collection is enabled and explicitly run
+before each repetition, outside the timing clocks. Book destruction is also
+outside primary timing. Worker startup, imports, validation, checksums, writing
+results, canonical inspection, comparison mode and diagnostic counters are excluded.
+
+Separate I/O workers measure binary file reading, gzip decompression, and UTF-8
+decoding/JSON parsing with time.perf_counter(). Validation is outside these clocks.
+Decompression is null for uncompressed input. I/O uses an untimed warm-up and five
+repetitions, so these are warm-cache measurements; no cold-cache claim is made.
+
+Primary timing reports initialization_seconds separately. Ordinary replay has
+construction_seconds=null; controlled sales time their setup order submissions
+as construction_seconds. replay_seconds times only the measured stream or sale.
+All event processing uses process_event(). Returned results are immediately
+discarded during replay, including their destruction. A single-sale result is
+retained until its clock stops so fills and residual can be recorded afterward.
+
+~~~text
+total_compute_seconds = initialization_seconds + (construction_seconds or 0) + replay_seconds
+throughput_events_per_second = processed_events / replay_seconds
+~~~
+
+The total is calculated within each raw repetition, then summarized by its median.
+It is not the sum of component medians. I/O is reported separately; independent
+medians are not presented as an end-to-end wall time. A zero-duration clock sample
+produces null throughput rather than infinity.
+
+Latency is a separate instrumentation run, with a clock around each event call.
+Appending samples happens after the clock. Ordinary replay supplies one sample
+per event in one instrumented pass. Each controlled single-sale case supplies five
+samples using fresh identical books. Clock overhead is not subtracted. The median
+averages the middle pair for even sample counts; P95 and P99 use nearest rank:
+sorted_samples[ceil(p * sample_count) - 1], without interpolation. All raw samples
+are saved beside their worker checkpoints with event_id, sequence and repetition.
+Instrumented latency is never used as primary replay time.
+
+Memory uses tracemalloc in a separate worker process, with five independently
+traced fresh-book repetitions. Loading, imports and warm-up precede tracing.
+The reported incremental allocations include book construction, setup, matching,
+temporary fill results and cleanup. Preloaded input objects, result-history storage
+and canonical snapshots are excluded; the runner saves no event-result history.
+Orders can reference existing input strings/integers, whose earlier allocations
+are therefore excluded. Current bytes are sampled after garbage collection while
+the book remains alive; peak bytes include transient allocations and memory-run
+instrumentation. This measures traced Python allocations, not total process RSS
+or native allocator reservations. Construction and churn checkpoints are separate.
+
+A diagnostic run records active-order and occupied-price peaks after every event.
+It also records retained queue and heap entries separately from live orders.
+Ordered-result and final canonical-book digests are checked between versions.
+Fill counts, rejected-event counts, cancelled quantities and residual quantities
+come from this run, outside primary replay timing. Stream quantities are sums of
+the corresponding returned fields (including limit residuals); sale quantities
+refer to that one sale. Baseline retained entries describe list storage, and its
+heap metrics are null.
+
+### Controlled experiments
+
+- market-sell: build the same passive BUY book afresh, then sell 10%, 100% or 200%
+  of its available quantity. Requested quantity is (depth_units * percent + 99) // 100:
+  integer ceiling avoids zero-unit requests and float rounding. Setup and matching
+  have distinct clocks. processed_events is one, so throughput is sales per second.
+- queue-concentration: keep order count, quantities and arrival order identical,
+  comparing requested 4 versus 1000 levels and an exact-depth sale. Actual occupied
+  levels are min(order_count, requested_levels). Counts at least 1000 exercise the
+  full 4-versus-1000 comparison; the 120-order path check has 4 versus 120 levels.
+- cancel-churn: keep an old active head at one price, insert and cancel younger
+  orders, then cancel the head. N requested pairs produce 2*N+2 events. Diagnostics
+  and memory capture both the state before that final cancellation and the empty
+  book afterward. This tests retained storage even when the queue head stays live.
+
+Prices, quantities and sequences remain positive built-in Python integers in the
+existing cents, 10^-8 BTC and sequence units. Matching arithmetic is unchanged.
+Only clocks and statistics use floating-point values.
+
+### Artifacts, provenance and limits
+
+Each results directory contains manifest.json, raw.jsonl, summaries.jsonl and
+workers/ checkpoints, job descriptions and raw latency samples. Every raw row
+identifies case, experiment, phase, version, scenario, seed, requested count,
+actual event count, levels and repetition. Unused metrics are explicit JSON null.
+Shared I/O rows have version=null. Summary rows contain medians of complete raw
+repetitions, plus expected and completed repetition counts. Single-pass latency
+and diagnostics summaries have one aggregate row. No incomplete group receives
+a fabricated median.
+
+The manifest records Python, standard-library/zlib versions, OS/machine details,
+clock resolution, code Git revision and dirty state, source-file SHA-256 values,
+workload settings/checksums, worker environment and measurement boundaries.
+No third-party dependency is required. PYTHONHASHSEED=0 is fixed for workers,
+bytecode writing is disabled, and version order alternates across cases.
+
+Default limits are 60 seconds per worker, 1800 seconds for the measurement
+campaign, 128 MiB for each compressed/decoded input payload, and 512 MiB of
+traced allocations in memory runs. Override with --worker-seconds,
+--campaign-seconds, --payload-mib and --traced-mib. Workload generation precedes
+the measurement deadline and has no separate timeout. The allocation cap is
+checked between events, so one event can exceed it before detection. There is no
+OS RSS hard cap. Large Baseline runs or diagnostics may exceed the chosen wall
+limit: increasing it is an explicit choice, not a promise of completion.
+
+A timed-out worker is terminated. Completed repetitions survive in checkpoints;
+remaining repetitions are stopped with null measurements. Jobs past the campaign
+deadline are not_run, and failing workers report error. Such summaries and the
+campaign are marked incomplete and the command exits with code 2. Output
+serialization and process launch time are outside primary measurements.
+
+### Smoke verification on 2026-11-25
+
+On Python 3.14.5, results/smoke_1000_seed42 completed all five scenarios at
+1000 events and seed 42, both versions, with five primary timing repetitions.
+All 45 phase jobs completed: 145 raw aggregate rows and 45 summary rows, plus
+10000 individual latency samples. All five diagnostic result/book comparisons
+passed, with zero rejected workload events.
+
+| Scenario | Baseline median replay, ms | Revised median replay, ms |
+| --- | ---: | ---: |
+| buildup | 53.830 | 2.739 |
+| crowded | 55.104 | 2.337 |
+| mixed | 9.453 | 2.422 |
+| sweep | 60.618 | 3.417 |
+| cancel_churn | 1.909 | 2.044 |
+
+These are local smoke measurements, not completed larger-campaign evidence or a
+general performance ranking. The supplied cancellation stream usually has almost
+no standing depth, which differs from the anchored churn experiment. Detailed
+latency, throughput, initialization, memory and diagnostic metrics are in the
+machine-readable summaries.
+
+results/small_experiment_validation completed all six controlled cases on small
+120-order books / 120 churn pairs: 54 phase jobs, 174 raw aggregate rows and
+54 summary rows. All six cross-version diagnostic comparisons passed. Revised
+churn peaked at 35 retained entries while two orders were live; before final
+cancellation it held 19 entries for one live order (18 inactive), then zero.
+Median traced current memory fell from 7200 to 1672 bytes across that final
+cancellation; Baseline fell from 792 to 424 bytes. These include the respective
+empty-book structures and are incremental allocation measurements.
+
+The existing 69 correctness tests passed before and after the benchmark work.
+All 15 benchmark checks passed, including independently known throughput,
+percentiles, exact integer sale quantities, medians of compute totals, fresh-book
+clock boundaries, checkpoint recovery and storage bounds. The engine, generator,
+three existing test files and 12 supplied data/reference files were verified
+byte-for-byte unchanged. See results/verification.json for the recorded audit.
+
 
 ## Common interface
 
