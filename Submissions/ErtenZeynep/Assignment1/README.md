@@ -413,21 +413,23 @@ Open `http://127.0.0.1:8000/06_dashboard/`. Stop the server with Ctrl+C. Opening
 
 The supplied generator must remain unchanged. Additional generation behavior, if required, will live in a separate helper script after approval. Supplied datasets belong in `02_data/supplied/`; locally generated workloads belong in `02_data/generated/`.
 
-The original instructor package is preserved under `02_data/supplied/`, including its own `README.md`, generator, manifest, PDF, data files, metadata, worked example, and expected result. The instructor README is separate from this project README. Validate the preserved package after changing to the project root:
+The original instructor package is preserved under `02_data/supplied/`, including its own `README.md`, generator, manifest, PDF, data files, metadata, worked example, and expected result. The instructor README is separate from this project README. `validate_inputs.py --output` records local absolute paths in the regenerated verification metadata, so it must not overwrite the retained privacy-redacted `02_data/supplied_verification.json`. If local regeneration is needed, write a separate machine-specific temporary artifact after changing to the project root:
 
 ```powershell
 Set-Location -LiteralPath 'C:\path\to\Submissions\ErtenZeynep\Assignment1'
 python '02_data\validate_inputs.py' `
     --supplied-dir '02_data\supplied' `
-    --output '02_data\supplied_verification.json'
+    --output '02_data\supplied_verification.local.json'
 ```
 
 ```bash
 cd "/path/to/Submissions/ErtenZeynep/Assignment1"
 python3 02_data/validate_inputs.py \
     --supplied-dir 02_data/supplied \
-    --output 02_data/supplied_verification.json
+    --output 02_data/supplied_verification.local.json
 ```
+
+`02_data/supplied_verification.local.json` is machine-specific temporary output. Do not commit it, and remove it after inspection. The retained `02_data/supplied_verification.json` is the public, privacy-redacted verification record.
 
 The Stage 2A review verified five 10,000-event, seed-42 workload streams: `buildup`, `crowded`, `mixed`, `sweep`, and `cancel_churn`. These supplied combinations must not be regenerated merely to rename them. `02_data/supplied_verification.json` contains the machine-readable inventory, manifest comparison, event counts, schema results, price-level observations, and metadata checks.
 
@@ -457,19 +459,25 @@ cd "/path/to/Submissions/ErtenZeynep/Assignment1"
 python3 02_data/generate_workloads.py --execute
 ```
 
-Revalidate finalized outputs without regenerating them:
+`generate_workloads.py --verify-only` is the historical Stage 2B verifier. It expects the generated directory to contain exactly the 43 Stage 2B workloads and 43 matching metadata files. The current completed project also contains three separately approved Stage 4E 10,000-event concentration-pair workloads, so that historical verifier is not the current-layout verification entry point; it is retained unchanged as Stage 2B provenance.
+
+From the current repository root, use these existing non-executing verification commands for Stage 4E results, concentration pairs, warmed-primary planning and identities, and aggregated results:
 
 ```powershell
-Set-Location -LiteralPath 'C:\path\to\Submissions\ErtenZeynep\Assignment1'
-python '02_data\generate_workloads.py' --verify-only
+python '05_benchmarks/run_stage4e.py' verify --results-root '07_results/stage4e' --global-budget-seconds 4500
+python '02_data/generate_concentration_pairs.py' --verify-only
+python '05_benchmarks/run_warmed_primary.py' --output '07_results/stage4e/warmed_primary.jsonl' --global-budget-seconds 5400 --dry-run
+python '05_benchmarks/aggregate_results.py' --verify-only
 ```
 
 ```bash
-cd "/path/to/Submissions/ErtenZeynep/Assignment1"
-python3 02_data/generate_workloads.py --verify-only
+python3 05_benchmarks/run_stage4e.py verify --results-root 07_results/stage4e --global-budget-seconds 4500
+python3 02_data/generate_concentration_pairs.py --verify-only
+python3 05_benchmarks/run_warmed_primary.py --output 07_results/stage4e/warmed_primary.jsonl --global-budget-seconds 5400 --dry-run
+python3 05_benchmarks/aggregate_results.py --verify-only
 ```
 
-`02_data/generated_manifest.json` is the retained reproduction record. Its `actual_command`, `historical_final_path_command`, and `historical_execution_context` fields are immutable historical evidence and may contain the original machine's absolute paths. They are not portable instructions and must not be presented as commands that were run elsewhere. The `portable_reproduction` and per-workload `portable_reproduction_command` fields are the location-independent command contract; `{python}` means `python` on Windows or `python3` on macOS/Linux. The manifest also retains parameters, elapsed generation times, structural coverage metrics, metadata, hashes, paired-source provenance, deterministic spot-check evidence, resource limits, and final coverage checks. Large generated workloads remain excluded by `.gitignore`; the helper and manifest remain submission artifacts.
+`02_data/generated_manifest.json` is the retained reproduction record. For public submission, its `actual_command`, `historical_final_path_command`, and `historical_execution_context` fields preserve the historical command structure but replace personal machine paths with clearly labelled placeholders such as `<PROJECT_ROOT>` and `<PYTHON_EXECUTABLE>`. These fields are privacy-redacted representations, not literal commands executed with placeholder values and not portability guidance. Active machine-readable paths are project-root-relative. The `portable_reproduction` and per-workload `portable_reproduction_command` fields remain the location-independent command contract; `{python}` means `python` on Windows or `python3` on macOS/Linux. The manifest also retains unchanged parameters, elapsed generation times, structural coverage metrics, metadata, hashes, paired-source provenance, deterministic spot-check evidence, resource limits, and final coverage checks. Large generated workloads remain excluded by `.gitignore`; the helper and manifest remain submission artifacts.
 
 Primary timing, memory, liquidation, stopped-run, and operation-count records should use machine-readable JSON Lines. Per-event latency should use gzip-compressed CSV written incrementally. Heavy counters and memory tracing must run separately from primary timing.
 

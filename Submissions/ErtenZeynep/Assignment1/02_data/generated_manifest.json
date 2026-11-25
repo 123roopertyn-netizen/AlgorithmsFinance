@@ -1,7 +1,7 @@
 {
   "command_semantics": {
-    "actual_command": "Exact command executed historically; may contain machine-specific absolute paths.",
-    "historical_final_path_command": "Historical equivalent targeting the finalized path; retained as evidence, not portability guidance.",
+    "actual_command": "Privacy-redacted representation of the exact command executed historically; placeholders replace machine-specific path values and were not executed literally.",
+    "historical_final_path_command": "Privacy-redacted historical equivalent targeting the finalized path; retained as evidence, not portability guidance.",
     "portable_reproduction_command": "Project-root-relative command template; replace {python} with python or python3."
   },
   "completed_at": "2026-11-22T13:46:29.091470+01:00",
@@ -16,8 +16,8 @@
   "direct_workloads": [
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -27,7 +27,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\buildup_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\buildup_1000_seed42.jsonl.gz"
       ],
       "bytes": 13493,
       "coverage_metrics": {
@@ -87,8 +87,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"buildup\", \"events\": 1000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 13493, \"sha256\": \"9b3054be934ed3df5aad49b61622e9af79309646518fcc9de11d590eb77618db\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -98,7 +98,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\buildup_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\buildup_1000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -145,7 +145,7 @@
           "BUY": 494,
           "SELL": 506
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_1000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_1000_seed42.jsonl.gz",
         "sha256": "9b3054be934ed3df5aad49b61622e9af79309646518fcc9de11d590eb77618db",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -158,8 +158,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -169,7 +169,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\buildup_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\buildup_1000_seed43.jsonl.gz"
       ],
       "bytes": 13515,
       "coverage_metrics": {
@@ -229,8 +229,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"buildup\", \"events\": 1000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 13515, \"sha256\": \"037e723135ac3bb6cbee903f66b9c9e4074ba372dbed7b9fc0306da176e525c6\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -240,7 +240,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\buildup_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\buildup_1000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -287,7 +287,7 @@
           "BUY": 495,
           "SELL": 505
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_1000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_1000_seed43.jsonl.gz",
         "sha256": "037e723135ac3bb6cbee903f66b9c9e4074ba372dbed7b9fc0306da176e525c6",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -300,8 +300,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -311,7 +311,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\buildup_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\buildup_1000_seed44.jsonl.gz"
       ],
       "bytes": 13562,
       "coverage_metrics": {
@@ -371,8 +371,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"buildup\", \"events\": 1000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 13562, \"sha256\": \"6bc6459b09796ef555707cff9daebd865b5f67758cf6d2d4e604591ab6f485d8\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -382,7 +382,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\buildup_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\buildup_1000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -429,7 +429,7 @@
           "BUY": 481,
           "SELL": 519
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_1000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_1000_seed44.jsonl.gz",
         "sha256": "6bc6459b09796ef555707cff9daebd865b5f67758cf6d2d4e604591ab6f485d8",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -442,8 +442,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -453,7 +453,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\buildup_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\buildup_10000_seed43.jsonl.gz"
       ],
       "bytes": 132923,
       "coverage_metrics": {
@@ -513,8 +513,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"buildup\", \"events\": 10000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 132923, \"sha256\": \"25f25e183271ebce17807d04bd426059e34573e29d657e2dccd60e5698818739\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -524,7 +524,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\buildup_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\buildup_10000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -571,7 +571,7 @@
           "BUY": 4997,
           "SELL": 5003
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_10000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_10000_seed43.jsonl.gz",
         "sha256": "25f25e183271ebce17807d04bd426059e34573e29d657e2dccd60e5698818739",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -584,8 +584,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -595,7 +595,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\buildup_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\buildup_10000_seed44.jsonl.gz"
       ],
       "bytes": 132925,
       "coverage_metrics": {
@@ -655,8 +655,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"buildup\", \"events\": 10000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 132925, \"sha256\": \"a2392b86e396c33634f98a4592a7e390bf9cdb9c2d35d51dbbeb3c2286589d01\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -666,7 +666,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\buildup_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\buildup_10000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -713,7 +713,7 @@
           "BUY": 5053,
           "SELL": 4947
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_10000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_10000_seed44.jsonl.gz",
         "sha256": "a2392b86e396c33634f98a4592a7e390bf9cdb9c2d35d51dbbeb3c2286589d01",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -726,8 +726,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -737,7 +737,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\buildup_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\buildup_100000_seed42.jsonl.gz"
       ],
       "bytes": 1318514,
       "coverage_metrics": {
@@ -797,8 +797,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"buildup\", \"events\": 100000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1318514, \"sha256\": \"3d6ffabf40ead705eccaf54c8d14aea9667f95f8bfdfe404ada38c4c18ef08ac\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -808,7 +808,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\buildup_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\buildup_100000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -855,7 +855,7 @@
           "BUY": 49988,
           "SELL": 50012
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_100000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_100000_seed42.jsonl.gz",
         "sha256": "3d6ffabf40ead705eccaf54c8d14aea9667f95f8bfdfe404ada38c4c18ef08ac",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -868,8 +868,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -879,7 +879,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\buildup_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\buildup_100000_seed43.jsonl.gz"
       ],
       "bytes": 1318265,
       "coverage_metrics": {
@@ -939,8 +939,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"buildup\", \"events\": 100000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1318265, \"sha256\": \"e949f2e93500a22660e5f169645a76f98341464d923dc1ba417ff7904cc6141e\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -950,7 +950,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\buildup_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\buildup_100000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -997,7 +997,7 @@
           "BUY": 49978,
           "SELL": 50022
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_100000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_100000_seed43.jsonl.gz",
         "sha256": "e949f2e93500a22660e5f169645a76f98341464d923dc1ba417ff7904cc6141e",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -1010,8 +1010,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -1021,7 +1021,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\buildup_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\buildup_100000_seed44.jsonl.gz"
       ],
       "bytes": 1318121,
       "coverage_metrics": {
@@ -1081,8 +1081,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"buildup\", \"events\": 100000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1318121, \"sha256\": \"16ddbfcc4155748214f8875be81b3b0ace7d5d80b4a165ecadfacff6dcb77fce\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "buildup",
         "--events",
@@ -1092,7 +1092,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\buildup_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\buildup_100000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -1139,7 +1139,7 @@
           "BUY": 50010,
           "SELL": 49990
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_100000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_100000_seed44.jsonl.gz",
         "sha256": "16ddbfcc4155748214f8875be81b3b0ace7d5d80b4a165ecadfacff6dcb77fce",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -1152,8 +1152,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1163,7 +1163,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\crowded_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\crowded_1000_seed42.jsonl.gz"
       ],
       "bytes": 11450,
       "coverage_metrics": {
@@ -1223,8 +1223,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"crowded\", \"events\": 1000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 11450, \"sha256\": \"30053d0b678d452ff32b6e08fab431ef6d6676829f227686bbb1159fedfa306e\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1234,7 +1234,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\crowded_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\crowded_1000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -1281,7 +1281,7 @@
           "BUY": 480,
           "SELL": 520
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/crowded_1000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/crowded_1000_seed42.jsonl.gz",
         "sha256": "30053d0b678d452ff32b6e08fab431ef6d6676829f227686bbb1159fedfa306e",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -1294,8 +1294,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1305,7 +1305,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\crowded_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\crowded_1000_seed43.jsonl.gz"
       ],
       "bytes": 11407,
       "coverage_metrics": {
@@ -1365,8 +1365,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"crowded\", \"events\": 1000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 11407, \"sha256\": \"5ea0ceea89148c356116d8471f28abd16a52c550f918eb24d48db064fc8295a5\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1376,7 +1376,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\crowded_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\crowded_1000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -1423,7 +1423,7 @@
           "BUY": 459,
           "SELL": 541
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/crowded_1000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/crowded_1000_seed43.jsonl.gz",
         "sha256": "5ea0ceea89148c356116d8471f28abd16a52c550f918eb24d48db064fc8295a5",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -1436,8 +1436,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1447,7 +1447,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\crowded_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\crowded_1000_seed44.jsonl.gz"
       ],
       "bytes": 11426,
       "coverage_metrics": {
@@ -1507,8 +1507,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"crowded\", \"events\": 1000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 11426, \"sha256\": \"1ee8aace9734c93cbc2cb1fff2dd6ecc257260623da4fc5478a1e26df2f51b25\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1518,7 +1518,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\crowded_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\crowded_1000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -1565,7 +1565,7 @@
           "BUY": 489,
           "SELL": 511
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/crowded_1000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/crowded_1000_seed44.jsonl.gz",
         "sha256": "1ee8aace9734c93cbc2cb1fff2dd6ecc257260623da4fc5478a1e26df2f51b25",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -1578,8 +1578,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1589,7 +1589,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\crowded_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\crowded_10000_seed43.jsonl.gz"
       ],
       "bytes": 111824,
       "coverage_metrics": {
@@ -1649,8 +1649,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"crowded\", \"events\": 10000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 111824, \"sha256\": \"0d482988b03a4ca3dcf425acacf1d003d00f262c86b1df65cd484847e520d490\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1660,7 +1660,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\crowded_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\crowded_10000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -1707,7 +1707,7 @@
           "BUY": 4971,
           "SELL": 5029
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/crowded_10000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/crowded_10000_seed43.jsonl.gz",
         "sha256": "0d482988b03a4ca3dcf425acacf1d003d00f262c86b1df65cd484847e520d490",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -1720,8 +1720,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1731,7 +1731,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\crowded_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\crowded_10000_seed44.jsonl.gz"
       ],
       "bytes": 111762,
       "coverage_metrics": {
@@ -1791,8 +1791,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"crowded\", \"events\": 10000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 111762, \"sha256\": \"d4c3778717962bf4a09c944c7d48df531c729fcead2aab0454251ff3b439a9ea\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1802,7 +1802,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\crowded_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\crowded_10000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -1849,7 +1849,7 @@
           "BUY": 4982,
           "SELL": 5018
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/crowded_10000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/crowded_10000_seed44.jsonl.gz",
         "sha256": "d4c3778717962bf4a09c944c7d48df531c729fcead2aab0454251ff3b439a9ea",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -1862,8 +1862,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1873,7 +1873,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\crowded_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\crowded_100000_seed42.jsonl.gz"
       ],
       "bytes": 1104154,
       "coverage_metrics": {
@@ -1933,8 +1933,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"crowded\", \"events\": 100000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1104154, \"sha256\": \"e96395f4d3db4ecce0cc52c5ba388db6eaefe6fdadce5d3325fa3c34da00a179\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -1944,7 +1944,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\crowded_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\crowded_100000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -1991,7 +1991,7 @@
           "BUY": 49863,
           "SELL": 50137
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/crowded_100000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/crowded_100000_seed42.jsonl.gz",
         "sha256": "e96395f4d3db4ecce0cc52c5ba388db6eaefe6fdadce5d3325fa3c34da00a179",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -2004,8 +2004,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -2015,7 +2015,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\crowded_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\crowded_100000_seed43.jsonl.gz"
       ],
       "bytes": 1104001,
       "coverage_metrics": {
@@ -2075,8 +2075,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"crowded\", \"events\": 100000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1104001, \"sha256\": \"d0fc59f1a3636aee0d1651a2192c0c1e72887834c246aac5c0c199ee7dcf0c8e\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -2086,7 +2086,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\crowded_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\crowded_100000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -2133,7 +2133,7 @@
           "BUY": 49709,
           "SELL": 50291
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/crowded_100000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/crowded_100000_seed43.jsonl.gz",
         "sha256": "d0fc59f1a3636aee0d1651a2192c0c1e72887834c246aac5c0c199ee7dcf0c8e",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -2146,8 +2146,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -2157,7 +2157,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\crowded_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\crowded_100000_seed44.jsonl.gz"
       ],
       "bytes": 1104343,
       "coverage_metrics": {
@@ -2217,8 +2217,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"crowded\", \"events\": 100000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1104343, \"sha256\": \"832a37991a5816f273b64445f274fce59122b0cb27efcf211ebd3346c21ab8d8\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "crowded",
         "--events",
@@ -2228,7 +2228,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\crowded_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\crowded_100000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -2275,7 +2275,7 @@
           "BUY": 50088,
           "SELL": 49912
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/crowded_100000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/crowded_100000_seed44.jsonl.gz",
         "sha256": "832a37991a5816f273b64445f274fce59122b0cb27efcf211ebd3346c21ab8d8",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -2288,8 +2288,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2299,7 +2299,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\mixed_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\mixed_1000_seed42.jsonl.gz"
       ],
       "bytes": 12595,
       "coverage_metrics": {
@@ -2366,8 +2366,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"mixed\", \"events\": 1000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 12595, \"sha256\": \"8c3455dc8370f2e006eda834f5bfeb47abdb7dc3766775cf12cdc8444f974d9d\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2377,7 +2377,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\mixed_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\mixed_1000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -2426,7 +2426,7 @@
           "BUY": 277,
           "SELL": 303
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/mixed_1000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/mixed_1000_seed42.jsonl.gz",
         "sha256": "8c3455dc8370f2e006eda834f5bfeb47abdb7dc3766775cf12cdc8444f974d9d",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -2439,8 +2439,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2450,7 +2450,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\mixed_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\mixed_1000_seed43.jsonl.gz"
       ],
       "bytes": 12534,
       "coverage_metrics": {
@@ -2517,8 +2517,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"mixed\", \"events\": 1000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 12534, \"sha256\": \"002a4bb66fdd24f97d72a086b89d3f19b62c0f47713daaf5260773b95f44b4da\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2528,7 +2528,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\mixed_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\mixed_1000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -2577,7 +2577,7 @@
           "BUY": 263,
           "SELL": 331
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/mixed_1000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/mixed_1000_seed43.jsonl.gz",
         "sha256": "002a4bb66fdd24f97d72a086b89d3f19b62c0f47713daaf5260773b95f44b4da",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -2590,8 +2590,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2601,7 +2601,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\mixed_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\mixed_1000_seed44.jsonl.gz"
       ],
       "bytes": 12620,
       "coverage_metrics": {
@@ -2668,8 +2668,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"mixed\", \"events\": 1000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 12620, \"sha256\": \"051284b7198e345b741e175b9f426613638efca10e13f580215ea704f6c5bc37\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2679,7 +2679,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\mixed_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\mixed_1000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -2728,7 +2728,7 @@
           "BUY": 305,
           "SELL": 312
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/mixed_1000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/mixed_1000_seed44.jsonl.gz",
         "sha256": "051284b7198e345b741e175b9f426613638efca10e13f580215ea704f6c5bc37",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -2741,8 +2741,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2752,7 +2752,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\mixed_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\mixed_10000_seed43.jsonl.gz"
       ],
       "bytes": 125238,
       "coverage_metrics": {
@@ -2819,8 +2819,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"mixed\", \"events\": 10000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 125238, \"sha256\": \"2e6f1d4dfc78d46a8cd0cefd48e8417da4f448d6cf2c5d4e28af3842aa5f60a6\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2830,7 +2830,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\mixed_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\mixed_10000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -2879,7 +2879,7 @@
           "BUY": 3009,
           "SELL": 3117
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/mixed_10000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/mixed_10000_seed43.jsonl.gz",
         "sha256": "2e6f1d4dfc78d46a8cd0cefd48e8417da4f448d6cf2c5d4e28af3842aa5f60a6",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -2892,8 +2892,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2903,7 +2903,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\mixed_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\mixed_10000_seed44.jsonl.gz"
       ],
       "bytes": 125173,
       "coverage_metrics": {
@@ -2970,8 +2970,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"mixed\", \"events\": 10000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 125173, \"sha256\": \"b9a68b87f1922d1d137ef391a5f7bbe4eaf6efe6c843aa599c0b7a2646b4dea8\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -2981,7 +2981,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\mixed_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\mixed_10000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -3030,7 +3030,7 @@
           "BUY": 3068,
           "SELL": 3000
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/mixed_10000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/mixed_10000_seed44.jsonl.gz",
         "sha256": "b9a68b87f1922d1d137ef391a5f7bbe4eaf6efe6c843aa599c0b7a2646b4dea8",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -3043,8 +3043,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -3054,7 +3054,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\mixed_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\mixed_100000_seed42.jsonl.gz"
       ],
       "bytes": 1255375,
       "coverage_metrics": {
@@ -3121,8 +3121,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"mixed\", \"events\": 100000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1255375, \"sha256\": \"83aa4dfb3468228dd9cfad3419d54f21186df9a140aaafe42164dd08dac55424\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -3132,7 +3132,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\mixed_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\mixed_100000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -3181,7 +3181,7 @@
           "BUY": 30075,
           "SELL": 29900
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/mixed_100000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/mixed_100000_seed42.jsonl.gz",
         "sha256": "83aa4dfb3468228dd9cfad3419d54f21186df9a140aaafe42164dd08dac55424",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -3194,8 +3194,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -3205,7 +3205,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\mixed_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\mixed_100000_seed43.jsonl.gz"
       ],
       "bytes": 1256281,
       "coverage_metrics": {
@@ -3272,8 +3272,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"mixed\", \"events\": 100000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1256281, \"sha256\": \"1ef72b12ab563ce63ed5dec88a43b59fc70149ece4d0d9263fc1072e6aee0a64\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -3283,7 +3283,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\mixed_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\mixed_100000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -3332,7 +3332,7 @@
           "BUY": 29867,
           "SELL": 30218
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/mixed_100000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/mixed_100000_seed43.jsonl.gz",
         "sha256": "1ef72b12ab563ce63ed5dec88a43b59fc70149ece4d0d9263fc1072e6aee0a64",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -3345,8 +3345,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -3356,7 +3356,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\mixed_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\mixed_100000_seed44.jsonl.gz"
       ],
       "bytes": 1255703,
       "coverage_metrics": {
@@ -3423,8 +3423,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"mixed\", \"events\": 100000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1255703, \"sha256\": \"d015100d548d4d1bf3f910e099553f67541bb226bced623c6d09964feb1b8eb8\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "mixed",
         "--events",
@@ -3434,7 +3434,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\mixed_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\mixed_100000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -3483,7 +3483,7 @@
           "BUY": 30122,
           "SELL": 30037
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/mixed_100000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/mixed_100000_seed44.jsonl.gz",
         "sha256": "d015100d548d4d1bf3f910e099553f67541bb226bced623c6d09964feb1b8eb8",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -3496,8 +3496,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -3507,7 +3507,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\sweep_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\sweep_1000_seed42.jsonl.gz"
       ],
       "bytes": 12837,
       "coverage_metrics": {
@@ -3569,8 +3569,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"sweep\", \"events\": 1000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 12837, \"sha256\": \"e4ec73a1792d215d2f56a5ba4dc92fcb012886a741603dc939827d567f11c2fe\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -3580,7 +3580,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\sweep_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\sweep_1000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -3628,7 +3628,7 @@
           "BUY": 389,
           "SELL": 411
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/sweep_1000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/sweep_1000_seed42.jsonl.gz",
         "sha256": "e4ec73a1792d215d2f56a5ba4dc92fcb012886a741603dc939827d567f11c2fe",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -3641,8 +3641,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -3652,7 +3652,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\sweep_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\sweep_1000_seed43.jsonl.gz"
       ],
       "bytes": 12874,
       "coverage_metrics": {
@@ -3714,8 +3714,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"sweep\", \"events\": 1000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 12874, \"sha256\": \"11619704e2b389d1832c7cdafb86854cd5fda300a05d9c7e0655083502cccad0\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -3725,7 +3725,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\sweep_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\sweep_1000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -3773,7 +3773,7 @@
           "BUY": 411,
           "SELL": 389
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/sweep_1000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/sweep_1000_seed43.jsonl.gz",
         "sha256": "11619704e2b389d1832c7cdafb86854cd5fda300a05d9c7e0655083502cccad0",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -3786,8 +3786,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -3797,7 +3797,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\sweep_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\sweep_1000_seed44.jsonl.gz"
       ],
       "bytes": 12913,
       "coverage_metrics": {
@@ -3859,8 +3859,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"sweep\", \"events\": 1000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 12913, \"sha256\": \"ea3de66deeef120f55c310cbe9db82f0c76073c0029404560ff696153753b9cf\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -3870,7 +3870,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\sweep_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\sweep_1000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -3918,7 +3918,7 @@
           "BUY": 382,
           "SELL": 418
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/sweep_1000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/sweep_1000_seed44.jsonl.gz",
         "sha256": "ea3de66deeef120f55c310cbe9db82f0c76073c0029404560ff696153753b9cf",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -3931,8 +3931,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -3942,7 +3942,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\sweep_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\sweep_10000_seed43.jsonl.gz"
       ],
       "bytes": 123816,
       "coverage_metrics": {
@@ -4004,8 +4004,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"sweep\", \"events\": 10000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 123816, \"sha256\": \"c855424b4a836ad16b9a60c2aa5be78f690d26aba2512ac2950bb3723ff06a8e\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4015,7 +4015,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\sweep_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\sweep_10000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -4063,7 +4063,7 @@
           "BUY": 4002,
           "SELL": 3998
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/sweep_10000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/sweep_10000_seed43.jsonl.gz",
         "sha256": "c855424b4a836ad16b9a60c2aa5be78f690d26aba2512ac2950bb3723ff06a8e",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -4076,8 +4076,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4087,7 +4087,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\sweep_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\sweep_10000_seed44.jsonl.gz"
       ],
       "bytes": 123956,
       "coverage_metrics": {
@@ -4149,8 +4149,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"sweep\", \"events\": 10000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 123956, \"sha256\": \"ff72b1d7292b6dba3589d761a3d4e4951916dd4def8bdb2b10bf99635361970c\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4160,7 +4160,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\sweep_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\sweep_10000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -4208,7 +4208,7 @@
           "BUY": 4033,
           "SELL": 3967
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/sweep_10000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/sweep_10000_seed44.jsonl.gz",
         "sha256": "ff72b1d7292b6dba3589d761a3d4e4951916dd4def8bdb2b10bf99635361970c",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -4221,8 +4221,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4232,7 +4232,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\sweep_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\sweep_100000_seed42.jsonl.gz"
       ],
       "bytes": 1228090,
       "coverage_metrics": {
@@ -4294,8 +4294,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"sweep\", \"events\": 100000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1228090, \"sha256\": \"cb15a30b8541947f8ccc45d2b6e59104cb69b18d2b617bd874f691271cc39c53\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4305,7 +4305,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\sweep_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\sweep_100000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -4353,7 +4353,7 @@
           "BUY": 40064,
           "SELL": 39936
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/sweep_100000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/sweep_100000_seed42.jsonl.gz",
         "sha256": "cb15a30b8541947f8ccc45d2b6e59104cb69b18d2b617bd874f691271cc39c53",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -4366,8 +4366,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4377,7 +4377,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\sweep_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\sweep_100000_seed43.jsonl.gz"
       ],
       "bytes": 1228145,
       "coverage_metrics": {
@@ -4439,8 +4439,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"sweep\", \"events\": 100000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1228145, \"sha256\": \"fccad62402602a0f3c9fcb727703147c598ee5228956395ecace9631234cef4b\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4450,7 +4450,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\sweep_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\sweep_100000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -4498,7 +4498,7 @@
           "BUY": 39924,
           "SELL": 40076
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/sweep_100000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/sweep_100000_seed43.jsonl.gz",
         "sha256": "fccad62402602a0f3c9fcb727703147c598ee5228956395ecace9631234cef4b",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -4511,8 +4511,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4522,7 +4522,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\sweep_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\sweep_100000_seed44.jsonl.gz"
       ],
       "bytes": 1227897,
       "coverage_metrics": {
@@ -4584,8 +4584,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"sweep\", \"events\": 100000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1227897, \"sha256\": \"8896f6c5b343ed34186f1eb8fb39bfc29087ff512e9a15bf58f42a7896cb1d2d\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "sweep",
         "--events",
@@ -4595,7 +4595,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\sweep_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\sweep_100000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -4643,7 +4643,7 @@
           "BUY": 39999,
           "SELL": 40001
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/sweep_100000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/sweep_100000_seed44.jsonl.gz",
         "sha256": "8896f6c5b343ed34186f1eb8fb39bfc29087ff512e9a15bf58f42a7896cb1d2d",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -4656,8 +4656,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -4667,7 +4667,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\cancel_churn_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\cancel_churn_1000_seed42.jsonl.gz"
       ],
       "bytes": 11336,
       "coverage_metrics": {
@@ -4731,8 +4731,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"cancel_churn\", \"events\": 1000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 11336, \"sha256\": \"2994e992735f3a2a324c6832d8883570e486cbf1a6761b3174d2a5014bf5b2d6\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -4742,7 +4742,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\cancel_churn_1000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\cancel_churn_1000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -4786,7 +4786,7 @@
         "limit_side_counts": {
           "BUY": 500
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/cancel_churn_1000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/cancel_churn_1000_seed42.jsonl.gz",
         "sha256": "2994e992735f3a2a324c6832d8883570e486cbf1a6761b3174d2a5014bf5b2d6",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -4799,8 +4799,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -4810,7 +4810,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\cancel_churn_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\cancel_churn_1000_seed43.jsonl.gz"
       ],
       "bytes": 11322,
       "coverage_metrics": {
@@ -4874,8 +4874,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"cancel_churn\", \"events\": 1000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 11322, \"sha256\": \"1a3972c9c249f09d53cd5fe5ad71f53e93147b7162c6cb0a89e8007d106731e2\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -4885,7 +4885,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\cancel_churn_1000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\cancel_churn_1000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -4929,7 +4929,7 @@
         "limit_side_counts": {
           "BUY": 500
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/cancel_churn_1000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/cancel_churn_1000_seed43.jsonl.gz",
         "sha256": "1a3972c9c249f09d53cd5fe5ad71f53e93147b7162c6cb0a89e8007d106731e2",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -4942,8 +4942,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -4953,7 +4953,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\cancel_churn_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\cancel_churn_1000_seed44.jsonl.gz"
       ],
       "bytes": 11269,
       "coverage_metrics": {
@@ -5017,8 +5017,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"cancel_churn\", \"events\": 1000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 11269, \"sha256\": \"3418127dc6ba01bdfe2b522e75fe11b5be42407980332dbec51bc76384e9f594\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5028,7 +5028,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\cancel_churn_1000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\cancel_churn_1000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -5072,7 +5072,7 @@
         "limit_side_counts": {
           "BUY": 500
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/cancel_churn_1000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/cancel_churn_1000_seed44.jsonl.gz",
         "sha256": "3418127dc6ba01bdfe2b522e75fe11b5be42407980332dbec51bc76384e9f594",
         "status": "valid",
         "unique_event_ids": 1000,
@@ -5085,8 +5085,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5096,7 +5096,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\cancel_churn_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\cancel_churn_10000_seed43.jsonl.gz"
       ],
       "bytes": 110729,
       "coverage_metrics": {
@@ -5160,8 +5160,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"cancel_churn\", \"events\": 10000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 110729, \"sha256\": \"02e85c19c30f2b61c7b3fc1336c4a48576434a328779cdc2c76b49c189d55982\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5171,7 +5171,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\cancel_churn_10000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\cancel_churn_10000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -5215,7 +5215,7 @@
         "limit_side_counts": {
           "BUY": 5000
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/cancel_churn_10000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/cancel_churn_10000_seed43.jsonl.gz",
         "sha256": "02e85c19c30f2b61c7b3fc1336c4a48576434a328779cdc2c76b49c189d55982",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -5228,8 +5228,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5239,7 +5239,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\cancel_churn_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\cancel_churn_10000_seed44.jsonl.gz"
       ],
       "bytes": 110661,
       "coverage_metrics": {
@@ -5303,8 +5303,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"cancel_churn\", \"events\": 10000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 110661, \"sha256\": \"533fbc3a190e00d91af1b6c538405848e0539132a084e69f9931d18a01c1df61\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5314,7 +5314,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\cancel_churn_10000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\cancel_churn_10000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -5358,7 +5358,7 @@
         "limit_side_counts": {
           "BUY": 5000
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/cancel_churn_10000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/cancel_churn_10000_seed44.jsonl.gz",
         "sha256": "533fbc3a190e00d91af1b6c538405848e0539132a084e69f9931d18a01c1df61",
         "status": "valid",
         "unique_event_ids": 10000,
@@ -5371,8 +5371,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5382,7 +5382,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\cancel_churn_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\cancel_churn_100000_seed42.jsonl.gz"
       ],
       "bytes": 1097574,
       "coverage_metrics": {
@@ -5446,8 +5446,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"cancel_churn\", \"events\": 100000, \"seed\": 42, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1097574, \"sha256\": \"d633254ec2c5e73284c58f123978dcada972bf3e80f3e4e4e2ea952458c1f5aa\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5457,7 +5457,7 @@
         "--seed",
         "42",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\cancel_churn_100000_seed42.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\cancel_churn_100000_seed42.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -5501,7 +5501,7 @@
         "limit_side_counts": {
           "BUY": 50000
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/cancel_churn_100000_seed42.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/cancel_churn_100000_seed42.jsonl.gz",
         "sha256": "d633254ec2c5e73284c58f123978dcada972bf3e80f3e4e4e2ea952458c1f5aa",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -5514,8 +5514,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5525,7 +5525,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\cancel_churn_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\cancel_churn_100000_seed43.jsonl.gz"
       ],
       "bytes": 1096900,
       "coverage_metrics": {
@@ -5589,8 +5589,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"cancel_churn\", \"events\": 100000, \"seed\": 43, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1096900, \"sha256\": \"332836860cd12dd36893a0c2af5c20246af6242d3abcc5e05dd3115d8368d0e5\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5600,7 +5600,7 @@
         "--seed",
         "43",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\cancel_churn_100000_seed43.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\cancel_churn_100000_seed43.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -5644,7 +5644,7 @@
         "limit_side_counts": {
           "BUY": 50000
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/cancel_churn_100000_seed43.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/cancel_churn_100000_seed43.jsonl.gz",
         "sha256": "332836860cd12dd36893a0c2af5c20246af6242d3abcc5e05dd3115d8368d0e5",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -5657,8 +5657,8 @@
     },
     {
       "actual_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5668,7 +5668,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\.stage2b_staging\\cancel_churn_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\.stage2b_staging\\cancel_churn_100000_seed44.jsonl.gz"
       ],
       "bytes": 1097459,
       "coverage_metrics": {
@@ -5732,8 +5732,8 @@
       "generator_stderr": "",
       "generator_stdout": "{\"synthetic\": true, \"calibrated_to_exchange_data\": false, \"scenario\": \"cancel_churn\", \"events\": 100000, \"seed\": 44, \"levels\": 1000, \"python\": \"3.13.17\", \"generator\": \"random.Random\", \"price_tick_usd\": \"0.01\", \"quantity_unit_btc\": \"0.00000001\", \"compressed_bytes\": 1097459, \"sha256\": \"b7509b134016db7c0db8372bc22cc9a59d623026a8842cfe2c8ee153a5d44cdc\"}",
       "historical_final_path_command": [
-        "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\supplied\\generate_orders.py",
+        "<PYTHON_EXECUTABLE>",
+        "<PROJECT_ROOT>\\02_data\\supplied\\generate_orders.py",
         "--scenario",
         "cancel_churn",
         "--events",
@@ -5743,7 +5743,7 @@
         "--seed",
         "44",
         "--out",
-        "C:\\Users\\zeyne\\OneDrive\\Desktop\\Class Labs\\AlgorithmsFinance\\Submissions\\ErtenZeynep\\Assignment1\\02_data\\generated\\cancel_churn_100000_seed44.jsonl.gz"
+        "<PROJECT_ROOT>\\02_data\\generated\\cancel_churn_100000_seed44.jsonl.gz"
       ],
       "kind": "direct_generator_output",
       "levels": 1000,
@@ -5787,7 +5787,7 @@
         "limit_side_counts": {
           "BUY": 50000
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/cancel_churn_100000_seed44.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/cancel_churn_100000_seed44.jsonl.gz",
         "sha256": "b7509b134016db7c0db8372bc22cc9a59d623026a8842cfe2c8ee153a5d44cdc",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -5859,10 +5859,10 @@
     "unchanged_from_instructor": true
   },
   "historical_execution_context": {
-    "project_root": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1",
-    "purpose": "Historical evidence from the machine that executed Stage 2B; not a portable command contract.",
+    "project_root": "<PROJECT_ROOT>",
+    "purpose": "Privacy-redacted representation of the machine that executed Stage 2B; placeholders are not literal executed command values or portability guidance.",
     "python": {
-      "executable": "C:\\Users\\zeyne\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+      "executable": "<PYTHON_EXECUTABLE>",
       "implementation": "CPython",
       "platform": "Windows-11-10.0.26200-SP0",
       "version": "3.13.17"
@@ -5986,7 +5986,7 @@
           "BUY": 49988,
           "SELL": 50012
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_100000_seed42_levels4_paired.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_100000_seed42_levels4_paired.jsonl.gz",
         "sha256": "014c6dc14155cd5f1009f3d3b3581ce82e8f948dc64c8a6f0e11c6f3e99ca932",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -6110,7 +6110,7 @@
           "BUY": 49978,
           "SELL": 50022
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_100000_seed43_levels4_paired.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_100000_seed43_levels4_paired.jsonl.gz",
         "sha256": "1532399e0870d52ee704beced3480b78476f508c42ce3f7b26fb82e4f4f6f124",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -6234,7 +6234,7 @@
           "BUY": 50010,
           "SELL": 49990
         },
-        "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/generated/.stage2b_staging/buildup_100000_seed44_levels4_paired.jsonl.gz",
+        "path": "02_data/generated/.stage2b_staging/buildup_100000_seed44_levels4_paired.jsonl.gz",
         "sha256": "8fa6d02228ae6512b6679bd4884dd4516d34124300102e70f953afe90adc075b",
         "status": "valid",
         "unique_event_ids": 100000,
@@ -6322,5 +6322,17 @@
       "seed": 42,
       "sha256": "7aef5f014e6d1e5d01cb37c7ff7b02cfcc5a30f185de8a4b33db2d32b3d9d933"
     }
-  ]
+  ],
+  "privacy_redaction": {
+    "applied_on": "2026-11-25",
+    "purpose": "Remove personal machine-specific paths from the public submission without changing workload evidence.",
+    "active_path_policy": "Project-contained machine-readable paths are project-root-relative POSIX strings.",
+    "historical_command_policy": "Historical command paths use clearly labelled placeholders and are representations, not literal rerun commands.",
+    "placeholders": {
+      "<PROJECT_ROOT>": "Project root used by the historical execution.",
+      "<PYTHON_EXECUTABLE>": "Python executable used by the historical execution."
+    },
+    "semantic_inventory_sha256": "c3c374d10e98c2b1b8a6ee226636e98458676248f514f04f8833ed96f3324c41",
+    "final_manifest_sha256_location": "Recorded externally in AI_DECISIONS.md; a manifest never stores its own final digest."
+  }
 }

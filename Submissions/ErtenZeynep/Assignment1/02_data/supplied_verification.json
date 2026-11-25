@@ -129,7 +129,7 @@
         "status": "matched"
       }
     ],
-    "manifest_path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/supplied/MANIFEST.json",
+    "manifest_path": "02_data/supplied/MANIFEST.json",
     "synthetic_data_only": true,
     "unlisted_actual_files": [
       "MANIFEST.json"
@@ -192,7 +192,7 @@
       "stream_path": "data/sweep_10000.jsonl.gz"
     }
   ],
-  "project_root": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1",
+  "project_root": ".",
   "streams": {
     "data/buildup_10000.jsonl.gz": {
       "bytes": 132767,
@@ -217,7 +217,7 @@
         "BUY": 5025,
         "SELL": 4975
       },
-      "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/supplied/data/buildup_10000.jsonl.gz",
+      "path": "02_data/supplied/data/buildup_10000.jsonl.gz",
       "sha256": "441db8ecf37103113abfed079fbe4bdbe212bb7acbc31be0d344bab67c9b95b5",
       "status": "valid",
       "unique_event_ids": 10000,
@@ -247,7 +247,7 @@
       "limit_side_counts": {
         "BUY": 5000
       },
-      "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/supplied/data/cancel_churn_10000.jsonl.gz",
+      "path": "02_data/supplied/data/cancel_churn_10000.jsonl.gz",
       "sha256": "7aef5f014e6d1e5d01cb37c7ff7b02cfcc5a30f185de8a4b33db2d32b3d9d933",
       "status": "valid",
       "unique_event_ids": 10000,
@@ -280,7 +280,7 @@
         "BUY": 4956,
         "SELL": 5044
       },
-      "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/supplied/data/crowded_10000.jsonl.gz",
+      "path": "02_data/supplied/data/crowded_10000.jsonl.gz",
       "sha256": "112bc3ad120eb436e45608ef11ff804aed35aef24e43d4c10e5adda3b26577b6",
       "status": "valid",
       "unique_event_ids": 10000,
@@ -315,7 +315,7 @@
         "BUY": 3065,
         "SELL": 3010
       },
-      "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/supplied/data/mixed_10000.jsonl.gz",
+      "path": "02_data/supplied/data/mixed_10000.jsonl.gz",
       "sha256": "f5a027da6b31209d5e83c56bfbf8626604bb5f91e4176b784ff8a1dac1974a16",
       "status": "valid",
       "unique_event_ids": 10000,
@@ -349,7 +349,7 @@
         "BUY": 4062,
         "SELL": 3938
       },
-      "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/supplied/data/sweep_10000.jsonl.gz",
+      "path": "02_data/supplied/data/sweep_10000.jsonl.gz",
       "sha256": "c50755964212445574359b0fe4011f908ad2833edc900d49ecfa25948cca334f",
       "status": "valid",
       "unique_event_ids": 10000,
@@ -383,7 +383,7 @@
         "BUY": 4,
         "SELL": 1
       },
-      "path": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/supplied/data/worked_example.jsonl",
+      "path": "02_data/supplied/data/worked_example.jsonl",
       "sha256": "831015ac71d56ada0898b0bf8f59f125900b4dc32134d6ef37bd3cec304798ec",
       "status": "valid",
       "unique_event_ids": 6,
@@ -394,7 +394,7 @@
       "unique_submission_ids": 6
     }
   },
-  "supplied_dir": "C:/Users/zeyne/OneDrive/Desktop/Class Labs/AlgorithmsFinance/Submissions/ErtenZeynep/Assignment1/02_data/supplied",
+  "supplied_dir": "02_data/supplied",
   "worked_expected": {
     "bytes": 1101,
     "fill_count": 4,
@@ -408,5 +408,12 @@
       "remaining_orders",
       "synthetic"
     ]
+  },
+  "privacy_redaction": {
+    "applied_on": "2026-11-25",
+    "purpose": "Remove personal machine-specific paths from the public submission.",
+    "path_policy": "Active project-contained paths are project-root-relative POSIX strings.",
+    "scientific_fields_changed": false,
+    "final_file_sha256_location": "Recorded externally in AI_DECISIONS.md."
   }
 }

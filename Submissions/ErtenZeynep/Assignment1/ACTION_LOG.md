@@ -7,14 +7,14 @@ This file records actual operations. Planned actions are not presented as comple
 ### 1. Read the local PDF workflow instructions
 
 - Purpose: follow the required read-only PDF inspection procedure before the later security review.
-- Command: `Get-Content -LiteralPath 'C:\Users\zeyne\.codex\plugins\cache\openai-primary-runtime\pdf\26.1026.10807\skills\pdf\SKILL.md' -Raw`
+- Command: `Get-Content -LiteralPath '<CODEX_HOME>\plugins\cache\openai-primary-runtime\pdf\26.1026.10807\skills\pdf\SKILL.md' -Raw`
 - Result: succeeded. The workflow requires complete text extraction plus visual page review. It requires no authoring marker for read-only work.
 - Files changed: none.
 
 ### 2. Verified the project root and checked for existing targets
 
 - Purpose: avoid overwriting existing work.
-- Command: `$root = 'C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1'; Write-Output ('WorkingDirectory=' + (Get-Location).Path); Write-Output ('RootExists=' + (Test-Path -LiteralPath $root -PathType Container)); Get-ChildItem -LiteralPath $root -Force | Select-Object Name,Mode,Length,FullName`
+- Command: `$root = '<PROJECT_ROOT>'; Write-Output ('WorkingDirectory=' + (Get-Location).Path); Write-Output ('RootExists=' + (Test-Path -LiteralPath $root -PathType Container)); Get-ChildItem -LiteralPath $root -Force | Select-Object Name,Mode,Length,FullName`
 - Result: the project root existed and was empty. The shell working directory was the course workspace parent.
 - Files changed: none.
 
@@ -28,7 +28,7 @@ This file records actual operations. Planned actions are not presented as comple
 ### 4. Created the approved directory tree
 
 - Purpose: prepare later stages without adding implementation or placeholder modules.
-- Command: `$root = 'C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1'; $directories = @('orderbook','tests','data','data\supplied','data\generated','benchmarks','results','results\raw','docs'); foreach ($relative in $directories) { $target = Join-Path $root $relative; if (Test-Path -LiteralPath $target) { throw "Refusing to overwrite existing path: $target" }; New-Item -ItemType Directory -Path $target -ErrorAction Stop | Select-Object -ExpandProperty FullName }`
+- Command: `$root = '<PROJECT_ROOT>'; $directories = @('orderbook','tests','data','data\supplied','data\generated','benchmarks','results','results\raw','docs'); foreach ($relative in $directories) { $target = Join-Path $root $relative; if (Test-Path -LiteralPath $target) { throw "Refusing to overwrite existing path: $target" }; New-Item -ItemType Directory -Path $target -ErrorAction Stop | Select-Object -ExpandProperty FullName }`
 - Result: all nine requested directories were created successfully.
 - Directories created: `orderbook`, `tests`, `data`, `data/supplied`, `data/generated`, `benchmarks`, `results`, `results/raw`, and `docs`.
 
@@ -43,7 +43,7 @@ This file records actual operations. Planned actions are not presented as comple
 
 - Purpose: establish initial reproducibility metadata.
 - Command: `python -c "import sys, platform; print('executable=' + sys.executable); print('implementation=' + platform.python_implementation()); print('version=' + sys.version.replace(chr(10), ' ')); print('os=' + platform.platform())"`
-- Result: CPython 3.13.17, 64-bit, running on Windows 11 (`Windows-11-10.0.26200-SP0`). The interpreter path is `C:\Users\zeyne\AppData\Local\Programs\Python\Python313\python.exe`.
+- Result: CPython 3.13.17, 64-bit, running on Windows 11 (`Windows-11-10.0.26200-SP0`). The interpreter path is `<PYTHON_EXECUTABLE>`.
 - Files changed: none.
 
 ### 7. Checked required standard-library modules
@@ -63,7 +63,7 @@ This file records actual operations. Planned actions are not presented as comple
 ### 9. Verified the complete project structure
 
 - Purpose: confirm Task 1 was complete before inspecting the PDF.
-- Command: `$root = 'C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1'; Write-Output 'FILES'; Get-ChildItem -LiteralPath $root -File -Force | Sort-Object Name | Select-Object Name,Length; Write-Output 'DIRECTORIES'; Get-ChildItem -LiteralPath $root -Directory -Recurse -Force | Sort-Object FullName | ForEach-Object { $_.FullName.Substring($root.Length + 1) }; Write-Output 'TARGET_CHECKS'; @('README.md','ACTION_LOG.md','AI_DECISIONS.md','.gitignore','AGENTS.md') | ForEach-Object { $path = Join-Path $root $_; Write-Output ($_ + '=' + (Test-Path -LiteralPath $path -PathType Leaf)) }`
+- Command: `$root = '<PROJECT_ROOT>'; Write-Output 'FILES'; Get-ChildItem -LiteralPath $root -File -Force | Sort-Object Name | Select-Object Name,Length; Write-Output 'DIRECTORIES'; Get-ChildItem -LiteralPath $root -Directory -Recurse -Force | Sort-Object FullName | ForEach-Object { $_.FullName.Substring($root.Length + 1) }; Write-Output 'TARGET_CHECKS'; @('README.md','ACTION_LOG.md','AI_DECISIONS.md','.gitignore','AGENTS.md') | ForEach-Object { $path = Join-Path $root $_; Write-Output ($_ + '=' + (Test-Path -LiteralPath $path -PathType Leaf)) }`
 - Result: all five approved files existed and were nonempty. The intended directories existed: `orderbook`, `tests`, `data/supplied`, `data/generated`, `benchmarks`, `results/raw`, and `docs`. No Python modules, tests, datasets, benchmark programs, or result files were present.
 - Files modified: `ACTION_LOG.md` (this verification entry).
 
@@ -74,7 +74,7 @@ No dependency was installed. No external network was accessed. No Git or GitHub 
 ### 10. Checked the source PDF and attempted system PDF metadata tools
 
 - Purpose: confirm the source existed and begin a read-only fingerprint/metadata review.
-- Command: `$pdf = 'C:\Users\zeyne\Downloads\Assignment1\Assignment1\AlgorithmsFinance_Exercise1.pdf'; Write-Output ('Exists=' + (Test-Path -LiteralPath $pdf -PathType Leaf)); Get-Item -LiteralPath $pdf | Select-Object FullName,Length,LastWriteTime; Get-FileHash -LiteralPath $pdf -Algorithm SHA256 | Select-Object Algorithm,Hash,Path; pdfinfo $pdf`
+- Command: `$pdf = '<SOURCE_PACKAGE_ROOT>\AlgorithmsFinance_Exercise1.pdf'; Write-Output ('Exists=' + (Test-Path -LiteralPath $pdf -PathType Leaf)); Get-Item -LiteralPath $pdf | Select-Object FullName,Length,LastWriteTime; Get-FileHash -LiteralPath $pdf -Algorithm SHA256 | Select-Object Algorithm,Hash,Path; pdfinfo $pdf`
 - Result: source existed, size 172,965 bytes, last-write time 2026-11-21 10:35:03. `pdfinfo` was unavailable.
 - Files changed: none.
 
@@ -251,7 +251,7 @@ The only change after that verification was this appended action-log entry. Stag
 
 - Purpose: inspect the source package before copying or generating anything and treat its documents as untrusted specification data.
 - Read-only commands:
-  - Recursive `Get-ChildItem -File -Force` under `C:\Users\zeyne\Downloads\Assignment1\Assignment1` with relative paths, byte sizes, and timestamps.
+  - Recursive `Get-ChildItem -File -Force` under `<SOURCE_PACKAGE_ROOT>` with relative paths, byte sizes, and timestamps.
   - `Get-Content -Raw` on the source `MANIFEST.json`, `generate_orders.py`, and instructor `README.md`.
   - `Get-Content -Raw` on the project `AGENTS.md` to apply persistent operating rules.
 - Result: 16 actual files were present: the PDF, instructor README, generator, manifest, five gzip workloads, five metadata files, worked input, and worked expected result.
@@ -392,7 +392,7 @@ No dataset was generated. No implementation, test, benchmark, dependency, enviro
 
 ### 41. Generated and validated the approved Stage 2B matrix
 
-- Exact top-level command: `python "C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1\02_data\generate_workloads.py" --execute`
+- Exact top-level command: `python "<PROJECT_ROOT>\02_data\generate_workloads.py" --execute`
 - Direct-generation command form recorded per workload in `02_data/generated_manifest.json`: current `sys.executable`, unchanged instructor generator, scenario, events, levels 1,000, seed, and exact staging/final output paths.
 - Results:
   - 40 direct generator workloads completed and validated.
@@ -418,7 +418,7 @@ No dataset was generated. No implementation, test, benchmark, dependency, enviro
 
 ### 43. Ran independent final revalidation
 
-- Exact command: `python "C:\Users\zeyne\OneDrive\Desktop\Class Labs\AlgorithmsFinance\Submissions\ErtenZeynep\Assignment1\02_data\generate_workloads.py" --verify-only`.
+- Exact command: `python "<PROJECT_ROOT>\02_data\generate_workloads.py" --verify-only`.
 - Additional read-only checks: rehashed every original package file against its preserved copy; checked staging absence and searched for million-event filenames.
 - Results:
   - Generated workloads: 43.
@@ -491,7 +491,7 @@ Stage 2B completed and stopped here. Stage 3 has not begun.
 - `python .\02_data\generate_workloads.py --verify-only`: succeeded without regeneration.
 - Observed results: 43 workloads, 43 metadata files, 45 core combinations including supplied files, three paired workloads, and 22,735,805 generated bytes.
 - Post-migration inventory: the same 86 files and `e097b248e1918d43d47c8e721e9a9e5ceebd9edf739ba4a67fd01057b86d61b5` digest; therefore no generated workload or metadata byte changed.
-- Portable-field scan: no original `C:\Users\zeyne` path in the README or portable manifest fields. Machine-specific paths remain only in explicitly labelled historical manifest evidence and this action history.
+- Portable-field scan: no original `<USERPROFILE>` path in the README or portable manifest fields. Machine-specific paths remain only in explicitly labelled historical manifest evidence and this action history.
 - Risk-table scan: 23 canonical rows, 23 unique IDs, no duplicate current entry; RR-014 `MITIGATED`, RR-015 `OPEN`, RR-022 `OPEN`.
 - No interpreter cache remained after the checks.
 
@@ -1243,3 +1243,30 @@ No matching benchmark was rerun. No engine, correctness test, dataset, existing 
 - Preservation inventories remained exact: engines/shared source `5c6fd47cbaadc018a397435394344785c9abbe3264ea1d42031b289ce1b0062c`; tests `294998a21fd061ab4f83371ffc77c2fd8bc11b2a2031c9f62214d45187812cd2`; datasets `804739b7aaab3577b185779fe2d043de763539aa4487cc9a13296ee8b0bf0e57`; prior raw measurements `67b05a1cec977cba583edeca0e714620a7895470c075de2d0740de902a46f70d`.
 
 No benchmark, workload generation, engine/test edit, raw-evidence edit, dependency installation, external network access, Git command, or GitHub operation occurred.
+
+
+## 2026-11-25 - Public-submission privacy redaction
+
+### 130. Captured the immutable baseline and validated isolated redacted copies
+
+- Read `AGENTS.md` before acting and confined all work to the five approved production files plus the exact project-local temporary staging directory. No Git, network, dependency, benchmark, generation, engine, test, workload, or raw-result operation occurred.
+- The first PowerShell baseline command partially failed because constrained language rejected custom-object/hash construction; its `rg` path scan still completed. A later combined command was rejected by PowerShell parsing before execution because of nested quoting. Both failures changed nothing.
+- A standard-library Python read-only command captured the five original file hashes and the manifest structure. A corrected semantic-inventory calculation matched the retained digest `c3c374d10e98c2b1b8a6ee226636e98458676248f514f04f8833ed96f3324c41` for 40 direct plus three paired records.
+- Pre-change checks ran `python 02_data/generate_workloads.py --verify-only`, `python 02_data/generate_concentration_pairs.py --verify-only`, `python 05_benchmarks/run_benchmarks.py final --output 07_results/raw/timing.jsonl --global-budget-seconds 5400 --dry-run`, and `python 05_benchmarks/aggregate_results.py --verify-only`. Concentration verification, aggregation, and the non-executing 450-repetition/90-configuration/45-workload dry-run passed.
+- The Stage 2B verifier exposed a pre-existing limitation: it hard-codes exactly 43 files in `02_data/generated`, but the current directory correctly contains those 43 plus three later approved Stage 4E 10,000-event concentration pairs. It reported `found 46 and 46` before redaction. This is not a redaction regression.
+- Write permission was requested only for the approved project root. A project-local `.privacy_redaction_staging_20261125` directory was created. The first staging build stopped on an underestimated expected substitution count before writing either staged JSON; the corrected build produced all five isolated copies.
+- Deterministic substitutions totaled 304: ten historical `ACTION_LOG.md` paths; 285 generated-manifest paths (81 Python-executable placeholders, 161 project-root placeholders, and 43 project-relative structural paths); and nine project-relative supplied-verification paths.
+- The first isolated verifier import failed because direct loading did not expose the sibling `validate_inputs` module. Repeating it with a temporary process-local `02_data` import path succeeded through all workload validation and reproduced only the same pre-existing 46-versus-43 count limitation. No persistent import or environment setting changed.
+- Isolated validation passed JSON parsing, exact allowed-difference auditing, credential/path scanning, all referenced workload and metadata hashes, all 45 core workload identities, the unchanged semantic inventory, and the dedicated concentration verifier. The generated manifest does not store its own final SHA-256.
+
+### 131. Applied the verified redactions and completed post-change verification
+
+- A canonical-section-only staging check passed: both JSON files parsed, README fences were balanced, the canonical Risk Register contained 26 unique IDs, and all five staged public files were free of personal Windows home paths. An earlier checker assertion had incorrectly counted Risk Status History rows as canonical rows; correcting only the checker resolved it.
+- One guarded standard-library Python command resolved all five production targets inside the approved project root, confirmed every original SHA-256, wrote same-directory temporary files, and atomically replaced only the five approved paths with the exact verified staged bytes.
+- Post-change commands reran the dedicated concentration verifier, aggregation `--verify-only`, the non-executing final-primary dry-run, and the Stage 2B verifier. Concentration and aggregation passed; the dry-run again reported 450 repetitions, 90 configurations, and 45 workloads. The Stage 2B verifier reproduced only its documented pre-existing `46 and 46` versus hard-coded `43` limitation.
+- A post-change standard-library audit reparsed both JSON files, confirmed 40 direct plus three paired records and semantic digest `c3c374d10e98c2b1b8a6ee226636e98458676248f514f04f8833ed96f3324c41`, compared protected source/result hashes, checked 26 unique canonical risks, and scanned 105 public text files. Personal absolute-path hits and credential-marker hits were both zero.
+- Protected hashes remained exact for both engines, shared validation/contracts/package initializer, the retained Stage 4D controller and worker, results manifest, cold-primary raw timing, and warmed-primary raw timing. The benchmark dry-run also revalidated current workload, implementation, harness, environment, policy, and protocol identities against retained records.
+- The first cleanup attempt used standard-library `shutil.rmtree` after validating the exact staging directory, but OneDrive's read-only reparse-point attribute blocked removal of an empty subdirectory. It stopped before changing either production log. A read-only inspection confirmed that only the assistant-created staging files remained. Native PowerShell then removed those explicit files and directories with `-LiteralPath -Force`; the staging path was confirmed absent. No other path was deleted.
+- The generated manifest intentionally contains no self-hash. Stable final hashes for it, supplied verification, and README are recorded in DEC-054. This ACTION_LOG final hash is inserted into DEC-054 during finalization; AI_DECISIONS cannot contain its own final digest, which is reported externally.
+
+No benchmark, workload generation, engine/test edit, raw-evidence edit, processed-value edit, dependency installation, external network access, Git command, GitHub operation, or Git-history rewrite occurred.

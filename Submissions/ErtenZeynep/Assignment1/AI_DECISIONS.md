@@ -589,10 +589,10 @@ This history records meaningful changes without creating duplicate current-statu
 
 ### DEC-040 - Expanded privacy findings
 
-- Status: OPEN; redaction not authorized.
-- Historical absolute paths occur extensively in the generated manifest, supplied verification record, and ACTION_LOG. They preserve actual provenance but expose the personal home/project location.
+- Status: MITIGATED IN THE CURRENT PUBLIC-SUBMISSION SNAPSHOT; Git-history exposure remains user-controlled and unresolved.
+- Historical absolute paths were verified in the generated manifest, supplied verification record, and ACTION_LOG. The approved migration replaces only personal machine locations while preserving scientific provenance, semantic workload inventory, and cryptographic workload evidence.
 - README student-name matches are portable submission paths, not machine paths. Pilot environment fields contain reproducibility characteristics but no hostname/home directory; they may still be fingerprintable.
-- Recommended future decision: preserve cryptographic hashes and an unredacted private archive, then create explicitly labelled privacy-redacted public copies of project-owned logs/manifests. Never modify instructor originals or imply redacted commands were executed literally.
+- Public project-owned files now label historical placeholders as privacy-redacted representations rather than literal executed values. Instructor originals remain unchanged. Redacting the current files does not remove paths from earlier Git commits; no Git inspection or history rewrite was authorized or performed.
 
 ### DEC-041 - Complete source fingerprints for final resume
 
@@ -725,3 +725,17 @@ This history records meaningful changes without creating duplicate current-statu
 - Complexity claims were checked against the current baseline and optimized source. Heap costs use actual heap length `H`; rebuild cost and amortized qualification remain explicit. Empirical cancellation-churn and liquidation counterexamples are reported rather than claiming universal Version B superiority.
 - The report includes three `[STUDENT REVIEW REQUIRED]` items: the student's own design rationale, personal AI-use disclosure, and final submitted commit identifier. These are intentionally not inferred from assistant records.
 - The preserved instructor README supplied the mandatory report/submission mapping. A fresh PDF text/layout extraction could not be performed in the current environment because Poppler and Python PDF readers were unavailable and dependency installation was prohibited; the earlier recorded direct review of relevant PDF slides was used only as corroboration. No visual PDF re-verification is claimed.
+
+
+### DEC-054 - Public-submission privacy-redaction migration
+
+- Status: COMPLETED AND POST-CHANGE VERIFIED; final evidence is recorded in ACTION_LOG.
+- Policy: active machine-readable paths are project-root-relative POSIX strings. Historical commands retain their structure but use `<PROJECT_ROOT>`, `<PYTHON_EXECUTABLE>`, `<CODEX_HOME>`, `<SOURCE_PACKAGE_ROOT>`, or `<USERPROFILE>`; these placeholders are representations and were not executed literally.
+- Scope: only `ACTION_LOG.md`, `02_data/generated_manifest.json`, `02_data/supplied_verification.json`, `README.md`, and `AI_DECISIONS.md` are changed. Exactly 304 personal path values are substituted. No raw measurement, processed analytical value, workload, metadata, engine, test, benchmark script, instructor file, or AGENTS file is altered.
+- Original SHA-256 values: ACTION_LOG `a0edd098d650242718d7a9fa37fac30eef1b42507a92e090f70d39e2b04383dd`; generated manifest `5c408a6ac8aec13f0596f20ab974a526fe238a99f2f68ec32195a1a82ee16ca5`; supplied verification `94e889e19379e03d2248cfccc63427c9ab32116d97e1f719084e4b0348045c02`; README `4467b6b38150e53ab1b33755456488d945c77b7518df22dc70f9489ca3adc254`; AI decisions `bdf04bf5d6af812f60e30d3aea8cacb007a667811d4a8e5ae8f976fc288e7749`.
+- Stable post-redaction artifact SHA-256 values: generated manifest `6066ed4d5a8267f2e702da57c1489f8643578db94e723e64a3abe38bddacb7ba`; supplied verification `f010e8bd9b23ddb7b61b8bbf1e091f6d6e478e28305706768a52d9bc2198f817`; README `98a0dc71d64900cc9d4f770b71379b88357f641047515c35bb0097e083b516e3`. The generated manifest intentionally contains no self-hash; these values are external provenance. The final ACTION_LOG hash is inserted below by the post-verification finalization command. AI_DECISIONS cannot contain its own final digest and its final hash is reported externally.
+- Final ACTION_LOG SHA-256: `d12d80e848682a0a007b59010a0ca799a77870cdf2b08c3b2f803c384c4288ac`.
+- Semantic verification: 40 direct plus three paired records remain; filenames, parameters, seeds, source relationships, workload hashes, metadata hashes, and supplied-core coverage are identical. The semantic inventory remains `c3c374d10e98c2b1b8a6ee226636e98458676248f514f04f8833ed96f3324c41`.
+- Compatibility: aggregation verification, dedicated concentration verification, and the 450-repetition/45-workload benchmark dry-run pass. `generate_workloads.py --verify-only` has a pre-existing exact-directory-count limitation because three later approved concentration files bring the directory to 46; redaction produces the identical failure only after validating all direct files.
+- External audit disposition: privacy redaction and the final commit-reference gap are accepted; the README portability criticism is qualified because portable commands already exist; historical identifier reuse remains deferred outside mandatory scope; one-million-event testing remains rejected as unnecessary; and an external auditing agent's read-only Git commands are recorded as a process exception, not authorization for this assistant to use Git.
+- Remaining boundary: current-file redaction does not sanitize earlier Git history. Publication-history review and any Git action remain exclusively the user's responsibility.
