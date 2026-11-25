@@ -11,7 +11,7 @@ historical records.
 
 ## Correctness
 
-The final suite contains 219 passing tests under Python 3.12.10. Independent
+The final suite contains 226 passing tests under Python 3.12.10. Independent
 hand-calculated expectations cover validation, conservation, FIFO and price
 priority, partial fills, cancellations, crossing limits, market residuals, and
 the worked example. Small deterministic streams compare each event and

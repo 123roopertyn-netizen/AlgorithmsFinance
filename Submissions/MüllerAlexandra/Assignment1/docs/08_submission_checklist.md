@@ -10,5 +10,8 @@
 - [x] Dashboard reads saved results only
 - [x] Environment, settings, units, seeds, and measured code version recorded
 - [x] README commands verified from a clean environment
+- [x] Specification and modeling boundaries completed
+- [x] Arbitrary plain/gzip event-file replay command supplied
+- [x] Clean-environment creation and installation commands documented
 - [ ] Final commit identifier recorded by the student
 

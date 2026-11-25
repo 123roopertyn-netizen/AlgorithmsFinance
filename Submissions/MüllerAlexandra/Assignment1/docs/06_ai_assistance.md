@@ -75,6 +75,50 @@ rejected with the reason and the verification performed.
   saved-data-only design. Speedups are emitted only for matched completed
   baseline/revision tasks; raw repeats, units, settings, correctness outcomes,
   and timeout records remain available in the dashboard.
+- Before submission, the user proposed a second critical review of the whole
+  dashboard and then visually identified that Version B was not visible in a
+  latency chart. The user also questioned the four-level selector and why
+  throughput had tables both above and below its chart. AI accepted these as
+  substantive review findings rather than cosmetic preferences. The resulting
+  audit checked all saved dashboard records and every available throughput,
+  latency, and memory filter family; it retained separate task-coverage and
+  completed-measurement tables but labelled their different purposes.
+- The user's subsequent visual review found two further presentation problems.
+  Task coverage listed all baseline rows before the revised rows, making the
+  revised measurements appear absent inside the initial viewport; rows are now
+  paired by event count and seed. The user also questioned why the baseline
+  point was higher in the replay panel. That question exposed ambiguous
+  terminology: `construction_seconds` measures empty-engine initialization,
+  not processing the stream. The chart and README now distinguish empty-book
+  initialization from full event replay.
+- The final source audit identified an unfinished specification placeholder, a
+  clean-environment path that assumed an existing course virtual environment,
+  and no clearly documented arbitrary-file replay command. The user accepted
+  correcting all three. The replay adapter was added only after its five-test
+  contract was preserved failing because the module did not yet exist; neither
+  matching implementation was changed.
+- During the final clean-environment visual review, the user found that Windows
+  application control blocked the generated `streamlit.exe` launcher. AI had
+  previously treated successful application tests as sufficient verification
+  of the documented launch command. The user-proposed manual check exposed the
+  difference. The README now invokes the same installed package through the
+  permitted interpreter with `python -m streamlit`.
+- The user questioned why cancellation-churn latency exposed only seed 42. AI
+  confirmed that this followed the preregistered representative-latency matrix
+  rather than a missing result, but the dashboard did not explain the coverage
+  distinction. The Latency tab now states that buildup uses all three sizes and
+  seeds, while other workloads use 10,000 events and seed 42 with multi-seed
+  scaling covered by throughput and memory.
+- The user's final browser review found that the throughput y-axis title was
+  clipped even though the chart passed application tests. AI accepted the
+  visual finding and corrected all comparative Altair charts with concise unit
+  labels and explicit left padding. A regression assertion now fixes the
+  throughput title and padding in the emitted chart specification.
+- A later user screenshot showed that the liquidation facet titles and x-axis
+  labels overlapped in a narrow viewport, despite the chart specification and
+  application tests passing. AI replaced the side-by-side facets with two
+  full-width stacked charts, simplified the percentage labels, preserved a
+  shared logarithmic y-domain, and strengthened the regression contract.
 
 ## AI-assisted output corrected so far
 
@@ -128,6 +172,26 @@ rejected with the reason and the verification performed.
   60-event streams and a separate test-only reference model had been added only
   after Version A and before Version B. The original evidence and expectations
   are preserved; the later tests are not represented as pre-Version-A tests.
+- The first saved-results dashboard passed its application smoke test but used
+  linear bar charts whose scale could compress the smaller latency or timing
+  series until it appeared absent. AI corrected this after the user's visual
+  review: single-size throughput, latency percentiles, construction/replay
+  scaling, raw-repeat throughput distributions, memory comparisons, and
+  liquidation timing now use explicit comparative encodings and logarithmic
+  axes where appropriate. Missing and stopped runs remain unplotted and
+  explicitly labelled rather than being represented as zero. The ambiguous
+  `Available price setting` label was
+  corrected to configured price levels per side, the ordinary 1,000-level case
+  became the default, and the controlled four-level buildup case is explained.
+  Two new application regression tests verify paired latency data, log-scale
+  encodings, diagnostic pairing, and the absence of fabricated points for
+  stopped million-event runs.
+- AI initially described the dashboard task table as complete because all rows
+  existed in the data. The user's screenshot showed that data presence was not
+  sufficient: version-grouped ordering concealed most revised rows below the
+  viewport. The presentation was corrected to place baseline/revised task
+  counterparts together, and the dashboard regression test now fixes that
+  ordering contract.
 
 ## Rejected so far
 

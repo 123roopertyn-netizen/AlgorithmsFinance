@@ -11,24 +11,44 @@ stopping limits.
 - Python 3.12.10
 - Dependencies pinned in `requirements.txt`
 
-From `Submissions/MüllerAlexandra/Assignment1`:
+From `Submissions/MüllerAlexandra/Assignment1`, create a fresh project-local
+environment in Windows PowerShell:
 
 ```powershell
-..\.venv\Scripts\python.exe -m pip install -r requirements.txt
-..\.venv\Scripts\python.exe -m pip install -e .
-..\.venv\Scripts\python.exe -m pytest
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -e .
+.\.venv\Scripts\python.exe -m pytest
 ```
 
-The existing course-lab virtual environment is one directory above this
-project. A clean environment may instead install the same requirements in its
-own virtual environment.
+The `.venv/` directory is ignored by Git. Python 3.11 or newer satisfies the
+package requirement, while the saved verification and measurements use Python
+3.12.10. On macOS or Linux, replace the launcher with `python3.12 -m venv
+.venv` and use `.venv/bin/python` for the remaining commands.
+
+## Replay one event file
+
+Replay any plain `.jsonl` or gzip-compressed `.jsonl.gz` file with either
+implementation:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\01_replay.py `
+  --version baseline `
+  --input data\supplied\worked_example.jsonl
+```
+
+Use `--version revised` for Version B. By default the command prints one JSON
+document containing every event result and the final canonical book. This
+explicitly retains result history and can therefore be large. To create a new
+file without replacing an earlier result, add `--out path\to\replay.json`.
 
 ## Test-first evidence
 
 Use the evidence runner from the project root:
 
 ```powershell
-..\.venv\Scripts\python.exe scripts\00_run_tests.py --stage 01_before_implementation
+.\.venv\Scripts\python.exe scripts\00_run_tests.py --stage 01_before_implementation
 ```
 
 The runner records the exact command, output, exit code, UTC time, Python and
@@ -84,7 +104,7 @@ streams and verify all metadata and checksums outside timing with:
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\python.exe scripts\06_prepare_inputs.py `
+.\.venv\Scripts\python.exe scripts\06_prepare_inputs.py `
   --generate `
   --plan-out experiments\08_input_plan.json
 ```
@@ -100,7 +120,7 @@ timeout status without inventing a measurement:
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\python.exe scripts\07_run_formal.py `
+.\.venv\Scripts\python.exe scripts\07_run_formal.py `
   --version baseline `
   --resume
 ```
@@ -117,9 +137,9 @@ verified plan and metadata are retained:
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\python.exe scripts\09_prepare_million_inputs.py --generate
-..\.venv\Scripts\python.exe scripts\10_run_million.py --version baseline --resume
-..\.venv\Scripts\python.exe scripts\10_run_million.py --version revised --resume
+.\.venv\Scripts\python.exe scripts\09_prepare_million_inputs.py --generate
+.\.venv\Scripts\python.exe scripts\10_run_million.py --version baseline --resume
+.\.venv\Scripts\python.exe scripts\10_run_million.py --version revised --resume
 ```
 
 Extension results are stored below `results/extension_1m/` and are not counted
@@ -129,7 +149,7 @@ as part of the original formal matrix.
 
 1. Specification and independent tests: strengthened by pre-revision critical review.
 2. Transparent baseline: implemented and passing its applicable contract tests.
-3. Revised implementation: implemented; final full suite has 219 passes.
+3. Revised implementation: implemented; final full suite has 226 passes.
 4. Throughput: both formal matrices recorded under identical settings.
 5. Per-event latency: both representative matrices recorded.
 6. Memory: both state and retained-output matrices recorded.
@@ -139,6 +159,8 @@ as part of the original formal matrix.
 10. Dashboard: implemented from saved results; 238 task statuses represented.
 11. Optional one-million-event extension: test-first harness implemented;
     paired throughput results recorded.
+12. Arbitrary plain/gzip replay command: implemented test-first and verified
+    from a clean project-local environment.
 
 ## Saved-results dashboard
 
@@ -146,7 +168,7 @@ Launch Streamlit with the committed saved-result table:
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\streamlit.exe run dashboard\12_app.py
+.\.venv\Scripts\python.exe -m streamlit run dashboard\12_app.py
 ```
 
 The builder refuses to overwrite an existing artifact. The committed dashboard
@@ -155,15 +177,24 @@ does not rerun an experiment. The tables preserve raw throughput and
 liquidation repeats, stopped tasks, latency percentiles, memory checkpoints,
 settings, environment/code metadata, and correctness diagnostics.
 
+Task-coverage tables intentionally remain separate from completed-run timing
+tables: coverage includes stopped tasks that have no timing value, whereas the
+timing tables contain only completed measurements. Comparative timing charts
+use logarithmic axes so a much faster version is not visually compressed to
+zero. Throughput charts distinguish fresh empty-engine initialization from
+replaying the entire event stream. The default memory view is the largest saved
+state-only cancellation-churn run, making post-cancellation state directly
+visible.
+
 To reproduce the aggregation without replacing the committed artifact, build a
 second file and point the dashboard at it:
 
 ```powershell
-..\.venv\Scripts\python.exe scripts\11_build_dashboard_data.py `
+.\.venv\Scripts\python.exe scripts\11_build_dashboard_data.py `
   --out results\summary\13_dashboard_data_rebuilt.json.gz
 $env:ASSIGNMENT1_DASHBOARD_DATA = `
   "results\summary\13_dashboard_data_rebuilt.json.gz"
-..\.venv\Scripts\streamlit.exe run dashboard\12_app.py
+.\.venv\Scripts\python.exe -m streamlit run dashboard\12_app.py
 ```
 
 The short interpretation report is `docs/07_results_report.md`.
@@ -172,7 +203,7 @@ Validate the baseline against all supplied 10,000-event streams:
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\python.exe scripts\03_validate_supplied.py --version baseline
+.\.venv\Scripts\python.exe scripts\03_validate_supplied.py --version baseline
 ```
 
 Use `--version revised` to validate Version B against the same supplied
@@ -191,7 +222,7 @@ first 100 events. It is harness verification, not a formal performance result:
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\python.exe scripts\04_benchmark.py `
+.\.venv\Scripts\python.exe scripts\04_benchmark.py `
   --version baseline `
   --input data\supplied\cancel_churn_10000.jsonl.gz `
   --max-events 100 `
@@ -209,7 +240,7 @@ summarizes overall, per-event-type, and early/late-window latency:
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\python.exe scripts\04_benchmark.py `
+.\.venv\Scripts\python.exe scripts\04_benchmark.py `
   --phase latency `
   --version baseline `
   --input data\supplied\cancel_churn_10000.jsonl.gz `
@@ -229,7 +260,7 @@ Memory is measured separately with input parsing completed before
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\python.exe scripts\05_measure_memory.py `
+.\.venv\Scripts\python.exe scripts\05_measure_memory.py `
   --version baseline `
   --mode memory_state `
   --input data\supplied\cancel_churn_10000.jsonl.gz `
@@ -237,7 +268,7 @@ $env:PYTHONPATH = "src"
   --checkpoints 10 `
   --out evidence\07_memory_smoke\07_baseline_cancel_churn_100_state.json
 
-..\.venv\Scripts\python.exe scripts\05_measure_memory.py `
+.\.venv\Scripts\python.exe scripts\05_measure_memory.py `
   --version baseline `
   --mode memory_retained_output `
   --input data\supplied\cancel_churn_10000.jsonl.gz `
@@ -256,7 +287,7 @@ correctness diagnostics on the five 1,000-event seed-42 workloads:
 
 ```powershell
 $env:PYTHONPATH = "src"
-..\.venv\Scripts\python.exe scripts\08_run_stress.py `
+.\.venv\Scripts\python.exe scripts\08_run_stress.py `
   --version baseline `
   --order-count 1000 `
   --price-levels 100 `

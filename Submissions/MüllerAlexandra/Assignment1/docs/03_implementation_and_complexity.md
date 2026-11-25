@@ -1,8 +1,10 @@
 # Implementation and complexity
 
-Let `B` be active individual orders, `P` occupied price levels, and `F` maker
-fills produced by an incoming event. Version A stores a single Python list of
-`B` mutable `RestingOrder` values.
+Let `B` be active individual orders, `P` occupied price levels, `M` incoming
+events in a replay, and `F` maker fills produced by one incoming event. Version
+A stores a single Python list of `B` mutable `RestingOrder` values. Replay cost
+is the sum of the `M` individual event costs; `M` does not determine `B` or
+`F`, so an event-count-only bound would hide the workload-dependent costs.
 
 ## Baseline operations
 
