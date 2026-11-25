@@ -25,15 +25,15 @@ Stronger supporting evidence for B1/B2, added after Phase 4 by the attack (it do
 
 ## 3. Revision B3r
 
-One change to B3, as allowed by the fallback: rebuild a side's heap when its stale keys exceed its live levels (and 32), by filtering the existing heap list. Cost is amortized O(1) per stale key (measured: exactly 2.00 heap entries scanned per cancel), with a declared single-event spike of O(live + stale).
+One change to B3, as allowed by the fallback: rebuild a side's heap when its stale keys exceed its live levels (and 32), by filtering the existing heap list. Cost is amortized O(1) per stale key (measured: at most 2 heap entries scanned per cancel, worst observed 1.999), with a declared single-event spike of O(live + stale).
 
 | Check | Result |
 |---|---|
-| Correctness | 0 differences against an independent reference (professor's 50,000 events + 135,000 stress events), all contract/own-dataset/stateful/mutant tests |
+| Correctness | 0 differences against an independent reference (professor's 50,000 events + 135,000 stress events; script and log in `05_evidence/chat_reference/`), all contract/own-dataset/stateful/mutant tests |
 | Speed, official 100k | 0.4247 s geometric mean, equal to the fastest candidate (B1 0.4244 s) |
 | Memory (drift, 1M events) | 5 KB, heap of 18 entries (B3: 37 MB) |
 | Worst ratio vs best B on throughput scenarios | 1.42 (1M cancel_churn); B1/B2 reach 18x |
-| Speedup vs A | 139x-181x at 10k; at 100k 290x (mixed) and more than 1,260x where A was stopped at 600 s; A is 1.3-1.8x faster on cancel_churn |
+| Speedup vs A (median of per-seed ratios) | 21x (mixed) to 186x (crowded) at 10k on the four non-churn workloads; at 100k 299x (mixed) and more than 1,260x where A was stopped at 600 s; on cancel_churn the ratio is 0.7-0.8, i.e. A is faster |
 
 **One interpretation made after measuring, stated openly:** on spike_purge_at_threshold the measured "replay" is a single sell event that purges 100,000 stale heap keys (57 ms vs 0.03 ms for B1, ratio 1,866). Read literally, the 3x filter excludes B3r too. We keep B3r because (a) this single-event spike was declared as an accepted tail-latency cost (D1) before the measurement, and (b) over the whole stream that creates the situation B3r is faster: construction + spike 1.78 s vs 4.63 s for B1. Both readings and the numbers are reported.
 
@@ -51,7 +51,7 @@ We do not re-measure or change the rule a second time: the rematch was declared 
 
 ## 5. What this costs
 
-B3r is about 13 % slower than B3r_fast on the official grid, and still 139x to more than 1,260x faster than A at 10k-100k.
+B3r is about 13 % slower than B3r_fast on the official grid, and still 21x-186x faster than A at 10k (non-churn workloads) and more than 1,260x faster at 100k where A was stopped.
 
 ## Sources (committed run folders, all under `03_results/runs/`)
 
@@ -61,4 +61,4 @@ B3r is about 13 % slower than B3r_fast on the official grid, and still 139x to m
 - B3r_fast, binding same-session rematch: `20261122T210801Z_e4fd928_phase4_b3r_fast_rematch_20261122/` (`fast_rematch_acceptance.md`)
 - Attack evidence: `07_attack/ATTACK_REPORT.md`; rules and decisions D1-D4: `SPEC.md`, `00_docs/AI_LOG.md`
 
-Open follow-up: the registry alias "B" still points to B1; it must point to B3r before submission.
+Follow-up completed: the registry alias "B" points to B3r (the final Version B); B1 remains available under its explicit name.
