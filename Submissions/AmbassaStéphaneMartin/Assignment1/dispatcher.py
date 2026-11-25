@@ -3,16 +3,15 @@
 Example, from Assignment1:
     python -B dispatcher.py data/worked_example.jsonl --implementation compare
 
-File parsing is sequential. If a later line is malformed, earlier events may
-already have been applied. Matching and event validation belong to the book.
+Events are processed in file order. If a later line is malformed, changes from
+earlier accepted events remain in the book. The order book is responsible for
+event validation, matching and cancellations.
 """
 
 import argparse
 import gzip
 import json
 from pathlib import Path
-
-from order_book import IMPLEMENTATIONS, create_order_book
 
 
 def read_events(source):
@@ -58,6 +57,8 @@ def replay_file(source, book):
 
 
 def main(argv=None):
+    from order_book import IMPLEMENTATIONS, create_order_book
+
     parser = argparse.ArgumentParser(description="Replay an order book event file.")
     parser.add_argument("path", type=Path, help="A .jsonl or .jsonl.gz event file.")
     parser.add_argument(

@@ -15,8 +15,23 @@ class OrderBook:
     """Common interface for a sequential BTC order book."""
 
     def process_event(self, event: dict) -> dict:
-        """Validate and dispatch a LIMIT, MARKET_SELL or CANCEL event."""
-        raise NotImplementedError("Implement event validation and dispatch.")
+        """Route an event to its public handler, which validates its fields."""
+        if not isinstance(event, dict):
+            reason = "event must be a dictionary"
+        else:
+            event_type = event.get("type")
+            if event_type == "LIMIT":
+                return self.AddLimitOrder(event)
+            if event_type == "MARKET_SELL":
+                return self.FillMarketSell(event)
+            if event_type == "CANCEL":
+                return self.CancelOrder(event)
+            reason = "type must be LIMIT, MARKET_SELL or CANCEL"
+
+        result = {"status": "rejected", "reason": reason}
+        if isinstance(event, dict) and "event_id" in event:
+            result["event_id"] = deepcopy(event["event_id"])
+        return result
 
     def AddLimitOrder(self, event: dict) -> dict:
         """Match a limit order and rest any remaining quantity."""
