@@ -278,7 +278,19 @@ supplied ID rather than deriving it from seq.
 ## Run tests
 
 Use Python 3.11 or newer. The test runner uses only the standard library.
-Open a terminal in this Assignment1 folder and select a version:
+Open a terminal in this Assignment1 folder.
+
+Run all 69 tests in one command:
+
+~~~console
+python -B -m unittest -v test_order_book test_price_heaps test_lazy_cancellation
+~~~
+
+This runs the original 49 tests in their default Compare mode, plus the 10 heap
+and 10 lazy-cancellation regressions. Both regression suites also compare Revised
+against Baseline. The combined command was verified with all 69 tests passing.
+
+To run the original 49 tests with an explicit version, use:
 
 ~~~console
 python -B test_order_book.py --implementation baseline
