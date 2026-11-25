@@ -70,6 +70,11 @@ rejected with the reason and the verification performed.
   60-second limit. It is isolated from and explicitly dated after the original
   formal matrix; stopped baseline runs remain visible and are not assigned a
   fabricated speedup.
+- AI proposed a status-driven dashboard aggregator so stopped runs cannot
+  disappear merely because they lack raw result files. The user accepted the
+  saved-data-only design. Speedups are emitted only for matched completed
+  baseline/revision tasks; raw repeats, units, settings, correctness outcomes,
+  and timeout records remain available in the dashboard.
 
 ## AI-assisted output corrected so far
 

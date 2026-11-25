@@ -92,3 +92,13 @@ versions under the existing 60-second limit. The original matrix remains
 unchanged. Three extension-contract tests were preserved failing before the
 harness existed and then passing as part of the 217-test full suite.
 
+## Saved-result reporting and dashboard
+
+The reporting layer was added test-first after all measurements were committed.
+Its initial missing-module failure is preserved. The implementation treats
+status records as authoritative, opens raw results only for completed tasks,
+and computes speedup only for matched completed pairs. The generated dashboard
+artifact represents 238 statuses: 200 completed, 38 timed out, and zero failed.
+The full suite passes 219 tests, and Streamlit's application test reports no
+rendering-time exception.
+

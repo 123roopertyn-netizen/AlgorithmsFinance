@@ -3,8 +3,8 @@
 This project implements and measures two Python versions of a sequential,
 single-venue BTC limit order book. The transparent list-based Version A is
 implemented and measured. The indexed FIFO-price-level Version B is implemented
-and passes the unchanged behavioral contract; its formal measurements remain
-to be run.
+and measured under the same behavioral contract, inputs, instrumentation, and
+stopping limits.
 
 ## Environment
 
@@ -54,6 +54,22 @@ Both `BaselineOrderBook` and `RevisedOrderBook` provide:
 The two versions accept identical event dictionaries and return plain
 dictionaries. Book inspection is canonical: bids by decreasing price and
 arrival sequence, followed by asks by increasing price and arrival sequence.
+
+## Worked-example expected output
+
+Both implementations reproduce `data/supplied/worked_expected.json`. The final
+market sell is filled with no residual and executes, in order:
+
+```text
+b1: 100000000 units at 6000000 ticks
+b2: 100000000 units at 6000000 ticks
+b3: 300000000 units at 5990000 ticks
+b4: 100000000 units at 5970000 ticks
+```
+
+The remaining book contains `b4` with 400,000,000 units at 5,970,000 ticks and
+`a1` with 200,000,000 units at 6,010,000 ticks. Gross proceeds are
+3,594,000,000,000,000 tick-times-quantity units, or USD 359,400.00.
 
 ## Supplied data
 
@@ -113,16 +129,44 @@ as part of the original formal matrix.
 
 1. Specification and independent tests: strengthened by pre-revision critical review.
 2. Transparent baseline: implemented and passing its applicable contract tests.
-3. Revised implementation: implemented; full 214-test suite passes.
-4. Throughput: formal Version A matrix recorded.
-5. Per-event latency: formal Version A representative matrix recorded.
-6. Memory: formal Version A state and retained-output matrices recorded.
-7. Formal input matrix: generated and checksum-verified; Version A recorded.
-8. Timeout-aware formal runner: 114 Version A task statuses recorded.
-9. Liquidation and diagnostic harness: Version A formal stress run recorded.
-10. Dashboard: not implemented.
+3. Revised implementation: implemented; final full suite has 219 passes.
+4. Throughput: both formal matrices recorded under identical settings.
+5. Per-event latency: both representative matrices recorded.
+6. Memory: both state and retained-output matrices recorded.
+7. Formal input matrix: generated, checksum-verified, and replayed by both.
+8. Timeout-aware runner: 228 formal statuses recorded (114 per version).
+9. Liquidation and diagnostics: both formal stress runs recorded.
+10. Dashboard: implemented from saved results; 238 task statuses represented.
 11. Optional one-million-event extension: test-first harness implemented;
-    inputs and measurements not yet generated.
+    paired throughput results recorded.
+
+## Saved-results dashboard
+
+Launch Streamlit with the committed saved-result table:
+
+```powershell
+$env:PYTHONPATH = "src"
+..\.venv\Scripts\streamlit.exe run dashboard\12_app.py
+```
+
+The builder refuses to overwrite an existing artifact. The committed dashboard
+loads `results/summary/13_dashboard_data.json.gz`; changing a filter or view
+does not rerun an experiment. The tables preserve raw throughput and
+liquidation repeats, stopped tasks, latency percentiles, memory checkpoints,
+settings, environment/code metadata, and correctness diagnostics.
+
+To reproduce the aggregation without replacing the committed artifact, build a
+second file and point the dashboard at it:
+
+```powershell
+..\.venv\Scripts\python.exe scripts\11_build_dashboard_data.py `
+  --out results\summary\13_dashboard_data_rebuilt.json.gz
+$env:ASSIGNMENT1_DASHBOARD_DATA = `
+  "results\summary\13_dashboard_data_rebuilt.json.gz"
+..\.venv\Scripts\streamlit.exe run dashboard\12_app.py
+```
+
+The short interpretation report is `docs/07_results_report.md`.
 
 Validate the baseline against all supplied 10,000-event streams:
 
