@@ -381,6 +381,84 @@ Prices, quantities and sequences remain positive built-in Python integers in the
 existing cents, 10^-8 BTC and sequence units. Matching arithmetic is unchanged.
 Only clocks and statistics use floating-point values.
 
+### Executed price levels for a measured sale
+
+price_levels_visited counts distinct executed prices in one measured sale:
+
+~~~python
+len({fill["price_ticks"] for fill in result["fills"]})
+~~~
+
+It is zero when the sale has no fills. Several makers at the same price count as
+one level; a price counts only if a fill actually executes there. This is separate
+from fill_count (maker executions) and actual_controlled_price_levels (initial
+occupied prices). An oversized sale counts executed levels while its unsold
+remainder is reported separately in unfilled_qty_units.
+
+For market-sell and queue-concentration cases, timing raw rows calculate this
+count after the primary replay timer stops, alongside fill count and residual.
+Diagnostic sale rows calculate it in the separate untimed phase. Summaries report
+the median of complete repetitions, and Baseline/Revised diagnostic comparisons
+explicitly check it. I/O, latency, memory and ordinary replay rows use null; their
+measurement phases and result-disposal behavior are unchanged. Market prices,
+quantities and sequences retain their existing built-in integer representation.
+
+Reproduce the correction checks using new output directories:
+
+~~~console
+python -B -m unittest -v test_order_book test_price_heaps test_lazy_cancellation test_benchmark
+python -B benchmark.py run --counts 1000 --seeds 42 --scenarios buildup crowded mixed sweep cancel_churn --experiments replay --out results/smoke_price_levels --worker-seconds 60 --campaign-seconds 300 --label smoke-validation
+python -B benchmark.py run --counts 120 --seeds 42 --experiments market-sell queue-concentration cancel-churn --out results/small_price_levels --worker-seconds 60 --campaign-seconds 300 --label small-path-validation
+~~~
+
+If an output directory already exists, choose a new name. Previously recorded
+benchmark results are historical and are not rewritten with this new metric.
+
+Correction verification started from a clean checkout of 3f97e5e. The complete
+command above passed all 89 tests: the original 69 correctness tests and 20
+benchmark tests. Five focused tests were added, preserving all 15 earlier benchmark
+test methods and their assertions. Hand-built cases independently expect 1, 3, 3
+and 0 executed levels for same-price makers, multiple prices, an oversized sale
+and a sale with no bids, respectively. The clock-boundary test checks that fill
+prices are read only after the primary timer has stopped. A comparison regression
+also detects a level-count mismatch even when the result/book digests agree.
+
+Both requested repeat campaigns completed, with five timing repetitions per
+version/case and all five measurement phases retained:
+
+| New results directory | Phase jobs | Raw rows | Summary rows | Diagnostic comparisons |
+| --- | ---: | ---: | ---: | ---: |
+| results/smoke_price_levels | 45 | 145 | 45 | 5 passed |
+| results/small_price_levels | 54 | 174 | 54 | 6 passed |
+
+Representative sale results below agree for Baseline and Revised, every timing
+repetition, and diagnostic records. Residuals use integer quantity units:
+
+| Case, 120 initial orders | Maker fills | Executed price levels | Unsold qty_units |
+| --- | ---: | ---: | ---: |
+| Market sell, 10% | 12 | 12 | 0 |
+| Market sell, 100% | 120 | 120 | 0 |
+| Market sell, 200% | 120 | 120 | 5917000000 |
+| Queue concentration, 4 prices, exact-depth sale | 120 | 4 | 0 |
+| Queue concentration, 1000 requested / 120 actual prices, exact-depth sale | 120 | 120 | 0 |
+
+The saved audit independently consumes the input orders in integer price-time
+order to check each sale's level count, maker count and residual, then checks all
+raw records, summary medians, worker checkpoints and diagnostic comparisons. It
+also verifies the current source hashes, reviewed HEAD and dirty working-tree
+metadata in both manifests. All 263 protected engine, generator, dispatcher,
+existing correctness-test, workload and prior-result files remain unchanged.
+
+The report and its input snapshot are saved under results/small_price_levels/.
+With the recorded code and checkout unchanged, rerun the audit using:
+
+~~~console
+python -B results/small_price_levels/audit.py
+~~~
+
+See results/small_price_levels/verification.json for the complete audit. These
+remain smoke and small-path validation runs; no larger campaign was launched.
+
 ### Artifacts, provenance and limits
 
 Each results directory contains manifest.json, raw.jsonl, summaries.jsonl and

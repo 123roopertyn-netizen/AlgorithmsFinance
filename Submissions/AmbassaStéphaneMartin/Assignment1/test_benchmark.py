@@ -110,7 +110,96 @@ class TestMeasurements(unittest.TestCase):
             self.assertIsNone(summary["replay_seconds"])
 
 
+    def test_single_sale_price_levels_are_calculated_after_the_clock_stops(self):
+        test = self
+
+        class GuardedFill(dict):
+            def __getitem__(self, key):
+                if key == "price_ticks":
+                    test.assertEqual(clock.call_count, 6)
+                return super().__getitem__(key)
+
+        class Probe:
+            def process_event(self, event):
+                return {"fills": [GuardedFill(price_ticks=6_000_000),
+                                  GuardedFill(price_ticks=6_000_000)],
+                        "unfilled_qty_units": 0}
+
+        with patch.object(bm.time, "perf_counter", side_effect=[10, 12, 20, 24, 30, 35]) as clock:
+            metrics = bm.timed_once(Probe, [{"seq": 1}], [{"seq": 2}], True)
+        self.assertEqual(metrics["replay_seconds"], 5)
+        self.assertEqual(metrics["fill_count"], 2)
+        self.assertEqual(metrics["price_levels_visited"], 1)
+
+    def test_price_levels_are_summarized_and_remain_null_when_incomplete(self):
+        rows = []
+        for levels in (1, 3, 1, 2, 3):
+            row = dict.fromkeys(bm.METRICS)
+            row.update(status="complete", error=None, price_levels_visited=levels)
+            rows.append(row)
+        self.assertEqual(bm.summarize(rows, 5)["price_levels_visited"], 2)
+        rows[-1].update(status="stopped", error="wall limit", price_levels_visited=None)
+        self.assertIsNone(bm.summarize(rows, 5)["price_levels_visited"])
+
+    def test_diagnostic_comparison_detects_price_level_mismatch(self):
+        common = dict(case_id="known-sale", phase="diagnostics", status="complete",
+                      result_digest="same-result", snapshot_digest="same-book",
+                      fill_count=4, unfilled_qty_units=0, cancelled_qty_units=0,
+                      rejected_event_count=0)
+        left = dict(common, version="baseline", price_levels_visited=3)
+        right = dict(common, version="revised", price_levels_visited=2)
+        self.assertEqual(bm.validate_diagnostics([left, right]),
+                         [{"case_id": "known-sale", "status": "failed"}])
+        right["price_levels_visited"] = 3
+        self.assertEqual(bm.validate_diagnostics([left, right]),
+                         [{"case_id": "known-sale", "status": "passed"}])
+
+
 class TestWorkloadsAndExperiments(unittest.TestCase):
+    def test_single_sale_price_levels_from_independently_known_fills(self):
+        unit = 100_000_000
+        bids = [
+            dict(seq=seq, event_id=name, type="LIMIT", order_id=name, side="BUY",
+                 price_ticks=price, qty_units=quantity * unit)
+            for seq, name, price, quantity in (
+                (1, "A", 6_000_000, 2), (2, "B", 6_000_000, 1),
+                (3, "C", 5_999_999, 7), (4, "D", 5_999_998, 20))
+        ]
+        ask = [dict(seq=1, event_id="ask", type="LIMIT", order_id="ask", side="SELL",
+                    price_ticks=6_000_100, qty_units=unit)]
+        # Thirty BTC across four makers and three prices. Counts below are literal
+        # expectations, independent of the benchmark's distinct-price calculation.
+        cases = (
+            ("same price", bids, 10, 3 * unit, 2, 1, 0),
+            ("multiple prices", bids, 100, 30 * unit, 4, 3, 0),
+            ("oversized", bids, 200, 60 * unit, 4, 3, 30 * unit),
+            ("no fills", ask, 100, unit, 0, 0, unit),
+        )
+        for label, setup, percent, quantity, fills, levels, residual in cases:
+            for experiment in ("market-sell", "queue-concentration"):
+                for version, factory in (("baseline", BaselineOrderBook), ("revised", RevisedOrderBook)):
+                    with self.subTest(case=label, experiment=experiment, version=version):
+                        task = [dict(seq=len(setup) + 1, event_id="sale", type="MARKET_SELL",
+                                     order_id="sale", qty_units=quantity)]
+                        case = dict(experiment=experiment, sale_percent=percent)
+                        timed = bm.timed_once(factory, setup, task, True)
+                        diagnostic = bm.diagnostics_once(factory, version, case, setup, task)
+                        for metrics in (timed, diagnostic):
+                            self.assertEqual(metrics["fill_count"], fills)
+                            self.assertEqual(metrics["price_levels_visited"], levels)
+                            self.assertIs(type(metrics["price_levels_visited"]), int)
+                            self.assertEqual(metrics["unfilled_qty_units"], residual)
+
+    def test_replay_price_levels_remain_not_applicable(self):
+        rows = list(bm.controlled_orders(4, 42, 4))
+        task = rows + [dict(seq=5, event_id="sale", type="MARKET_SELL",
+                            order_id="sale", qty_units=1)]
+        case = dict(experiment="replay", sale_percent=None)
+        for version, factory in (("baseline", BaselineOrderBook), ("revised", RevisedOrderBook)):
+            metrics = bm.diagnostics_once(factory, version, case, [], task)
+            self.assertEqual(metrics["fill_count"], 1)
+            self.assertIsNone(metrics["price_levels_visited"])
+
     def test_decompression_budget_applies_to_decoded_payload(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "large.jsonl.gz"

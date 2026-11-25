@@ -45,7 +45,7 @@ METRICS = (
     "inactive_queue_entries_final", "heap_entries_final",
     "retained_queue_entries_before_final_cancel", "inactive_entries_before_final_cancel",
     "heap_entries_before_final_cancel", "active_orders_before_final_cancel",
-    "fill_count", "unfilled_qty_units", "cancelled_qty_units",
+    "fill_count", "price_levels_visited", "unfilled_qty_units", "cancelled_qty_units",
     "rejected_event_count", "processed_events", "compressed_bytes", "decoded_bytes",
 )
 BOUNDARIES = {
@@ -78,7 +78,9 @@ BOUNDARIES = {
               "event can exceed it before the check. No OS RSS/CPU hard cap.",
     "sale": "Setup uses a fresh identical passive bid book per sale. Construction "
             "timed separately. Integer ceil(depth * percent / 100); 10%, 100%, 200%. "
-            "Throughput counts one sale, not its setup events.",
+            "Throughput counts one sale, not its setup events. price_levels_visited "
+            "counts distinct executed fill prices after the primary timer stops; "
+            "it is reported for single-sale timing and diagnostics only.",
     "queue_concentration": "Same order count, requested 4 versus 1000 levels. Actual "
                            "occupied levels are min(order_count, requested_levels).",
     "churn": "An old active head remains while same-price orders are added/cancelled; "
@@ -354,6 +356,7 @@ def timed_once(factory, setup, task, single_sale):
                    throughput_events_per_second=throughput(len(task), elapsed))
     if single_sale:
         metrics.update(fill_count=len(result["fills"]),
+                       price_levels_visited=len({fill["price_ticks"] for fill in result["fills"]}),
                        unfilled_qty_units=result["unfilled_qty_units"])
     # Destruction is outside all timing, and cannot leak into the next constructor.
     del book
@@ -381,12 +384,15 @@ def diagnostics_once(factory, version, case, setup, task):
              for key, value in storage_counts(book, version).items()}
     digest = hashlib.sha256()
     fills = residual = cancelled = rejected = 0
+    price_levels_visited = None
     extra = {}
     for index, event in enumerate(setup + task):
         result = book.process_event(event)
         digest.update((json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n").encode())
         if index >= len(setup):
             fills += len(result.get("fills", []))
+            if case.get("sale_percent") is not None:
+                price_levels_visited = len({fill["price_ticks"] for fill in result["fills"]})
             residual += result.get("unfilled_qty_units", 0)
             cancelled += result.get("cancelled_qty_units", 0)
             rejected += result["status"] == "rejected"
@@ -402,7 +408,8 @@ def diagnostics_once(factory, version, case, setup, task):
     snapshot = book.inspect_book()
     metrics = {key + "_peak": value for key, value in peaks.items()}
     metrics.update({key + "_final": value for key, value in storage_counts(book, version).items()})
-    metrics.update(fill_count=fills, unfilled_qty_units=residual, cancelled_qty_units=cancelled,
+    metrics.update(fill_count=fills, price_levels_visited=price_levels_visited,
+                   unfilled_qty_units=residual, cancelled_qty_units=cancelled,
                    rejected_event_count=rejected, processed_events=len(task),
                    result_digest=digest.hexdigest(),
                    snapshot_digest=hashlib.sha256(json.dumps(snapshot, sort_keys=True).encode()).hexdigest(),
@@ -597,7 +604,7 @@ def validate_diagnostics(summaries):
         if set(versions) == set(VERSIONS):
             left, right = (versions[v] for v in VERSIONS)
             equal = all(left[field] == right[field] for field in
-                        ("result_digest", "snapshot_digest", "fill_count",
+                        ("result_digest", "snapshot_digest", "fill_count", "price_levels_visited",
                          "unfilled_qty_units", "cancelled_qty_units", "rejected_event_count"))
             checks.append(dict(case_id=case_id, status="passed" if equal else "failed"))
     return checks
