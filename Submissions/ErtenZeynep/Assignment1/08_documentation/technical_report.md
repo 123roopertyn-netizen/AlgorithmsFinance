@@ -372,7 +372,9 @@ python '05_benchmarks/run_stage4e.py' diagnostics --results-root '07_results/sta
 
 The warmed-primary controller has a 5,400-second cumulative budget; Stage 4E shares 4,500 seconds across its modes. A reproduction may legitimately contain stopped and censored Version A runs. Exact hashes, protocols, boundaries, and expected counts are in `07_results/results_manifest.json`; settings and machine evidence are in `01_environment/environment.json`.
 
-> [STUDENT REVIEW REQUIRED] Record the final submitted commit identifier here and ensure it matches the repository state delivered to the course repository.
+**Audited code and evidence commit:** `e863aa59a1e53b295d6280f255510668b0dc4a8b`
+
+This commit identifies the code and experimental-evidence revision verified during the successful clean-checkout reproducibility assessment. It is not labelled as the final submission HEAD: that HEAD will be created later by the student's manual final commit, and no future commit identifier is predicted here.
 
 ## Conclusion
 

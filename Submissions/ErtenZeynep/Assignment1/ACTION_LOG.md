@@ -1290,3 +1290,11 @@ No benchmark, workload generation, engine/test edit, raw-evidence edit, processe
 - The complete unchanged correctness suite passed 51/51 tests in 18.790 seconds, including the supplied worked example and the pre-generated differential test.
 - Lightweight saved-result checks all passed: Stage 4E represented 212 observations; the concentration verifier accepted three pairs; the warmed-primary dry-run represented 450 repetitions, 90 configurations, and 45 workloads without launching workers; aggregation verification reproduced SHA-256 `0f8c7a88f7360900c5c385496222ae6da4b4dbe7a8724edeeff1de8099a231d5` with zero pilot contamination.
 - No matching benchmark, dependency installation, external network access, Git/GitHub operation, or authoritative-repository write occurred. Temporary clean-check and generation workspaces remain pending separate cleanup authorization.
+
+## 2026-11-25 - Git-history publication decision
+
+### 134. Recorded the approved provenance choice
+
+- Performed a read-only assessment of the 15 reachable Assignment1 development commits. Historical local paths and Git author identity were present, but no high-confidence credential, private key, sensitive configuration file, or direct remote-access mechanism was detected; pattern scanning cannot prove absolute absence.
+- The student reviewed snapshot-only publication, history sanitization, and preservation of the existing incremental history, then approved preservation for academic transparency, test-first evidence, methodology corrections, and project provenance. The current committed snapshot is privacy-redacted, while earlier path-bearing commits will remain reachable after publication.
+- Added DEC-056 and this action record only. No Git/GitHub operation, test, benchmark, source edit, data edit, or result edit was performed.
