@@ -1270,3 +1270,23 @@ No benchmark, workload generation, engine/test edit, raw-evidence edit, dependen
 - The generated manifest intentionally contains no self-hash. Stable final hashes for it, supplied verification, and README are recorded in DEC-054. This ACTION_LOG final hash is inserted into DEC-054 during finalization; AI_DECISIONS cannot contain its own final digest, which is reported externally.
 
 No benchmark, workload generation, engine/test edit, raw-evidence edit, processed-value edit, dependency installation, external network access, Git command, GitHub operation, or Git-history rewrite occurred.
+
+## 2026-11-25 - Final clean-checkout reproducibility verification
+
+### 132. Verified committed extraction and identified generation preconditions
+
+- Extracted the committed Assignment1 subtree into a new isolated directory outside the repository and OneDrive. The corrected `.gitattributes` policy produced exact equality across authoritative local bytes, committed blobs, ZIP entries, and extracted bytes for all 98 byte-sensitive tracked files. All nine result-manifest artifacts, three corrected metadata records, and recorded engine/harness fingerprints matched.
+- The isolated submission contained 116 committed files. Fifty tests not requiring ignored generated workloads passed, the supplied worked example passed for both engines, and retained aggregation verification reproduced SHA-256 `0f8c7a88f7360900c5c385496222ae6da4b4dbe7a8724edeeff1de8099a231d5`.
+- The first reproduction attempt established that Git does not retain the empty `02_data/generated/` directory. After that directory was created in an isolated staging copy, a second preflight established that `generate_workloads.py --execute` correctly refuses to overwrite the retained `generated_manifest.json`. Both attempts stopped before generating a workload and changed no authoritative file.
+- Inspected the unchanged generator. It anchors paths to its own location and requires an existing empty generated directory, no pre-existing generated manifest, the approved instructor-generator hash, and sufficient disk space. A separate minimal workspace was therefore required to preserve the retained submission manifest.
+
+### 133. Completed isolated workload reproduction and full verification
+
+- Created a minimal isolated generation workspace containing byte-identical copies of only `generate_workloads.py`, `generate_concentration_pairs.py`, `validate_inputs.py`, the instructor generator, and the five supplied 10,000-event inputs. No retained generated-data manifest was copied into that workspace.
+- Generated and natively verified the 43 Stage 2B workloads before adding later files. Stage 2B generation plus its historical verifier took 46.345 seconds. All 43 workload filenames, sizes, and SHA-256 values matched the retained manifest; all 40 direct metadata files were byte-identical.
+- The three 100,000-event paired workload files were byte-identical. Their regenerated metadata differed from the retained historical metadata only in `transform_script_sha256`: the retained metadata records the earlier transformation-script revision, while regenerated metadata records the currently committed script. Seeds, event counts, source hashes, formula, levels, quantities, paths, workload relationships, and all other fields matched.
+- Generated and natively verified the three Stage 4E 10,000-event concentration pairs in 1.224 seconds. All three workload and metadata filenames, sizes, and SHA-256 values matched `02_data/concentration_10000_manifest.json`. Cumulative generation and native-verification time was 47.569 seconds of the approved 600-second limit.
+- Copied only the 46 verified workloads and 46 suitable metadata files into the extracted clean submission after confirming its destination was absent. No retained manifest or authoritative historical metadata was overwritten.
+- The complete unchanged correctness suite passed 51/51 tests in 18.790 seconds, including the supplied worked example and the pre-generated differential test.
+- Lightweight saved-result checks all passed: Stage 4E represented 212 observations; the concentration verifier accepted three pairs; the warmed-primary dry-run represented 450 repetitions, 90 configurations, and 45 workloads without launching workers; aggregation verification reproduced SHA-256 `0f8c7a88f7360900c5c385496222ae6da4b4dbe7a8724edeeff1de8099a231d5` with zero pilot contamination.
+- No matching benchmark, dependency installation, external network access, Git/GitHub operation, or authoritative-repository write occurred. Temporary clean-check and generation workspaces remain pending separate cleanup authorization.

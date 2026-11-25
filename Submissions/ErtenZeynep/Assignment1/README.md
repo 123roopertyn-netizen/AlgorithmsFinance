@@ -447,19 +447,52 @@ new BUY    = 6_000_000 - bucket
 new SELL   = 6_000_100 + bucket
 ```
 
-Generate the approved matrix only in an empty `02_data/generated/` directory. These portable commands assume the shell is first changed to the project root:
+The completed submission retains `02_data/generated_manifest.json`, while `generate_workloads.py --execute` intentionally refuses to overwrite any existing manifest. Git also does not retain an empty `02_data/generated/` directory. Therefore, full clean-checkout reproduction must use a separate minimal generation workspace; do not delete, rename, or replace the retained manifest in the submission checkout.
+
+Create a new workspace outside the checkout. Preserve the following project-relative layout by copying only these committed inputs:
+
+```text
+Assignment1-generation/
+`-- 02_data/
+    |-- generate_workloads.py
+    |-- generate_concentration_pairs.py
+    |-- validate_inputs.py
+    |-- supplied/
+    |   |-- generate_orders.py
+    |   `-- data/
+    |       |-- buildup_10000.jsonl.gz
+    |       |-- crowded_10000.jsonl.gz
+    |       |-- mixed_10000.jsonl.gz
+    |       |-- sweep_10000.jsonl.gz
+    |       `-- cancel_churn_10000.jsonl.gz
+    `-- generated/                 # new and empty
+```
+
+Do not copy either retained generated-data manifest into this workspace. From the workspace root, reproduce in this exact order:
 
 ```powershell
-Set-Location -LiteralPath 'C:\path\to\Submissions\ErtenZeynep\Assignment1'
-python '02_data\generate_workloads.py' --execute
+New-Item -ItemType Directory -Path '02_data\generated'
+python -B '02_data\generate_workloads.py' --execute
+python -B '02_data\generate_workloads.py' --verify-only
+python -B '02_data\generate_concentration_pairs.py' --execute
+python -B '02_data\generate_concentration_pairs.py' --verify-only
 ```
 
 ```bash
-cd "/path/to/Submissions/ErtenZeynep/Assignment1"
-python3 02_data/generate_workloads.py --execute
+mkdir -p 02_data/generated
+python3 -B 02_data/generate_workloads.py --execute
+python3 -B 02_data/generate_workloads.py --verify-only
+python3 -B 02_data/generate_concentration_pairs.py --execute
+python3 -B 02_data/generate_concentration_pairs.py --verify-only
 ```
 
-`generate_workloads.py --verify-only` is the historical Stage 2B verifier. It expects the generated directory to contain exactly the 43 Stage 2B workloads and 43 matching metadata files. The current completed project also contains three separately approved Stage 4E 10,000-event concentration-pair workloads, so that historical verifier is not the current-layout verification entry point; it is retained unchanged as Stage 2B provenance.
+The historical Stage 2B verifier must run immediately after the first 43 workloads are created and before the three Stage 4E pairs are added. Independently compare the 43 filenames, byte sizes, workload SHA-256 values, and metadata against the retained `02_data/generated_manifest.json`; then compare the three Stage 4E pairs against `02_data/concentration_10000_manifest.json`. Only after those checks should the 46 workloads and 46 metadata files be copied into a clean submission checkout whose `02_data/generated/` destination is absent. Never copy either workspace-generated manifest over a retained manifest.
+
+This procedure was tested from the committed clean archive under CPython 3.13.17. All 46 workload files reproduced with the retained filenames, sizes, and SHA-256 values. The 40 direct metadata files were byte-identical. The three historical 100,000-event paired metadata files differed only in `transform_script_sha256`, because they record the earlier transformation-script revision used during the original run; their paired workload data was byte-identical and every other metadata field matched. Exact byte reproduction is therefore claimed for all workloads and 40 direct metadata files, but not for those three historical paired metadata files.
+
+After populating the clean checkout, the unchanged complete suite passed 51/51 tests, including the supplied worked example and pre-generated differential test. Stage 4E evidence verification represented all 212 observations; the concentration verifier accepted all three pairs; the warmed-primary dry-run represented 450 repetitions, 90 configurations, and 45 workloads without launching workers; and aggregation verification reproduced SHA-256 `0f8c7a88f7360900c5c385496222ae6da4b4dbe7a8724edeeff1de8099a231d5`. These full-reproduction steps are separate from the non-executing quick-verification commands below.
+
+`generate_workloads.py --verify-only` is the historical Stage 2B verifier. It expects the generated directory to contain exactly the 43 Stage 2B workloads and 43 matching metadata files. The current completed project also contains three separately approved Stage 4E 10,000-event concentration-pair workloads, so that historical verifier is not the current-layout quick-verification entry point; it is retained unchanged as Stage 2B provenance.
 
 From the current repository root, use these existing non-executing verification commands for Stage 4E results, concentration pairs, warmed-primary planning and identities, and aggregated results:
 
