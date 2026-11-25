@@ -9,6 +9,6 @@
 - [x] Raw timing, latency, memory, liquidation, and operation-count results saved
 - [x] Dashboard reads saved results only
 - [x] Environment, settings, units, seeds, and measured code version recorded
-- [ ] README commands verified from a clean environment
+- [x] README commands verified from a clean environment
 - [ ] Final commit identifier recorded by the student
 

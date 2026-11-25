@@ -102,3 +102,11 @@ artifact represents 238 statuses: 200 completed, 38 timed out, and zero failed.
 The full suite passes 219 tests, and Streamlit's application test reports no
 rendering-time exception.
 
+## Clean-environment verification
+
+A new Python 3.12.10 virtual environment was created outside the repository.
+The pinned requirements and project were installed using the README commands.
+All 219 tests passed, and the Streamlit application test reported zero
+exceptions. The full-suite log and interpreter metadata are preserved under
+`evidence/15_clean_environment/`; the temporary environment was then removed.
+
