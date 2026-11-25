@@ -1,5 +1,78 @@
 # Assignment 1, limit order book: Laurin Bühler
 
+## Start here (two minutes)
+
+Requires Python 3.13 and Git. From Assignment1:
+
+```powershell
+.\run_all.ps1                 # Windows PowerShell
+```
+```bash
+bash run_all.sh                # macOS/Linux
+```
+
+Creates `.venv` and installs pinned packages if absent; prints **1,033 passed**
+(about 13 minutes here), worked-example **OK**, then **1k smoke OK** (a few
+minutes, outputs under `scratch/`). Stops at the first error with **FAIL**;
+otherwise opens localhost:8501. Terminal-only: `.\run_all.ps1 -NoDashboard` /
+`bash run_all.sh --no-dashboard`. Long runs are excluded by default.
+
+**Final B is B3r**, selected in [FINAL_SELECTION.md](00_docs/FINAL_SELECTION.md).
+Report section 6: at 10k, B3r is **21–186x faster** on non-churn workloads;
+at 100k the seed-median A/B3r ratios exceed **1,295x / 1,299x / 1,260x** on
+buildup/crowded/sweep (A stopped at 600 s), and are **299x** on mixed.
+**A wins cancel_churn** (ratios about 0.7–0.8). B3r's 1M replays take about
+5–7 s; stopped A cells are bounds. B3r_fast is faster but was rejected by the
+binding pre-registered rule. Sources and qualifications: [REPORT §6](00_docs/REPORT.md#6-runtime).
+
+Individual setup: `python -m venv .venv` (macOS/Linux: `python3 -m venv .venv`),
+then activate with `.\.venv\Scripts\Activate.ps1` / `source .venv/bin/activate`.
+
+```text
+python -m pip install -r requirements.txt
+# Expected: pinned packages installed/already satisfied; hypothesis 6.155.7.
+python -m pytest -q --basetemp=scratch/pytest-manual
+# Expected: 1033 passed.
+python -m run lob.replay 06_data/supplied/worked_example.jsonl --version B
+# Expected: six JSON result lines; final B = B3r. A: use --version A.
+python -m streamlit run 04_dashboard/app.py
+# Expected: saved-results dashboard at localhost:8501 (no measurements).
+python -m submission_tools data
+# Regenerate the large catalog; verify content hashes, print archive SHA-256.
+python -m submission_tools data --verify-only
+# Expected: all recorded content hashes verified; gzip differences explicitly labelled.
+```
+
+To save/compare manually, create `scratch/`, then in PowerShell:
+```powershell
+python -m run lob.replay 06_data/supplied/worked_example.jsonl --version B | Set-Content -Encoding UTF8 scratch/worked_actual.jsonl
+python -m submission_tools check-worked scratch/worked_actual.jsonl  # OK
+```
+In bash use `> scratch/worked_actual.jsonl` instead of `| Set-Content ...`.
+
+Generator commands/checksums: [DATA_MANIFEST.json](00_docs/DATA_MANIFEST.json)
+and [POST_ATTACK_MANIFEST.json](00_docs/POST_ATTACK_MANIFEST.json). Regeneration
+uses those commands, writes ignored inputs/local manifests and reports gzip
+differences across zlib versions. Committed manifests stay unchanged.
+
+Long reproduction: `.\run_all.ps1 -Full` / `bash run_all.sh --full`.
+Prints **about 7 h; allow 6–10 h** here (estimate from saved worker times),
+requires `RUN FULL`, then runs the candidate/final-B grid and scoped A baseline.
+A: single trials at 100k/1M, supplementary parts through 10k; B: warm-up + five.
+Commit source first. Scripts show every command; new sessions preserve old
+results. The binding fast decision is not repeated.
+
+Folder map: `01_code/` engines, generators and benchmark runner; `02_tests/`
+correctness; `03_results/runs/` committed measurements; `04_dashboard/` saved-file
+views; `00_docs/` spec/report/selection/logs; `05_evidence/` verification;
+`06_data/supplied/` fixtures, `06_data/generated/` ignored large inputs;
+`07_attack/` independent attacks; `scratch/` local checks and smoke output.
+
+Submitted commit: `<to be filled at submission>`
+
+## Detailed reference
+
+
 > Status (2026-11-23): final Version B is B3r. The binding rematch rejected B3r_fast.
 > B1/B2/B3/B3r/B3r_fast remain available under explicit names. No adaptive switching.
 

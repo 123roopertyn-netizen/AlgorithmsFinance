@@ -43,7 +43,7 @@ One change to B3, as allowed by the fallback: rebuild a side's heap when its sta
 2. **B3r_fast:** same algorithm and data structures; a fast path for ordinary valid events that falls back to the unchanged validator for everything else, and local-variable binding in matching. Identical behaviour proven by 146,514 every-event comparisons against B3r and 300,000 random validator cases (Claude), plus 848 standard and 1,697 attack tests.
 3. **Rule, fixed before measuring:** at least 10 % faster on the official 100k grid, and no scenario more than 5 % slower.
 4. **First comparison (two sessions):** 11.3 % faster (ratio 0.887), but rejected: five cells exceeded 5 %. Analysis showed session noise: two of those cells were ones where the **B3r reference** was about 2x faster than the same cell for every other version and seed, and the spike cells did not reproduce later.
-5. **Fair rematch (same session, alternating order per case, method fixed and committed before measuring, one binding attempt):** **12.7 % faster** (ratio 0.873), faster in **26 of 27 scenarios** (ratios 0.70-0.94), spike case no longer slower. It failed on **one** cell: dead_slot_rebuild at 1k, single seed, 3.66 ms vs 3.42 ms (ratio 1.068, a difference of 0.23 ms), while the same scenario at 10k and 100k is 19 % and 17 % faster. **Decision: rejected, B3r stays final.**
+5. **Fair rematch (same session, alternating order per case, method fixed and committed before measuring, one binding attempt):** **12.7 % faster** (ratio 0.873), faster in **25 of 27 scenarios** and within the 5 % bound in 26 of 27 (ratios 0.70-1.014; the spike case is now 0.70 / 0.98 / 1.01 instead of 1.06-1.13). It failed on **one** cell: dead_slot_rebuild at 1k, single seed, 3.66 ms vs 3.42 ms (ratio 1.068, a difference of 0.23 ms), while the same scenario at 10k and 100k is 19 % and 17 % faster. **Decision: rejected, B3r stays final.**
 
 We do not re-measure or change the rule a second time: the rematch was declared binding before it ran.
 
@@ -61,6 +61,4 @@ B3r is about 13 % slower than B3r_fast on the official grid, and still 139x to m
 - B3r_fast, binding same-session rematch: `20261122T210801Z_e4fd928_phase4_b3r_fast_rematch_20261122/` (`fast_rematch_acceptance.md`)
 - Attack evidence: `07_attack/ATTACK_REPORT.md`; rules and decisions D1-D4: `SPEC.md`, `00_docs/AI_LOG.md`
 
-Registry follow-up completed 2026-11-23: "B" points to B3r; B1 remains an explicit
-registry/CLI name. SPEC.md and README.md document the final map. Historical
-results and the selection decision above are unchanged.
+Open follow-up: the registry alias "B" still points to B1; it must point to B3r before submission.

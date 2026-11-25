@@ -100,11 +100,11 @@ recorded in the final registry checkpoint at the end of this map.
 | R59 | Dashboard shows construction, replay and individual-sale scaling; A vs B; throughput and latency distributions; memory incl. post-cancellation; correctness table; workload settings; raw repeats; units; missing/stopped runs labelled (R §Results and dashboard; S22) | Nine tabs (Phase 5b) | AppTest smoke/interactions and numerical audit; final-selection-first layout, compact overview, scaling guides/toggles, separate memory panels, labelled GC/spike, selectable raw repeats/settings. Fresh Phase 5b evidence below; earlier checkpoints retained. |
 | R60 | Explain at least one measured bottleneck with code, operation counts and complexity; revision need not win everywhere (R §Results and dashboard; S22) | Two bottlenecks explained | A per-fill rescan O(F·B), Q7 counters/exponent in measured A range; B1 far-end insert O(P) per change, counted movement and scaling. B3r cancel_churn loss and declared spike qualification displayed. |
 | R61 | Submission path `Submissions/BuehlerLaurin/Assignment1/`; course folders and other students' work unchanged (R §Submit; S23) | partial | Folder scaffolded 2026-11-21; final check at Phase 7 |
-| R62 | Include both versions, tests, own generators and exact run commands (R §Submit; S23) | Implementations and runner commands present; long execution pending | A/B1/B2/B3 unchanged; BENCHMARK_PLAN.md has six exact PowerShell commands, staged execution and estimates. |
-| R63 | Include saved raw results, environment/settings metadata, dashboard code, dependency versions (R §Submit; S23) | Partial Phase 4a | Smoke raw results/environment/settings and dependency versions saved; dashboard and full long results pending. |
-| R64 | Short report: specification, correctness, runtime, memory, profiling, revision, limitations (R §Submit; S23) | todo | |
-| R65 | README: clean-environment run path, expected worked-example output, measured-data definitions (R §Submit; S23) | Partial Phase 4a | README adds safe smoke, full generation/verification and measurement boundaries; fresh-venv and final measured claims remain pending. |
-| R66 | Submitted commit identifier recorded (R §Submit; S23) | todo | |
+| R62 | Include both versions, tests, own generators and exact run commands (R §Submit; S23) | Implemented; Windows entry workflow verified | Explicit variants plus final B; run_all.ps1/run_all.sh show step commands, default 1k scratch smoke and confirmed Full option. Historical measurements unchanged. |
+| R63 | Include saved raw results, environment/settings metadata, dashboard code, dependency versions (R §Submit; S23) | Present | Four committed sessions named in FINAL_SELECTION.md, raw CSVs/env/spec/checks; saved-file dashboard. Requirements pins unchanged; fresh local-venv run evidence below. |
+| R64 | Short report: specification, correctness, runtime, memory, profiling, revision, limitations (R §Submit; S23) | Draft fact-checked 2026-11-25 | REPORT.md; 40 exact factual corrections in REPORT_FACT_CHECK.md; 91 saved numerical checks; unchanged report structure/style. |
+| R65 | README: clean-environment run path, expected worked-example output, measured-data definitions (R §Submit; S23) | Windows verified; Bash syntax verified | Start here, expected 1033 tests/OK replay, scratch smoke, data hashes, optional confirmed long runs. Fresh .venv default PowerShell run succeeds; no macOS/Linux execution claimed. |
+| R66 | Submitted commit identifier recorded (R §Submit; S23) | Human submission step pending | Start here contains the required placeholder; Laurin fills the submitted commit. |
 | R67 | No million-event datasets uploaded; generator commands + checksums instead (R §Submit; S23) | Phase 4a local scope verified; final check pending | Generated105 gzip files stay ignored; only small DATA_MANIFEST.json is proposed for commit. No upload or git mutation by Codex. |
 | R68 | No credentials or proprietary data in the public submission (R §Submit) | todo | |
 | R69 | Due 26 Nov 2026, 18:00:00h (R §Task, §Submit; S23) | todo | |
@@ -474,3 +474,28 @@ green. [Nine-tab audit](../05_evidence/clarity-audit.json) and
 trace displayed values, source/XML hashes, counts and protected-file checks;
 [verification JSON](../05_evidence/clarity-verification.json) records suite stages.
 Earlier audits/results remain intact. No new measurements/data/engine changes.
+
+## Submission workflow/report checkpoint (2026-11-25, base d885f6e)
+
+| Requested task | Implementation / verification |
+|---|---|
+| R37/R59 / fast in the same comparison | Six candidate table/bar rows. B3r and fast use binding same-session geomeans; older fast row explicitly cross-session. Sourced ratio 0.873, 25/27 faster, 26/27 within bound, 1k loss 1.068; older 0.887 rejection preserved. New AppTest plus all old assertions unchanged. |
+| R64 / factual-only report check | REPORT_FACT_CHECK.md lists every old/new/source change; JSON ledger reconstructs the final report exactly from HEAD, proving no additional edits. SPEC invariant/complexity references, paths and commands checked; 91 numeric records from committed results. Correct 17 kills distinguished from two rebuild-trap scenarios. |
+| R62/R65 / one-command entry points | run_all.ps1 and run_all.sh, step comments/-m commands, fail-fast, local venv setup, full tests, worked expected-file check, scratch-only 1k smoke and dashboard. NoDashboard options for terminal use. Full opt-in prints estimate/requires confirmation; A scope/protocol retained. |
+| R56-R57/R65 / data provenance | submission_tools data uses recorded generator commands; checks source/content hashes, reports archive differences, records actual local hashes; committed manifests untouched. Smoke uses unchanged copied code and existing pipeline; 108 worker/sample checks verified. |
+| R65-R66 / Start here | 437 words: one command per OS, outputs/pass count, final B/selection, section-6 headlines/loss/bounds, individual commands, regeneration/checksums, long-run duration/commands, folder map and submitted-commit placeholder. Prior detail retained exactly. |
+
+[Fresh default PowerShell run](../05_evidence/20261125T132117Z_d885f6e-dirty_handoff-run-all.txt):
+exit 0; new .venv/install; **1,033 passed in 778.59 s**, worked example OK,
+108/108 smoke workers, explicit NoDashboard exit. [Full XML](../05_evidence/handoff-all-tests.xml).
+[Bash syntax](../05_evidence/20261125T132027Z_d885f6e-dirty_handoff-bash-syntax.txt):
+exit 0. [Final helper smoke](../05_evidence/20261125T144429Z_d885f6e-dirty_handoff-smoke-final.txt):
+108 workers plus 108 sample checks, no non-1k worker. This tests the last local
+catalog/line-ending handling correction; all outputs stay in ignored scratch.
+[Report arithmetic](../05_evidence/handoff-report-check.json) and
+[final review](../05_evidence/20261125T150020Z_d885f6e-dirty_handoff-review-final.txt)
+verify factual-only edits, exact source preservation, all old assertions,
+catalog totals and untouched protected files. [Verification JSON](../05_evidence/handoff-verification.json)
+records hashes/counts. No engine/test-expectation/historical-result change,
+new long measurement or final-selection reassessment. Bash verified by syntax
+only; Full and actual submission remain human actions.

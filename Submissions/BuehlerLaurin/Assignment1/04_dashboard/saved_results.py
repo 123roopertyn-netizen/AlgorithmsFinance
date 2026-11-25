@@ -160,6 +160,46 @@ def official_geomeans(bundle):
     return pd.DataFrame(out)
 
 
+def selection_candidates(bundle):
+    """Keep each session explicit; pair final B with fast in the binding run."""
+    rows = official_geomeans(bundle).to_dict('records')
+    issues = {}
+    for line in bundle['selection'].splitlines():
+        fields = [p.strip() for p in line.split('|')]
+        if len(fields) >= 5 and fields[1] in ('B1','B2','B3'):
+            issues[fields[1]] = fields[3]
+    def score(role, version):
+        d = bundle['tables'][role]['validated']
+        d = d[d.phase.eq('replay') & d.experiment.eq('official') & d['size'].eq(100000)
+              & d.version.eq(version) & d.complete]
+        return dict(geomean_s=statistics.geometric_mean(d.median_s) if len(d) == 15 else float('nan'),
+                    cells=len(d),run=RUNS[role],commit=bundle['envs'][role]['git_commit'])
+    for row in rows:
+        row.update(comparison='original candidates',candidate_label=row['version'],
+                   outcome='excluded',robustness_issue=issues.get(row['version'],
+                   'Declared heap-purge tail spike; literal-filter qualification in FINAL_SELECTION'),
+                   official_100k_fast_over_B3r=float('nan'),faster_scenarios=float('nan'),
+                   within_bound_scenarios=float('nan'),scenario_count=float('nan'))
+        if row['version'] == 'B3r':
+            row.update(score('rematch','B3r'),comparison='same-session (binding)',
+                       candidate_label='B3r (binding reference)',outcome='final B; declared tail-cost qualification')
+    for role,label in [('rematch','same-session (binding)'),('cross','cross-session (older)')]:
+        record = bundle[role]
+        binding = role == 'rematch'
+        loss = bundle['rematch']['scenario_losses'][0]
+        reason = (f'{loss["workload"]} {loss["size"]//1000}k, ratio {loss["median_seed_ratio"]:.3f}'
+                  if binding else 'Older per-cell comparison; session noise; rejected')
+        scenarios = record.get('scenarios',[])
+        rows.append(dict(version='B3r_fast',candidate_label='B3r_fast ('+('binding' if binding else 'older')+')',
+                         comparison=label,**score(role,'B3r_fast'),
+                         official_100k_fast_over_B3r=record['official_100k_ratio'],
+                         outcome='faster, rejected by the pre-registered rule' if binding else record['decision'],
+                         robustness_issue=reason,faster_scenarios=sum(r['median_seed_ratio'] < 1 for r in scenarios) if binding else float('nan'),
+                         within_bound_scenarios=sum(r['median_seed_ratio'] <= 1.05 for r in scenarios) if binding else float('nan'),
+                         scenario_count=len(scenarios) if binding else float('nan')))
+    return pd.DataFrame(rows)
+
+
 def replay_limits(bundle):
     stops = bundle['tables']['baseline']['stops']
     d = stops[stops.version.eq('A') & stops.phase.eq('replay') & stops['mode'].eq('timing')

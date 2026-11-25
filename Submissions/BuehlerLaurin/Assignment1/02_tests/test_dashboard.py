@@ -129,6 +129,30 @@ def test_fast_rematch_score_is_from_same_session_csv(bundle):
     assert ratio == pytest.approx(bundle['rematch']['official_100k_ratio'],rel=1e-12)
 
 
+def test_selection_candidates_include_fast_from_both_recorded_sessions(bundle):
+    app = AppTest.from_file(str(ROOT/'04_dashboard/app.py'),default_timeout=120).run()
+    assert not app.exception,[e.message for e in app.exception]
+    frames = [d.value for d in app.tabs[0].dataframe if 'geomean_s' in d.value]
+    assert len(frames) == 1
+    shown = frames[0]
+    fast = shown[shown.version.eq('B3r_fast')]
+    assert set(fast.comparison) == {'same-session (binding)','cross-session (older)'}
+    for comparison,role in [('same-session (binding)','rematch'),('cross-session (older)','cross')]:
+        row = fast[fast.comparison.eq(comparison)].iloc[0]
+        raw = bundle['tables'][role]['summary'].query(
+            'phase == "replay" and experiment == "official" and size == 100000 and version == "B3r_fast"')
+        assert len(raw) == 15
+        assert row.geomean_s == pytest.approx(math.exp(sum(map(math.log,raw.median_s))/15))
+        assert row.run == saved.RUNS[role] and row.commit == bundle['envs'][role]['git_commit']
+        assert 'rejected' in row.outcome
+    binding = fast[fast.comparison.eq('same-session (binding)')].iloc[0]
+    assert binding.faster_scenarios == sum(r['median_seed_ratio'] < 1 for r in bundle['rematch']['scenarios']) == 25
+    assert binding.within_bound_scenarios == sum(r['median_seed_ratio'] <= 1.05 for r in bundle['rematch']['scenarios']) == 26
+    assert 'dead_slot_rebuild' in binding.robustness_issue and '1.068' in binding.robustness_issue
+    plot = json.loads(app.tabs[0].get('vega_lite_chart')[0].proto.spec)
+    assert plot['encoding']['x']['field'] == 'candidate_label'
+
+
 def test_histogram_is_a_distribution_not_rebuilt_from_percentiles(bundle):
     h = saved.observations(bundle,'latency_histogram')
     q = saved.observations(bundle,'latency')

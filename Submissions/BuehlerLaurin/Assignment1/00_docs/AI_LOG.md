@@ -1165,3 +1165,108 @@ STOP for Claude (chat) review and Laurin's commit. Proposed, not executed:
 git add -- 04_dashboard/charting.py 04_dashboard/saved_results.py 04_dashboard/views.py 04_dashboard/verify_saved.py 02_tests/test_dashboard.py 02_tests/test_submission_robustness.py README.md SPEC.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 05_evidence/INDEX.md '05_evidence/*clarity*'
 git commit -m "Assignment1: clarify dashboard selection, scaling and raw evidence views"
 ```
+
+## 2026-11-25 — Fast comparison, report check and run-all entry points (base d885f6e)
+
+Laurin authorized four tasks: add the two sourced fast comparisons, fact-check
+Claude chat's report without restyling, build/run reproduction scripts, and add
+README Start here. Applied aif-exercise, aif-tdd, aif-verify and aif-bench for
+the explicitly requested 1k smoke. No delegation, Git mutation, engine change,
+old test assertion change, expected-file change or historical result change.
+The logged PDF injection remains ignored; no new embedded instructions found.
+
+Dashboard: six rows/bars now include B1/B2/B3, final B3r's binding-rematch
+reference and two B3r_fast comparisons. B3r/fast binding geomeans are both from
+the same rematch (0.4687556667 / 0.4093057220 s), ratio 0.8731749845. The older
+cross-session row retains ratio 0.8874636993 and its original rejection.
+Computed scenario counts: 25/27 faster, 26/27 within 5%; dead_slot_rebuild 1k
+ratio 1.0683006733 remains the binding failure. Every row/bar names its session
+and commit. Historical FINAL_SELECTION.md stays verbatim, with a caption
+distinguishing its older scenario-count wording from the computed counts.
+
+Test-first [red](../05_evidence/20261125T125721Z_d885f6e-dirty_handoff-selection-red.txt)
+reproduces the missing comparison column/fast rows. One new AppTest was added;
+all old functions/assertions are AST-identical to HEAD. [Targeted green](../05_evidence/20261125T131701Z_d885f6e-dirty_handoff-dashboard.txt):
+22 passed in 26.24 s. The fresh full suite below includes that test too.
+
+Report: [REPORT_FACT_CHECK.md](REPORT_FACT_CHECK.md) lists all **40 exact
+old -> new -> source replacements**. No other text/style/section change:
+the final review reconstructs REPORT.md from HEAD plus the correction ledger.
+Examples: exclude cancel_churn from the 21-186x claim; distinguish shared
+validation from the fast path; correct I1-I7 and live-count/pseudocode updates;
+include stale-root heap work/allocated-table scan in complexity; round the
+crowded lower bound down; correct queue order and the 1k sweep rounding;
+source GC observations, traced memory and timing aggregation precisely; use
+full existing run paths. Final source inspection also corrected "two extra
+mutants" to **two rebuild-trap work-count scenarios**; 17 mutant kills remain.
+The original draft's correct figures/structure are retained. Bibliographic
+attributions were not independently checked over a network.
+
+[Report arithmetic check](../05_evidence/20261125T133243Z_d885f6e-dirty_handoff-report-check-final.txt):
+91 records from committed blobs, saved in
+[handoff-report-check.json](../05_evidence/handoff-report-check.json).
+The initial check caught the draft's 10x sweep-1k rounding (actual 10.53566x);
+corrected to 11x and reran. A scratch replacement script initially did not
+match Unicode ellipses in the abbreviated paths; it stopped before writing.
+After reading the actual text it applied the exact replacements. No stored
+result, final selection, contract expectation or generator was corrected.
+
+Entry scripts: run_all.ps1 and run_all.sh contain actual -m commands and
+step comments; fail on the first error. Defaults: create .venv/install existing
+requirements only if absent; full tests; final-B CLI worked replay plus
+expected fills/book/proceeds check; 1k smoke; dashboard. -NoDashboard and
+--no-dashboard allow terminal verification. Local venv creation and pip
+installation were explicitly authorized in Laurin's prompt; pins unchanged,
+including hypothesis==6.155.7. Bash is LF-pinned in .gitattributes.
+
+submission_tools.py is stdlib orchestration, not engine code. Smoke copies
+unchanged sources into a unique scratch workspace; creates only 1k/seed42
+inputs there using the supplied/own generator commands and checksums; invokes
+the existing runner for A/B3r with its full smoke protocol/result checks.
+Historical root 03_results/runs and 06_data remain unchanged. Optional Full
+is outside the default branch, prints about 7 h / allow 6-10 h, requires RUN
+FULL, uses new sessions and the declared A scope. Estimate: 6.62155 h summed
+saved candidate/baseline worker time, not a new long measurement. It does not
+repeat the binding fast selection. Full generation writes ignored local
+catalogs, checks content hashes, reports gzip differences, and accepts only
+proven newline-only differences for own generator source hashes (supplied
+generator remains exact). No long run was executed.
+
+[Default PowerShell run](../05_evidence/20261125T132117Z_d885f6e-dirty_handoff-run-all.txt):
+exit 0 in 905.05 s, including a new local venv and requirements installation.
+**1,033 passed in 778.59 s**, no failures/skips; worked example **OK**;
+**108/108 workers OK**, then explicit dashboard skip. The full suite is
+preserved as [handoff-all-tests.xml](../05_evidence/handoff-all-tests.xml).
+Per-file counts are in [handoff-verification.json](../05_evidence/handoff-verification.json),
+including 448 contracts, 25 mutant/control cases (17 kills), 22 dashboard,
+28 robustness, 184 validation, six A-vs-version stateful cases and the separate
+fast differential coverage. Engine/test sources were unchanged after this run.
+
+Final helper review corrected copied local-catalog aggregate totals and added
+portable own-generator newline hashing; it changes neither generators nor
+inputs. [Final smoke](../05_evidence/20261125T144429Z_d885f6e-dirty_handoff-smoke-final.txt):
+108/108 workers plus 108 sampled result checks passed in 58.07 s; 12 catalog
+entries / 11 physical files, all size 1000. The final verification checks
+catalog totals and that copied engine sources equal the originals byte for
+byte. Both smoke folders remain ignored under scratch, with no deletion/move.
+
+[Bash syntax](../05_evidence/20261125T132027Z_d885f6e-dirty_handoff-bash-syntax.txt):
+exit 0, bash -n. Initial sandbox Git Bash could not create its local signal
+pipe; the authorized unsandboxed syntax check succeeded. No macOS/Linux run
+or execution of Full is claimed. README's 437-word Start here has the two
+commands, expected outputs, sourced section-6 headlines, individual commands,
+folder map and submitted-commit placeholder. All prior detail is retained.
+
+[Final review](../05_evidence/20261125T150020Z_d885f6e-dirty_handoff-review-final.txt):
+PASS; source/XML hashes in handoff-verification.json. Reviewed the complete
+changed-source diff/new scripts for the logged injection: no traces in logic,
+names or comments. Protected engine/benchmark/data/attack/result/pin files and
+FINAL_SELECTION.md are unchanged; old assertions unchanged; diff --check
+passes. No open correctness questions. STOP for Claude chat/Laurin review.
+
+Proposed commands, not executed:
+
+```powershell
+git add -- .gitattributes run_all.ps1 run_all.sh submission_tools.py README.md SPEC.md 00_docs/REPORT.md 00_docs/REPORT_FACT_CHECK.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 04_dashboard/saved_results.py 04_dashboard/views.py 02_tests/test_dashboard.py 05_evidence/INDEX.md '05_evidence/*handoff*'
+git commit -m "Assignment1: fact-check report and add verified run-all workflow"
+```

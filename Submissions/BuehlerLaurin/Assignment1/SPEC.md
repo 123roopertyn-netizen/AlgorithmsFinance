@@ -948,3 +948,38 @@ tables, raw repeats/settings, all chart captions and both no-Git copy modes.
 The numerical audit writes new 05_evidence/clarity-audit.json; the original
 dashboard audit remains unchanged. Checkpoint after tests and evidence;
 Laurin alone runs the proposed Git commands.
+
+## Submission entry points and report fact check (Laurin, 2026-11-25)
+
+Scope: presentation, factual report corrections and reproduction entry points;
+no engine, contract expectation or historical result changes. Final B stays
+B3r. Selection comparison adds B3r_fast using its binding same-session rematch
+geomean paired with B3r from that session; historical candidate rows and the
+older cross-session fast result retain their own provenance. The original
+decision is rendered verbatim; computed scenario counts distinguish faster
+(25/27) from within the 5% bound (26/27).
+
+run_all.ps1 and run_all.sh default to local .venv setup (skip installation if
+it exists), full standard tests, worked-example final-B replay/comparison,
+1k smoke, then saved-file dashboard. Laurin explicitly authorized creating the
+local venv and installing requirements.txt for this task; dependency pins stay
+unchanged. -NoDashboard/--no-dashboard is for terminal verification. All Python
+commands use -m; scripts stop at the first failed step. Smoke copies unchanged
+code into a unique scratch workspace, regenerates only M=1000/seed42 inputs,
+and uses the existing A/B3r benchmark runner/protocol and sampled result checks.
+No smoke output enters committed 03_results/runs or changes the selection.
+
+-Full/--full is excluded from the default path, prints an estimate from saved
+worker times and requires the literal confirmation RUN FULL. It reproduces
+original B1/B2/B3 parts, B3r on all parts, old post-attack comparators and then
+A with its declared size/repeat scope. It does not repeat the binding fast
+selection attempt. New session names keep historical results intact. Full
+input regeneration checks generator/content hashes and reports archive-byte
+differences across zlib versions, recording actual local archive hashes in an
+ignored reproduction manifest. Committed manifests remain unchanged.
+
+Report editing is factual only; each old/new/source change is listed in
+00_docs/REPORT_FACT_CHECK.md. README gains a short Start here section and keeps
+the existing detailed reference. Verification: new AppTest regression, full
+suite through the default PowerShell script, worked check, scratch smoke,
+bash -n and saved arithmetic/source review. No long run at this checkpoint.
