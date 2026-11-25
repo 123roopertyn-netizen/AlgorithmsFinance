@@ -4,8 +4,9 @@ Submission of Bastian Bundschuh for *Algorithms in Finance* (take-home exercise,
 26 November 2026, 18:00). Task and data: `docs/ASSIGNMENT_README.md`,
 `docs/AlgorithmsFinance_Exercise1.pdf`.
 
-**Status: Phase 1 (tests written, red).** Engines are stubs; sections marked TODO
-are filled in later phases.
+**Status: complete.** Both versions, 454 tests, all benchmarks, the dashboard and the report
+(`REPORT.md`) are done; every result file in `results/` was measured on one MacBook Air
+(see `results/env.json`). The submitted code version is at the end of this file.
 
 A sequential, single-venue BTC limit order book in Python with price-time (FIFO) priority,
 in two versions:
@@ -13,7 +14,7 @@ in two versions:
 | Version | Data organization | File |
 |---|---|---|
 | A (baseline) | list of orders per side, found by scanning | `lob/version_a.py` |
-| B (revision) | price levels with FIFO queues + order index (planned) | `lob/version_b.py` |
+| B (revision) | price levels with FIFO queues (deque, lazy cancel) + sorted price list + order index | `lob/version_b.py` |
 
 All rules, units, result formats and decisions: **`SPEC.md`**.
 Model boundaries: one venue, no fees, balances, hidden orders, self-trade checks or
@@ -38,13 +39,13 @@ python3 -m venv .venv
 | Check supplied data | `.venv/bin/python tools/verify_data.py` | `results/data_checksums.json` |
 | Tests | `.venv/bin/python -m pytest -q` | nothing |
 | Replay a file | `.venv/bin/python -m lob.replay data/worked_example.jsonl --version A` | stdout |
-| Generate data | TODO (Phase 5: `bench/make_data.sh`) | `data/generated/` (not committed) |
-| Benchmarks | `bash bench/run_all.sh` (Phase 6; several hours, see below) | `results/` |
-| Dashboard | TODO (Phase 7) | loads `results/` only |
+| Generate data (about 100 MB, 100 s) | `bash bench/make_data.sh` | `data/generated/` (not committed) |
+| Benchmarks (several hours; needs the generated data; machine idle, on AC power) | `bash bench/run_all.sh` | `results/` |
+| Dashboard | `.venv/bin/streamlit run dashboard/app.py` | nothing (loads `results/` only) |
 
 ## Tests
 
-`.venv/bin/python -m pytest -q`: 328 tests; every test with a `book` runs for A and B.
+`.venv/bin/python -m pytest -q`: 454 tests; every test with a `book` runs for A and B.
 Every event in a test goes through `tests/helpers.py::step()`, which checks invariants
 I1-I7 and price-time order after that event (see `SPEC.md` section 4).
 
@@ -54,25 +55,60 @@ I1-I7 and price-time order after that event (see `SPEC.md` section 4).
 | `tests/test_matching.py` | empty book, one order, sell smaller/equal/larger than depth, FIFO at one price, several prices, partial fill keeps priority, id spelling vs arrival, 1000-order queue, crossing limit buys/sells at resting prices, equality cross, emptied level recreated, huge integers |
 | `tests/test_cancel.py` | cancel before/after partial/full fill, repeat/unknown/near-miss ids, head/middle/tail of queue, only order at best price, cancel everything, add/cancel churn |
 | `tests/test_worked_and_files.py` | worked example (file and by hand), replay command, reader edge cases, the five supplied 10,000-event files with outcomes derived from the generator |
+| `tests/test_equivalence.py`, `test_process_fuzz.py`, `test_validation_fast.py`, `test_version_b_structure.py` | A and B compared after every event on small adversarial streams, B's internal structure (no empty level, records <= 2 x live orders), the fast validation path against `validate()` |
+| `tests/test_generated_data.py`, `tests/test_bench.py`, `tests/test_dashboard.py` | the generated streams and their checksums, the benchmark code (percentiles, limits, gc, counters, liquidation), every dashboard page |
 
-Phase 1 red run (stubs): `docs/test_logs/phase1_red.txt`.
+Phase 1 red run (stubs, historical): `docs/test_logs/phase1_red.txt`.
 
 ## Expected worked-example output
 
 `data/worked_example.jsonl`: makers fill `b1:1, b2:1, b3:3, b4:1` BTC; 4 BTC stay on `b4`;
 the ask `a1` is unchanged; gross value 3,594,000,000,000,000 tick-units = **359,400.00 USD**.
-Full expected result: `data/worked_expected.json`. TODO: paste the replay output here.
+Full expected result: `data/worked_expected.json`. Output of
+`.venv/bin/python -m lob.replay data/worked_example.jsonl --version A` (Version B prints the same; the first five
+lines, the resting orders, are left out; the sixth is the sell `s1` with its four fills):
+
+```
+{"event_id":"event6","order_id":"s1","status":"filled","unfilled_qty_units":0,"fills":[{"maker_id":"b1","taker_id":"s1","price_ticks":6000000,"qty_units":100000000},{"maker_id":"b2","taker_id":"s1","price_ticks":6000000,"qty_units":100000000},{"maker_id":"b3","taker_id":"s1","price_ticks":5990000,"qty_units":300000000},{"maker_id":"b4","taker_id":"s1","price_ticks":5970000,"qty_units":100000000}]}
+{
+  "version": "A",
+  "status_counts": {
+    "resting": 5,
+    "filled": 1
+  },
+  "gross_value_tick_units": 3594000000000000,
+  "gross_value_usd": "359400.00",
+  "remaining_orders": [
+    {
+      "order_id": "b4",
+      "side": "BUY",
+      "price_ticks": 5970000,
+      "qty_units": 400000000,
+      "arrival_seq": 4
+    },
+    {
+      "order_id": "a1",
+      "side": "SELL",
+      "price_ticks": 6010000,
+      "qty_units": 200000000,
+      "arrival_seq": 5
+    }
+  ]
+}
+```
 
 ## Folder layout
 
 ```
-SPEC.md               rules + decisions D1-D19 (Phase 0)
+SPEC.md               rules + decisions D1-D19
 lob/                  common.py (reader, reasons, display), version_a.py, version_b.py, replay.py
 tests/                hand-calculated, worked example, invariants, A-vs-B equivalence
-tools/                verify_data.py, own small generator (Phase 4)
-bench/                timing, latency, memory, counts, liquidation (Phase 6)
+tools/                verify_data.py, gen_small.py (own small generator), ab_timing.py, hash_generated.py
+bench/                timing, latency, memory, counts, liquidation, concentration, churn, flood, fairness; make_data.sh, run_all.sh
 results/              saved raw results + environment metadata
-dashboard/            Streamlit app that only loads results/ (Phase 7)
+dashboard/            Streamlit app that only loads results/
+REPORT.md             the report (model, costs, results, incident, limitations)
+REVISIONS.md          A -> B changes and the 10 optimization steps with timings
 data/                 supplied 10,000-event files + worked example (unchanged)
 docs/                 course assignment README and slides (unchanged copies)
 generate_orders.py    course generator (unchanged)
@@ -209,7 +245,7 @@ Details of how the rules are applied (also fixed before the first run):
   scenarios. The variant is labeled in the `version` column and never replaces Version A.
 
 
-## Dashboard (Phase 7)
+## Dashboard
 
 ```bash
 .venv/bin/pip install -r requirements.txt
@@ -228,8 +264,29 @@ variant `A_idset` is a lighter orange. `?page=Scaling` in the URL opens a page d
 
 ## Measured-data definitions
 
-TODO (Phase 6).
+All files are in `results/`; each row says when it was taken (`start_utc`) and on which power source.
+Times are seconds from `time.perf_counter`; sizes are bytes; `events` is the number of events M.
+
+| File | One row is | Main columns |
+|---|---|---|
+| `time_raw.csv` | one replay (warm-up or timed repeat) of one stream by one version | `version, scenario, seed, events, levels, status, phase, repeat, elapsed_seconds, median_seconds` (median of the run, repeated on each row), `parse_seconds` |
+| `time_raw_run1.csv`, `env_run1.json` | the same, from the discarded first run | evidence only (REPORT section 5) |
+| `canary_raw.csv` | one replay of the canary (B, mixed, 100,000 events) before or after a block | `block, canary_point` and the columns of `time_raw.csv` |
+| `latency_summary.csv`, `latency_by_position.csv`, `latency_hist.json` | percentiles of per-event latency, by event type and window; 20 chunks; log2 histogram | `p50_ns, p95_ns, p99_ns, max_ns`, `timer_overhead_ns` |
+| `latency_gc_test.csv` | B buildup 100,000 events with gc off and on | `label, max_ns, events_over_1ms, top5_index_ns` |
+| `memory.csv` | `tracemalloc` run of one stream | `final_bytes` (after the replay), `peak_bytes`, `checkpoints_bytes` (every 10%) |
+| `counters.csv` | operation counts of one stream | A: `scan_is_live, scan_best_index, scan_cancel`; B: `key_shift_elements, compactions`; both: `fills, levels_visited` |
+| `liquidation_raw.csv`, `liquidation_summary.csv` | one trial / one (version, book, sale size) of a large market sell | `sale_qty_units, sell_seconds, fills, price_levels_visited, unfilled_qty_units, fills_digest` |
+| `concentration_raw.csv`, `fairness_time.csv` | timing rows as in `time_raw.csv` for 4 to 4,000 price levels; for A, `A_idset` and B | `levels`; `version` |
+| `cancel_churn_scaling.csv`, `flood_peaks.csv`, `workload_peaks.csv` | cancel churn against M; peak active orders B and price levels P per stream | `final_bytes, time_per_event_ns`; `peak_active_orders, peak_price_levels` |
+| `correctness.csv` | one stream compared A against B after every event | `all_results_equal, best_prices_equal, final_book_equal` |
+| `data_checksums.json`, `generated_data_checksums.json` | checksums of the supplied and the generated streams | `decompressed_sha256` (identity), `gz_sha256` (depends on zlib) |
+| `env.json` | the machine and code of the timing runs | Python, macOS, hardware, git commit, constants |
+
+`status` is `ok`, `stopped` (a replay reached 600 s; the time is not known), `not_run` (skipped by a declared
+rule; the reason is in `reason`) or `error`. A stopped or not-run row never has a median. `levels` is the number
+of price levels the generator was set to (1,000 unless a concentration stream). The rules are above.
 
 ## Submitted code version
 
-TODO: commit identifier.
+CODE_COMMIT_PLACEHOLDER

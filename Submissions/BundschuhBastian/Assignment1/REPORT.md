@@ -155,9 +155,18 @@ sweep (0.0074 s, 0.0064 s, 0.0082 s for B), because each new order still scans t
 
 ## 10. Use of AI
 
-Claude (Opus 5.5 in phases 0-1, Sonnet 5.5 from phase 2) was used as tutor and coding assistant. Bastian decided the
-specification, the order of the work, the benchmark rules, and the limits, and reviewed each phase. Every suggestion is
-logged in `AI_LOG.md` as accepted, corrected or rejected with evidence. Corrections that mattered: gc enabled in the timing
-runs (Bastian), run 1 rejected (Bastian), my wrong "O(B) memory" claim in `REVISIONS.md` (corrected from a 6b
-measurement), my expectation about the id scan (the measurement said half, not two thirds), and bugs the tests found in
-my benchmark code. All numbers in this report were read from `results/`, not from memory of earlier runs.
+I used Claude (Opus 5.5 in phases 0 and 1, Sonnet 5.5 from phase 2) as tutor and coding assistant, and I stayed
+responsible for every decision. **My decisions:** the specification choices D1-D19 in `SPEC.md`; the order of the
+phases; the benchmark rules (600 s limit per replay, a first replay over 60 s as the only measurement, the rule for A on
+the 1,000,000-event files, gc enabled); the extra optimization candidates (deque with lazy cancel, pool of levels); the
+gc test and the fairness check; rejecting timing run 1 and asking for the canaries; and the correction of the memory
+claim. **Claude's work:** the tests, both versions, the optimization experiments, the benchmark code, the dashboard and
+the first draft of this report. Claude also found and fixed bugs in its own benchmark code, usually through the tests
+(for example the counters restore bug and the empty-chunk error in the latency code). I reviewed every phase before the
+next one started.
+
+`AI_LOG.md` lists every suggestion as accepted, corrected or rejected, with the evidence. Four corrections matter for
+reading this report: gc stays enabled in the timing runs (my decision); run 1 is not used (my decision); Claude's claim in
+`REVISIONS.md` that B's memory is O(B) was wrong and is now O(peak B); and Claude's expectation that the id scan was
+two thirds of A's cost was wrong, the measurement says about half. Claude read every number in this report from
+`results/` (not from memory of earlier runs), and the dashboard shows the same files.
