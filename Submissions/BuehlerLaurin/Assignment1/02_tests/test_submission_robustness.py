@@ -147,15 +147,15 @@ import saved_results
 assert saved_results.head() is None
 app=AppTest.from_file(str(root/'04_dashboard/app.py'),default_timeout=120).run()
 assert not app.exception,[e.message for e in app.exception]
-assert len(app.tabs)==8
+assert len(app.tabs)==9 and app.tabs[0].label=='Final selection'
 assert all(len(t.dataframe)+len(t.markdown)>0 for t in app.tabs)
 banner='Reading files from disk (no git checkout): values are not verified against a commit.'
 assert banner in [w.value for w in app.warning]
 assert app.main.children[0].value==banner
 assert {m.label:m.value for m in app.metric}['B3r official 100k geomean']=='0.4247 s'
-print('PASS: eight tabs, top disk banner, unchanged CSV headline, no checkout')
+print('PASS: nine tabs, top disk banner, unchanged CSV headline, no checkout')
 '''
     result = subprocess.run([sys.executable,'-c',script,str(copy)],cwd=copy,env=env,
                             capture_output=True,text=True,encoding='utf-8',timeout=150)
     assert result.returncode == 0, result.stdout+'\n'+result.stderr
-    assert 'PASS: eight tabs' in result.stdout
+    assert 'PASS: nine tabs' in result.stdout

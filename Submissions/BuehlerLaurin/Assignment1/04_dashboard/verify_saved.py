@@ -32,6 +32,11 @@ def select(frame, **filters):
 
 base = b['tables']['baseline']
 summary = base['summary']
+for row in s.official_geomeans(b).itertuples():
+    emit('Final selection',row.version+' official100k geometric mean',float(row.geomean_s),
+         's','baseline' if row.version == 'B3r' else 'candidates','summary.csv')
+assert b['rematch']['decision'] == 'rejected'
+assert b['cross']['decision'] == 'tried and rejected'
 raw = select(summary,version='B3r',experiment='official',size=100000,phase='replay')
 g = math.exp(sum(math.log(v) for v in raw.median_s)/len(raw))
 shown = s.official_geomeans(b).set_index('version').loc['B3r','geomean_s']
@@ -43,6 +48,11 @@ emit('Overview','A phase replay limits',len(stops),'cases','baseline','stops.csv
 losses = s.a_vs_b(b).query('experiment == "official" and workload == "cancel_churn"')
 assert losses.speedup.lt(1).all()
 emit('Overview','cancel_churn A/B3r minimum measured ratio',float(losses.speedup.min()),'ratio','baseline','summary.csv')
+compact = s.overview_speedups(b)
+assert len(compact) == 15
+for row in compact.itertuples():
+    emit('Overview',f'{row.workload}/{row.size} seed-median A/B3r ({row.kind})',
+         row.label,'ratio label','baseline','summary.csv + stops.csv')
 
 scale = select(summary,version='A',experiment='official',workload='buildup',phase='replay',status='ok')
 points = scale.groupby('size').median_s.median()
@@ -110,11 +120,21 @@ emit('Bottleneck explained','B1 far-end list movement',int(shifts.value),'refere
 env = b['envs']['baseline']
 emit('Method & data','Per replay limit',env['per_replay_limit_s'],'s','baseline','env.json')
 emit('Method & data','Traced peak limit',env['traced_peak_limit_bytes'],'bytes','baseline','env.json')
-assert len(records) and len({r['tab'] for r in records}) == 8
+repeats = s.raw_repeats(b,'baseline',case,'B3r','replay')
+assert len(repeats) == 6 and repeats.row_kind.eq('warm-up').sum() == 1
+measured = repeats[repeats.row_kind.eq('measured')]
+assert len(measured) == 5
+assert math.isclose(measured.seconds.median(),select(summary,case_id=case,version='B3r',phase='replay').median_s.iloc[0],rel_tol=1e-12)
+emit('Method & data','Raw repeat selector: measured median',float(measured.seconds.median()),'s','baseline','timing.csv',case)
+settings = s.workload_settings(b)
+assert settings.input_sha256.str.len().eq(64).all()
+assert set(settings.data_origin) == {'own','supplied'}
+emit('Method & data','Workload settings rows with recorded SHA-256',len(settings),'rows','baseline','cells.csv (all four runs)')
+assert len(records) and len({r['tab'] for r in records}) == 9
 cp = subprocess.run(['git','diff','HEAD','--','01_code','03_results','06_data','requirements.txt'],capture_output=True,text=True,check=True)
 assert not cp.stdout
 print('Protected engine/benchmark/data/results/dependency files unchanged; external attack work excluded.')
 output = dict(snapshot_commit=b['store'].revision,created_utc=datetime.now(timezone.utc).isoformat(),
               measurements_executed=False,checks=records)
-Path('05_evidence/dashboard-audit.json').write_text(json.dumps(output,indent=2)+'\n',encoding='utf-8')
-print('RESULT: PASS (all8 tabs cross-checked against saved files; no measurement, engine change or network fetch)')
+Path('05_evidence/clarity-audit.json').write_text(json.dumps(output,indent=2)+'\n',encoding='utf-8')
+print('RESULT: PASS (all9 tabs cross-checked against saved files; no measurement, engine change or network fetch)')

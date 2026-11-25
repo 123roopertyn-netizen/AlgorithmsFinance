@@ -1053,3 +1053,115 @@ and Laurin's commit. Proposed commands, not executed:
 git add -- 01_code/lob/replay.py 04_dashboard/app.py 04_dashboard/saved_results.py 04_dashboard/views.py 02_tests/test_submission_robustness.py README.md SPEC.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 05_evidence/INDEX.md '05_evidence/*robustness*'
 git commit -m "Assignment1: add no-Git dashboard fallback and robust final-B replay CLI"
 ```
+
+## 2026-11-25 — Phase 5b dashboard clarity (base c4cfc25, Codex)
+
+Laurin requested presentation changes only. Read both AGENTS files and applied
+aif-exercise, aif-tdd and aif-verify; aif-debug for reproduced regression/test
+adapter failures. No benchmark/generator execution, engine change, dependency
+installation or git mutation. The logged PDF injection remains ignored; no new
+embedded instructions were found. Task scope is recorded in SPEC.md before the
+checkpoint; the final selection and historical measurements remain unchanged.
+
+Accepted: dedicated first Final selection tab with the full committed decision,
+candidate geomeans/violations (including B3r's literal-filter qualification) and
+both fast outcomes. Overview now has three metrics, one 5-by-3 speedup table,
+one log-log chart and the explicit cancel_churn loss. Original per-seed detail
+(50 rows), repeat completeness (1,091 rows) and non-OK coverage (180 rows) moved
+to Method & data; AppTest compares every rendered row/column/value with the
+original frames. Every chart has a How to read caption. Scaling offers dashed
+linear/quadratic reference guides and actual linear/log-log axes; memory uses
+independent B3/other panels and a linear/log-y toggle. GC observations are
+attributed to ATK-P7, including its allocation-outlier qualification, beside
+the histogram. The separately marked B3r algorithmic spike comes from CSV.
+
+Raw repeats expose every timing.csv row for a selected run/case/version/phase,
+mark the warm-up and place the validated median alongside; a large A cell is
+explicitly single trial. Workload settings retain generator parameters,
+own/supplied origin, input SHA-256 and add the per-version timing protocol.
+Commands are reconstructed, never executed. Overview links open these views.
+Provenance, stopped/not_run/scope labels and the no-Git warning remain intact.
+
+Test-first [red](../05_evidence/20261125T103109Z_c4cfc25-dirty_clarity-red.txt):
+**7 failed, 14 passed in 19.80 s**, reproducing absent new views/helpers/controls.
+Corrected new AppTest assumptions after checking the actual Streamlit API:
+the chart element is vega_lite_chart, Markdown strips surrounding whitespace,
+and Arrow normalizes object string dtypes. Value comparisons remain strict;
+dtype differences from serialization are excluded. No expected engine result
+was changed. The audit initially assumed the two JSON decision labels matched;
+the committed cross-session label is "tried and rejected", whereas the binding
+rematch label is "rejected". It now verifies those exact original labels.
+
+Source review reproduced an overstatement in the new compact-table formatting:
+**> 1300** was rounded up from a lower bound of **1295.716383...**.
+[Rounding red](../05_evidence/20261125T115050Z_c4cfc25-dirty_clarity-bound-rounding-red.txt)
+fails on that exact case. The new formatter rounds bounds down to three
+significant digits; saved ratios/measurements and the moved legacy table are
+unchanged. A regression checks displayed bounds do not exceed the calculated
+bounds. Ordinary measured ratios keep nearest rounding.
+
+One evidence command resolved its child "python" to the system interpreter
+(no pytest); it ran no tests. All subsequent child commands explicitly use
+C:/Users/laubu/.venvs/aif-a1/Scripts/python.exe. An already-applied scratch
+rewrite helper was inadvertently retried and stopped at a missing old marker
+before writing; two context-mismatched patches failed atomically. Re-read the
+actual source instead of guessing replacement context. These are tooling
+corrections, not data or behaviour changes.
+
+[Final numerical audit](../05_evidence/20261125T115416Z_c4cfc25-dirty_clarity-audit-final.txt):
+PASS across nine tabs, including candidate geomeans, all 15 compact ratio cells,
+13 stopped A replays, raw repeat median and 945 workload-setting rows.
+The new [clarity-audit.json](../05_evidence/clarity-audit.json) preserves source
+run/commit/file references; the original dashboard audit is retained unchanged.
+Fresh suite results and final source review follow below.
+
+[Final targeted green](../05_evidence/20261125T115403Z_c4cfc25-dirty_clarity-dashboard-pass.txt):
+**49 passed in 47.91 s**, no failures/skips: 21 dashboard checks and all 28
+submission-robustness cases (including both real no-Git copies). This run is
+after the final bound-formatting and AppTest adapter corrections. It checks
+actual chart specifications, all nine rendered tabs, CSV-derived headlines,
+every moved table value and each selected repeat without changing measurements.
+
+[Full standard suite](../05_evidence/20261125T114813Z_c4cfc25-dirty_clarity-all-tests.txt):
+**1,032 passed in 769.35 s**, exit 0, no failures/skips. It started before the
+final display-rounding/AppTest adapter cleanup; the final 49-case run above
+covers the completed presentation changes. Engine sources were unchanged
+throughout. Standard per-file counts:
+
+| File | Passed |
+|---|---:|
+| test_b3r | 6 |
+| test_b_internal | 32 |
+| test_bench_pipeline | 30 |
+| test_contract | 448 |
+| test_dashboard | 21 |
+| test_fast_assessment | 10 |
+| test_fast_equivalence | 116 |
+| test_final_version | 60 |
+| test_mutants | 25 (17 kills plus real-version controls) |
+| test_own_datasets | 4 |
+| test_post_attack_pipeline | 13 |
+| test_replay | 21 |
+| test_replay_regressions | 28 |
+| test_stateful | 6 |
+| test_submission_robustness | 28 |
+| test_validation | 184 |
+
+[Final source review](../05_evidence/20261125T120134Z_c4cfc25-dirty_clarity-final-review.txt):
+PASS. [Verification JSON](../05_evidence/clarity-verification.json) records source
+and XML hashes, suite stages and counts. Both suites are nonempty and wholly
+green; the numerical audit covers nine tabs. Protected 01_code, 03_results,
+06_data, 07_attack, requirements.txt, FINAL_SELECTION.md and the original
+dashboard-audit.json are unchanged. Only the two dashboard-facing test files
+changed; no engine expectation or expected result changed. git diff --check
+passes (Windows line-ending notices only). Reviewed the full changed-source
+diff and all new files for the logged injection: no traces in behaviour,
+identifiers or comments and no new embedded instructions. No files deleted or
+moved, no installations/network/Git mutations. No open questions.
+
+STOP for Claude (chat) review and Laurin's commit. Proposed, not executed:
+
+```powershell
+git add -- 04_dashboard/charting.py 04_dashboard/saved_results.py 04_dashboard/views.py 04_dashboard/verify_saved.py 02_tests/test_dashboard.py 02_tests/test_submission_robustness.py README.md SPEC.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 05_evidence/INDEX.md '05_evidence/*clarity*'
+git commit -m "Assignment1: clarify dashboard selection, scaling and raw evidence views"
+```

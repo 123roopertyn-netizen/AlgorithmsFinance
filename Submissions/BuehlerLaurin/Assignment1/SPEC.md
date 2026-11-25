@@ -906,3 +906,45 @@ Tests: final-B factory/default/help, located single-line diagnostics for plain
 and gzip files, valid-input regressions, Git-unavailable detection, disk path
 allowlist, and all eight tabs in independent processes on temporary submission
 copies without .git (both missing checkout and missing Git executable).
+
+## Phase 5b: dashboard clarity (Laurin, 2026-11-25)
+
+Presentation-only scope: no new measurements, generated inputs, stored-result
+changes, engine changes or selection reassessment. Keep committed-blob loading
+as the default and the previously declared, visibly unverified disk fallback.
+
+1. Final selection is the first of nine tabs. Render FINAL_SELECTION.md in
+   full, with a compact candidate timing/violation comparison and both fast
+   outcomes. The decision's literal-filter/tail-cost qualification stays visible.
+2. Overview has the existing three metrics, one scenario-by-size table of
+   median per-seed A/B3r ratios, one log-log comparison chart, the cancel_churn
+   loss and links to selection/raw repeats/settings. Censored A ratios stay
+   lower bounds. Round displayed lower bounds downward, never upward. Move the
+   original 50-row detail, 1,091-row completeness and coverage tables to Method
+   & data without changing their content.
+3. Every chart explains axes/units, scales, observation/aggregation and one
+   takeaway. Log-log captions explain power laws and growth-exponent slopes.
+   Scaling toggles log-log/linear axes; dashed slope-1 and slope-2 guides use
+   a measured small-size anchor over observed sizes only. They are labelled
+   references, never measurements or extrapolated replay values.
+4. Memory uses separate B3 and other-version panels with independent y-scales,
+   a linear/log-y toggle and no dual axis. Explain stale heap-key growth and
+   B3r's rebuild. Zero/nonpositive log samples remain in the tables.
+5. The histogram's adjacent GC note attributes the observed large-run pauses
+   to ATK-P7 (GC enabled equally); it does not attribute every outlier to GC.
+   Keep the report's allocation-cost qualification. Mark the distinct B3r
+   heap-purge scenario and derive its maximum from saved latency.csv.
+6. Method & data includes case/version/phase raw-repeat selection: every
+   timing.csv row in seconds, warm-up marked, median alongside and excluded
+   warm-up; large A remains labelled single trial. Failed/missing/stopped rows
+   never become a median. Workload settings include per-case/version protocol,
+   workload, size, seed, levels, percent, own/supplied, input SHA-256, run and
+   commit. Reconstruct generator commands from those parameters; never run them.
+
+Verification covers nine tabs and the full displayed decision, Overview's
+compact structure, CSV-derived headlines/ratios, conservative bounds, reference
+slopes, actual chart-axis toggles, separate memory panels, identical moved
+tables, raw repeats/settings, all chart captions and both no-Git copy modes.
+The numerical audit writes new 05_evidence/clarity-audit.json; the original
+dashboard audit remains unchanged. Checkpoint after tests and evidence;
+Laurin alone runs the proposed Git commands.

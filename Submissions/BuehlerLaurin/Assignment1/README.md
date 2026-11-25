@@ -53,11 +53,30 @@ From Assignment1 with the existing venv active:
 python -m streamlit run 04_dashboard/app.py
 ```
 
-Eight tabs cover Overview, Scaling, Original vs revised & variants, Throughput
-& latency, Memory, Correctness, Bottleneck explained, and Method & data. Q7
+Nine tabs cover Final selection (first), Overview, Scaling, Original vs revised
+& variants, Throughput & latency, Memory, Correctness, Bottleneck explained,
+and Method & data. Q7
 construction and individual sales have separate views; 1M results, actual
 latency histogram bins, early/late segments and post-cancellation state are
 included. Sources, recorded engine commits and units accompany the views.
+
+Final selection renders the full decision plus candidate timings/violations
+and both B3r_fast outcomes. Overview keeps three metrics, one compact table
+of median A/B3r speedups across seeds (with explicit stopped-A lower bounds),
+one log-log chart and the cancel_churn loss. Its links open the selection,
+raw repeats and workload settings. The original per-seed detail, repeat
+completeness and coverage tables are in Method & data.
+
+Every chart has a How to read caption. Scaling offers log-log/linear axes;
+dashed slope-1/2 guides on log-log views are labelled references, not observations.
+Memory separates B3 from the other versions with independent y-scales and a
+linear/log-y toggle. The latency histogram distinguishes runtime GC pauses
+(attributed to ATK-P7) from the declared algorithmic heap-purge spike; GC was
+enabled for all versions. ATK-P7 also records non-GC allocation outliers.
+Method & data lets you select a case/version/phase and inspect every raw repeat
+in seconds, its marked warm-up and the adjacent median (or A single trial).
+Workload settings list generator parameters/commands, own/supplied origin,
+input SHA-256, protocol, run folder and commit.
 
 When Git and a checkout are available, the app reads a fixed HEAD snapshot using read-only `git show`: only committed
 files under `03_results/runs/`, `05_evidence/`, `00_docs/FINAL_SELECTION.md` and
@@ -97,14 +116,26 @@ python -m pytest 02_tests/test_dashboard.py -q
 python 04_dashboard/verify_saved.py                  # optional developer audit; requires Git
 ```
 
-The [per-tab audit](05_evidence/dashboard-audit.json) traces sample displayed
+The [current per-tab audit](05_evidence/clarity-audit.json) traces sample displayed
 values to their CSV/JSON/XML files. It is saved-file analysis, not measurement.
+The original [Phase 5 audit](05_evidence/dashboard-audit.json) is retained.
 
 Phase 5 verification: [999 standard tests](05_evidence/20261123T190332Z_87ed911-dirty_dashboard-all-tests.txt)
 passed in 785.23 s; [16 dashboard gates on the latest committed snapshot](05_evidence/20261123T191536Z_337cc61-dirty_dashboard-current-head-smoke.txt)
 passed in 17.79 s. [Final verification](05_evidence/dashboard-verification.json)
 records source and XML hashes. All eight tabs and interactive selections render;
 headline numbers match CSVs. No new benchmark or engine change.
+
+Phase 5b (2026-11-25): [49 dashboard/portability checks](05_evidence/20261125T115403Z_c4cfc25-dirty_clarity-dashboard-pass.txt)
+passed in 47.91 s (21 dashboard, 28 submission robustness), including all nine
+tabs, both axis toggles, unchanged moved tables, raw repeats/settings and
+conservative bound labels. [Nine-tab numerical audit](05_evidence/20261125T115416Z_c4cfc25-dirty_clarity-audit-final.txt):
+PASS. Full-suite evidence is linked in the Phase 5b AI log/checkpoint record.
+[Standard suite](05_evidence/20261125T114813Z_c4cfc25-dirty_clarity-all-tests.txt):
+1,032 passed in 769.35 s. The full run started before the final display-only
+cleanup; the final 49-case run covers the completed presentation changes.
+[Checkpoint verification](05_evidence/clarity-verification.json) records source
+hashes, per-file counts and the unchanged protected engine/data/result files.
 
 ## Clean-environment run path (PowerShell, from this folder)
 ```powershell

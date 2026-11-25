@@ -194,6 +194,57 @@ def a_vs_b(bundle, phase='replay'):
     return pd.DataFrame(out)
 
 
+def overview_speedups(bundle):
+    """Median of per-seed ratios; censored replays remain explicit bounds.
+
+    A missing seed cannot become a measured ratio. For mixed exact/censored
+    groups a strict > label is used only if a majority is provably above the
+    median lower value; otherwise the conservative bound is >=.
+    """
+    pairs = a_vs_b(bundle)
+    limits = replay_limits(bundle).set_index('case_id').bound_s
+    result = []
+    for (workload,size),group in pairs[pairs.experiment.eq('official')].groupby(['workload','size']):
+        values = []
+        for row in group.itertuples():
+            if pd.notna(row.speedup):
+                values.append((row.speedup,False))
+            elif row.case_id in limits and pd.notna(row.B3r_s) and row.B3r_s > 0:
+                values.append((limits[row.case_id]/row.B3r_s,True))
+        value,kind,label = float('nan'),'unavailable','unavailable (missing/stopped input)'
+        if len(values) == len(group):
+            value = statistics.median(v for v,_ in values)
+            if any(bound for _,bound in values):
+                strict = sum(v > value or (bound and v >= value) for v,bound in values) > len(values)//2
+                # Round down: rounding 1295.7 up to "> 1300" would overclaim.
+                unit = 10 ** (math.floor(math.log10(value))-2)
+                lower = math.floor(value/unit)*unit
+                kind,label = 'lower bound',('> ' if strict else '>= ')+f'{lower:g}x'
+            else:
+                kind,label = 'measured',f'{value:.3g}x'
+        result.append(dict(workload=workload,size=size,median_speedup=value,kind=kind,label=label,
+                           seeds=','.join(map(str,sorted(group.seed))),run=group.run.iloc[0],commit=group.commit.iloc[0]))
+    return pd.DataFrame(result)
+
+
+def raw_repeats(bundle, role, case_id, version, phase):
+    """All saved rows for one selection, including warm-up and failed attempts."""
+    raw = bundle['tables'][role]['timing']
+    selected = raw[raw.case_id.eq(case_id) & raw.version.eq(version) & raw.phase.eq(phase)].copy()
+    selected['row_kind'] = selected.warmup.astype(str).str.lower().eq('true').map({True:'warm-up',False:'measured'})
+    return selected
+
+
+def workload_settings(bundle):
+    meta = pd.concat([t['cells'] for t in bundle['tables'].values()],ignore_index=True)
+    settings = meta.drop_duplicates(['run','case_id','version','input_sha256','timing_protocol'])[
+        ['case_id','experiment','version','workload','size','events','seed','levels','own','percent',
+         'driver_n','timing_protocol','input_sha256','run','commit']].copy()
+    settings['data_origin'] = settings.own.astype(str).str.lower().eq('true').map({True:'own',False:'supplied'})
+    settings['generator_command'] = settings.apply(generator_command,axis=1)
+    return settings
+
+
 def fit_exponents(rows, x='size', y='median_s', groups=('version',)):
     """OLS log(y) on log(x), after seed medians. No synthetic sizes or fit lines."""
     good = rows[rows.complete & rows[y].gt(0) & rows[x].gt(0)]

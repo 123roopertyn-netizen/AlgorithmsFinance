@@ -1,5 +1,6 @@
 """Saved-file analysis gates and Streamlit's real application smoke test."""
 import math
+import json
 from pathlib import Path
 import sys
 
@@ -10,8 +11,9 @@ from streamlit.testing.v1 import AppTest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / '04_dashboard'))
 import saved_results as saved
+import views
 
-TABS = ['Overview', 'Scaling', 'Original vs revised & variants',
+TABS = ['Final selection', 'Overview', 'Scaling', 'Original vs revised & variants',
         'Throughput & latency', 'Memory', 'Correctness',
         'Bottleneck explained', 'Method & data']
 
@@ -91,7 +93,7 @@ def test_b1_counter_example_is_measured(bundle):
     assert shown.value.tolist() == raw.value.tolist()
 
 
-def test_all_eight_tabs_render_and_headlines_match_csv(bundle,monkeypatch):
+def test_all_tabs_render_and_headlines_match_csv(bundle,monkeypatch):
     import socket
     local_connect = socket.socket.connect
     def no_external_network(sock,address):
@@ -110,6 +112,12 @@ def test_all_eight_tabs_render_and_headlines_match_csv(bundle,monkeypatch):
     assert metrics['B3r official 100k geomean'] == f'{geo:.4f} s'
     assert metrics['A replay limits'] == str(len(saved.replay_limits(bundle)))
     assert any('cancel_churn' in m.value and 'A is faster' in m.value for m in app.markdown)
+    overview = next(t for t in app.tabs if t.label == 'Overview')
+    assert len(overview.metric) == 3 and len(overview.dataframe) == 1
+    assert len(overview.get('vega_lite_chart')) == 1
+    # Streamlit's markdown renderer strips surrounding whitespace.
+    assert any(m.value == bundle['selection'].strip() for m in app.tabs[0].markdown)
+    assert not overview.expander
 
 
 def test_fast_rematch_score_is_from_same_session_csv(bundle):
@@ -138,8 +146,20 @@ def test_dashboard_interactive_views_render(bundle):
     app.radio(key='liq_phase').set_value('replay')
     app.selectbox(key='variant_part').select('post_attack')
     app.selectbox(key='mem_workload').select('cancel_churn_memory')
+    app.radio(key='scale_axes').set_value('linear axes')
+    app.radio(key='mem_axis').set_value('log y-axis')
     app.run()
     assert not app.exception, [e.message for e in app.exception]
+    scaling = next(t for t in app.tabs if t.label == 'Scaling')
+    for chart in scaling.get('vega_lite_chart'):
+        spec = json.loads(chart.proto.spec)
+        assert 'layer' not in spec
+        assert spec['encoding']['x']['scale']['type'] == 'linear'
+        assert spec['encoding']['y']['scale']['type'] == 'linear'
+    memory = next(t for t in app.tabs if t.label == 'Memory')
+    assert len(memory.get('vega_lite_chart')) == 2
+    for chart in memory.get('vega_lite_chart'):
+        assert json.loads(chart.proto.spec)['encoding']['y']['scale']['type'] == 'log'
     app.selectbox(key='lat_case').select('official_buildup_10000_s42_l1000')
     app.run()
     app.selectbox(key='lat_segment').select('early')
@@ -152,3 +172,99 @@ def test_subprocess_timeouts_do_not_create_replay_bounds(bundle):
     raw['reason'] = 'subprocess_wall_time_limit'
     fake = {'tables':{'baseline':{'stops':raw}}}
     assert saved.replay_limits(fake).empty
+
+
+def test_compact_overview_is_seed_median_with_explicit_bounds(bundle):
+    assert hasattr(saved,'overview_speedups')
+    shown = saved.overview_speedups(bundle).set_index(['workload','size'])
+    assert len(shown) == 15
+    raw = bundle['tables']['baseline']['summary']
+    a = raw[raw.version.eq('A') & raw.phase.eq('replay') & raw.experiment.eq('official')]
+    b = raw[raw.version.eq('B3r') & raw.phase.eq('replay') & raw.experiment.eq('official')]
+    limits = saved.replay_limits(bundle).set_index('case_id').bound_s
+    for (workload,size),rows in b.groupby(['workload','size']):
+        matches = a[a.case_id.isin(rows.case_id)].set_index('case_id')
+        if matches.status.eq('ok').all():
+            ratios = [matches.loc[r.case_id,'median_s']/r.median_s for r in rows.itertuples()]
+            assert shown.loc[(workload,size),'kind'] == 'measured'
+        else:
+            ratios = [limits[r.case_id]/r.median_s for r in rows.itertuples()]
+            assert shown.loc[(workload,size),'label'].startswith('> ')
+            assert shown.loc[(workload,size),'kind'] == 'lower bound'
+        assert shown.loc[(workload,size),'median_speedup'] == pytest.approx(pd.Series(ratios).median())
+        if shown.loc[(workload,size),'kind'] == 'lower bound':
+            displayed = float(shown.loc[(workload,size),'label'].split()[1].removesuffix('x'))
+            assert displayed <= pd.Series(ratios).median()
+
+
+def test_reference_lines_are_labelled_power_law_guides():
+    assert hasattr(views,'reference_data') and hasattr(views,'line_plot')
+    frame = pd.DataFrame(dict(version=['A','A','A'],size=[10,100,1000],median_s=[.1,1,10]))
+    guides = views.reference_data(frame,'size','median_s')
+    assert set(guides.guide) == {'linear (slope 1)','quadratic (slope 2)'}
+    for name,power in [('linear (slope 1)',1),('quadratic (slope 2)',2)]:
+        points = guides[guides.guide.eq(name)].sort_values('size')
+        assert points.median_s.iloc[-1]/points.median_s.iloc[0] == pytest.approx(
+            (points['size'].iloc[-1]/points['size'].iloc[0])**power)
+    log = views.line_plot(frame,'size','median_s','Events (count)','Time (s)',logx=True,logy=True,references=True).to_dict()
+    assert len(log['layer']) == 2 and 'strokeDash' in log['layer'][1]['encoding']
+    assert log['layer'][0]['encoding']['x']['scale']['type'] == 'log'
+    linear = views.line_plot(frame,'size','median_s','Events (count)','Time (s)',references=True).to_dict()
+    assert 'layer' not in linear and linear['encoding']['y']['scale']['type'] == 'linear'
+
+
+def test_raw_repeat_view_preserves_warmup_and_every_measured_value(bundle):
+    assert hasattr(saved,'raw_repeats')
+    case = 'official_buildup_1000_s42_l1000'
+    shown = saved.raw_repeats(bundle,'baseline',case,'B3r','replay')
+    raw = bundle['tables']['baseline']['timing']
+    raw = raw[raw.case_id.eq(case) & raw.version.eq('B3r') & raw.phase.eq('replay')]
+    assert len(shown) == 6 and shown.row_kind.eq('warm-up').sum() == 1
+    assert shown.row_kind.eq('measured').sum() == 5
+    pd.testing.assert_frame_equal(shown[raw.columns].reset_index(drop=True),raw.reset_index(drop=True))
+    stopped = saved.raw_repeats(bundle,'baseline','official_buildup_100000_s42_l1000','A','replay')
+    assert stopped.status.eq('stopped').all() and stopped.seconds.isna().all()
+
+
+def test_workload_settings_keep_protocol_origin_and_checksums(bundle):
+    assert hasattr(saved,'workload_settings')
+    settings = saved.workload_settings(bundle)
+    assert {'generator_command','timing_protocol','own','data_origin','input_sha256','percent','levels','seed'} <= set(settings)
+    assert settings.input_sha256.str.len().eq(64).all()
+    assert set(settings.data_origin) == {'own','supplied'}
+    assert settings[settings.version.eq('A') & settings['size'].eq(100000)].timing_protocol.str.contains('single').all()
+
+
+def test_method_raw_view_and_clarity_captions(bundle):
+    app = AppTest.from_file(str(ROOT/'04_dashboard/app.py'),default_timeout=120).run()
+    app.selectbox(key='raw_role').select('baseline')
+    app.run()
+    app.selectbox(key='raw_case').select('official_buildup_1000_s42_l1000')
+    app.run()
+    app.selectbox(key='raw_version').select('B3r')
+    app.run()
+    assert not app.exception,[e.message for e in app.exception]
+    method = next(t for t in app.tabs if t.label == 'Method & data')
+    assert any(h.value == 'Raw repeats' for h in method.subheader)
+    assert any(h.value == 'Workload settings' for h in method.subheader)
+    pairs = saved.a_vs_b(bundle)
+    original_detail = pairs[pairs.experiment.isin(['official','million'])][
+        ['workload','size','seed','A_time','B3r_s','speedup_label','A_protocol','run','commit']]
+    base = bundle['tables']['baseline']['validated']
+    original_completeness = base[['case_id','version','phase','status','completed_repeats',
+                                  'repeats_requested','complete','run','commit']]
+    coverage = saved.coverage(bundle)
+    for original in [original_detail,original_completeness,coverage[coverage.status.ne('ok')]]:
+        match = [d.value for d in method.dataframe if list(d.value.columns) == list(original.columns)]
+        assert len(match) == 1
+        # Streamlit/Arrow normalizes object string columns to pandas strings.
+        # Compare every value/row/column, independent of serialization dtype.
+        pd.testing.assert_frame_equal(match[0].reset_index(drop=True),
+                                      original.reset_index(drop=True),check_dtype=False)
+    median = bundle['tables']['baseline']['summary'].query(
+        'case_id == "official_buildup_1000_s42_l1000" and version == "B3r" and phase == "replay"').median_s.iloc[0]
+    assert {m.label:m.value for m in method.metric}['Selected median (s)'] == f'{median:.6g}'
+    captions = [c.value for c in app.caption]
+    assert sum(c.startswith('How to read:') for c in captions) >= len(app.get('vega_lite_chart'))
+    assert any('generation-2' in item.value for item in app.info)
+    assert any('Algorithmic spike' in item.value for item in app.warning)

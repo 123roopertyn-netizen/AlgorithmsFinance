@@ -97,7 +97,7 @@ recorded in the final registry checkpoint at the end of this map.
 | R56 | Machine-readable CSV/JSON results: version, scenario, seed, event count, active/level peaks, requested sell qty, fill count, phase, repeat, elapsed s, traced peak bytes; timing vs memory runs distinguishable (R §Results and dashboard) | Smoke machine-readable artifacts verified | Final smoke CSVs/journals include required metadata and counts; verification.json checks216 cells and semantic count parity. Full grid pending. |
 | R57 | Record Python, dependencies, machine, OS, code version, generator settings (R §Results and dashboard; S23) | Smoke metadata saved | Final smoke env.json, source hash, limits, GC policy, jobs, spec_snapshot.md; data generation settings/hashes in DATA_MANIFEST.json. |
 | R58 | Dashboard loads saved results only (no rerun) (R §Results and dashboard; S22) | Phase 5 plus no-Git fallback | Default full-commit Git blobs; without Git/checkout, same allowlisted disk paths with an explicit unverified banner. No engine/benchmark imports or network data; telemetry off. Temporary-copy tests render all tabs without checkout and without Git. |
-| R59 | Dashboard shows construction, replay and individual-sale scaling; A vs B; throughput and latency distributions; memory incl. post-cancellation; correctness table; workload settings; raw repeats; units; missing/stopped runs labelled (R §Results and dashboard; S22) | Eight tabs implemented/targeted verified | 16 dashboard gates, AppTest smoke + interaction test; per-tab numerical audit. Construction/sale selector, official and1M results, exact histograms/quantiles, churn/drift, correctness evidence, raw rows and provenance. Full Phase 5 evidence below. |
+| R59 | Dashboard shows construction, replay and individual-sale scaling; A vs B; throughput and latency distributions; memory incl. post-cancellation; correctness table; workload settings; raw repeats; units; missing/stopped runs labelled (R §Results and dashboard; S22) | Nine tabs (Phase 5b) | AppTest smoke/interactions and numerical audit; final-selection-first layout, compact overview, scaling guides/toggles, separate memory panels, labelled GC/spike, selectable raw repeats/settings. Fresh Phase 5b evidence below; earlier checkpoints retained. |
 | R60 | Explain at least one measured bottleneck with code, operation counts and complexity; revision need not win everywhere (R §Results and dashboard; S22) | Two bottlenecks explained | A per-fill rescan O(F·B), Q7 counters/exponent in measured A range; B1 far-end insert O(P) per change, counted movement and scaling. B3r cancel_churn loss and declared spike qualification displayed. |
 | R61 | Submission path `Submissions/BuehlerLaurin/Assignment1/`; course folders and other students' work unchanged (R §Submit; S23) | partial | Folder scaffolded 2026-11-21; final check at Phase 7 |
 | R62 | Include both versions, tests, own generators and exact run commands (R §Submit; S23) | Implementations and runner commands present; long execution pending | A/B1/B2/B3 unchanged; BENCHMARK_PLAN.md has six exact PowerShell commands, staged execution and estimates. |
@@ -449,3 +449,28 @@ wholly green (no skips). [Final review](../05_evidence/20261123T201613Z_47c0048-
 and [verification JSON](../05_evidence/robustness-verification.json) record
 source/XML hashes and unchanged protected sources/expectations/results. No new
 measurements or dependency changes; all three requested fixes complete.
+
+## Phase 5b clarity checkpoint (2026-11-25, base c4cfc25)
+
+| Requirement / requested clarity change | Implementation and evidence |
+|---|---|
+| R37, R59 / final selection first | Full committed decision in the first tab; CSV-derived candidate geomeans and sourced violations; both original fast outcomes, including the literal-filter qualification. AppTest verifies tab order and complete rendered document. |
+| R59 / compact Overview | Three metrics, one 5-by-3 scenario/size table, one chart and cancel_churn loss; links to selection/raw/settings. Ratios are seed medians with conservatively rounded lower bounds. AppTest checks structure and CSV arithmetic. |
+| R48-R49, R59 / readable charts | How to read under every chart; axes/units, scale, point aggregation and takeaway. Scaling linear/log-log toggle and labelled dashed slope-1/2 guides; reference math and rendered axis specifications tested. |
+| R53-R55, R59 / memory | Independent B3 and other-version panels, separate y-scales, linear/log-y toggle. Stale-key growth/rebuild explained. Exact retained/peak samples unchanged. |
+| R51-R52, R59 / latency | Histogram-adjacent ATK-P7 GC explanation (including non-GC allocation costs), same GC policy; distinct algorithmic spike warning/case label with CSV-derived maximum. |
+| R56-R59 / raw repeats and settings (S22) | Case/version/phase selector exposes every raw timing row, seconds, marked warm-up, adjacent validated median or A single trial; workload settings include command/parameters, origin, SHA-256 and per-version protocol. |
+| R58-R59 / preserved detail and provenance | Original 50-row detail, 1,091-row repeat completeness and 180-row non-OK coverage frames moved unchanged to Method & data; AppTest compares every value. Source captions, missing/stopped/scope labels and no-Git modes retained. |
+| R60 / bottleneck | Existing code/counter/complexity explanations retained with new How to read captions; no new performance claim or measurement. |
+
+[Final targeted suite](../05_evidence/20261125T115403Z_c4cfc25-dirty_clarity-dashboard-pass.txt):
+49 passed in 47.91 s (21 dashboard plus 28 robustness, including both no-Git
+copies). [Standard suite](../05_evidence/20261125T114813Z_c4cfc25-dirty_clarity-all-tests.txt):
+1,032 passed in 769.35 s, no skips/failures. The standard run began before final
+display/test-adapter cleanup; the final targeted run proves the completed UI.
+The unchanged engine contracts, differentials and all 17 mutant kills remain
+green. [Nine-tab audit](../05_evidence/clarity-audit.json) and
+[final review](../05_evidence/20261125T120134Z_c4cfc25-dirty_clarity-final-review.txt)
+trace displayed values, source/XML hashes, counts and protected-file checks;
+[verification JSON](../05_evidence/clarity-verification.json) records suite stages.
+Earlier audits/results remain intact. No new measurements/data/engine changes.
