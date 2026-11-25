@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+.pytest_cache/
+!AGENTS.md
+
+# Generated datasets above the supplied 10,000-event samples.
+data/*_1000.jsonl.gz*
+data/*_100000.jsonl.gz*
+data/*_1000000.jsonl.gz*
+
+# Generated benchmark inputs, profiles, and per-event diagnostic artifacts.
+results/benchmarks/*/inputs/
+results/benchmarks/*/artifacts/
+results/benchmarks/*/records/
+results/benchmarks/*/metadata.json
+results/benchmarks/*/generation_or_validation_error.json
+results/benchmark_*_console.txt
+results/benchmark_matrix_*.log
+*.tmp
+*.part
