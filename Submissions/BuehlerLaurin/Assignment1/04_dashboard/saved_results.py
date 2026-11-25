@@ -160,43 +160,61 @@ def official_geomeans(bundle):
     return pd.DataFrame(out)
 
 
+def _session_score(bundle, role, version):
+    """Fifteen complete official 100k cells, keeping the measured session."""
+    d = bundle['tables'][role]['validated']
+    d = d[d.phase.eq('replay') & d.experiment.eq('official') & d['size'].eq(100000)
+          & d.version.eq(version)]
+    good = len(d) == 15 and d.complete.all()
+    return dict(geomean_s=statistics.geometric_mean(d.median_s) if good else None,
+                cells=int(d.complete.sum()),run=RUNS[role],commit=bundle['envs'][role]['git_commit'])
+
+
 def selection_candidates(bundle):
-    """Keep each session explicit; pair final B with fast in the binding run."""
+    """One row per version from its primary full-protocol session."""
     rows = official_geomeans(bundle).to_dict('records')
+    rows.append(dict(version='B3r_fast',**_session_score(bundle,'cross','B3r_fast')))
     issues = {}
     for line in bundle['selection'].splitlines():
         fields = [p.strip() for p in line.split('|')]
         if len(fields) >= 5 and fields[1] in ('B1','B2','B3'):
             issues[fields[1]] = fields[3]
-    def score(role, version):
-        d = bundle['tables'][role]['validated']
-        d = d[d.phase.eq('replay') & d.experiment.eq('official') & d['size'].eq(100000)
-              & d.version.eq(version) & d.complete]
-        return dict(geomean_s=statistics.geometric_mean(d.median_s) if len(d) == 15 else float('nan'),
-                    cells=len(d),run=RUNS[role],commit=bundle['envs'][role]['git_commit'])
     for row in rows:
-        row.update(comparison='original candidates',candidate_label=row['version'],
-                   outcome='excluded',robustness_issue=issues.get(row['version'],
-                   'Declared heap-purge tail spike; literal-filter qualification in FINAL_SELECTION'),
-                   official_100k_fast_over_B3r=float('nan'),faster_scenarios=float('nan'),
-                   within_bound_scenarios=float('nan'),scenario_count=float('nan'))
-        if row['version'] == 'B3r':
-            row.update(score('rematch','B3r'),comparison='same-session (binding)',
-                       candidate_label='B3r (binding reference)',outcome='final B; declared tail-cost qualification')
-    for role,label in [('rematch','same-session (binding)'),('cross','cross-session (older)')]:
-        record = bundle[role]
-        binding = role == 'rematch'
-        loss = bundle['rematch']['scenario_losses'][0]
-        reason = (f'{loss["workload"]} {loss["size"]//1000}k, ratio {loss["median_seed_ratio"]:.3f}'
-                  if binding else 'Older per-cell comparison; session noise; rejected')
-        scenarios = record.get('scenarios',[])
-        rows.append(dict(version='B3r_fast',candidate_label='B3r_fast ('+('binding' if binding else 'older')+')',
-                         comparison=label,**score(role,'B3r_fast'),
-                         official_100k_fast_over_B3r=record['official_100k_ratio'],
-                         outcome='faster, rejected by the pre-registered rule' if binding else record['decision'],
-                         robustness_issue=reason,faster_scenarios=sum(r['median_seed_ratio'] < 1 for r in scenarios) if binding else float('nan'),
-                         within_bound_scenarios=sum(r['median_seed_ratio'] <= 1.05 for r in scenarios) if binding else float('nan'),
-                         scenario_count=len(scenarios) if binding else float('nan')))
+        v = row['version']
+        row.update(outcome='final B' if v == 'B3r' else
+                   'faster; rejected by the pre-registered rule' if v == 'B3r_fast' else 'excluded',
+                   detail=issues.get(v,'Declared heap-purge tail cost; see FINAL_SELECTION')
+                   if v != 'B3r_fast' else 'Older cross-session comparison to the B3r primary row: rejected.',
+                   ratio=bundle['cross']['official_100k_ratio'] if v == 'B3r_fast' else None)
+    return pd.DataFrame(rows)
+
+
+def selection_table(bundle):
+    """Five primary rows and the binding ratio; absent fields render blank."""
+    rows = selection_candidates(bundle).to_dict('records')
+    record = bundle['rematch']; scenarios = record['scenarios']; loss = record['scenario_losses'][0]
+    faster = sum(r['median_seed_ratio'] < 1 for r in scenarios)
+    within = sum(r['median_seed_ratio'] <= 1.05 for r in scenarios)
+    rows.append(dict(version='B3r_fast vs B3r, same session (binding)',geomean_s=None,
+                     ratio=record['official_100k_ratio'],outcome='faster; rejected by the pre-registered rule',
+                     detail=f'Faster in {faster} of {len(scenarios)}; within the 5 % bound in {within} of {len(scenarios)}; '
+                            f'failed on {loss["workload"]} {loss["size"]//1000}k ({loss["median_seed_ratio"]:.3f}).',
+                     run=RUNS['rematch'],commit=bundle['envs']['rematch']['git_commit']))
+    d = pd.DataFrame(rows)[['version','geomean_s','ratio','outcome','detail','run','commit']]
+    d['geomean_s'] = d.geomean_s.map(lambda v:'' if pd.isna(v) else f'{v:.4f}')
+    d['ratio'] = d.ratio.map(lambda v:'' if pd.isna(v) else f'{v:.3f}')
+    return d.astype(object).where(d.notna(),'')
+
+
+def session_effect(bundle):
+    """Both measured pairs; absolute times and ratios keep their own sources."""
+    rows = []
+    for label,roles,record in [
+        ('Primary sessions (different sessions)',{'B3r':'baseline','B3r_fast':'cross'},'cross'),
+        ('Same session, alternating order (binding)',{'B3r':'rematch','B3r_fast':'rematch'},'rematch')]:
+        for version,role in roles.items():
+            rows.append(dict(comparison=label,version=version,**_session_score(bundle,role,version),
+                             ratio=bundle[record]['official_100k_ratio']))
     return pd.DataFrame(rows)
 
 

@@ -983,3 +983,19 @@ Report editing is factual only; each old/new/source change is listed in
 the existing detailed reference. Verification: new AppTest regression, full
 suite through the default PowerShell script, worked check, scratch smoke,
 bash -n and saved arithmetic/source review. No long run at this checkpoint.
+
+## Selection presentation amendment (Laurin, 2026-11-25)
+
+Presentation only, superseding the preceding candidate-chart layout: one bar
+for each version's primary full-protocol session (B1/B2/B3: original candidates;
+B3r: baseline session; B3r_fast: its first full session). Five primary rows
+plus one ratio-only binding-rematch row form the right-hand table; absent
+values render blank. The fast primary row retains the older cross-session
+comparison, so all four run folders/commits remain identifiable.
+
+Below the primary chart, a grouped session-effect chart shows both B3r/fast
+pairs with sourced ratios above the groups (0.887 and 0.873). Captions use
+Laurin's exact wording; the corrected final decision remains verbatim. Values
+come from committed CSVs/acceptance files only; no measurements or selection
+changes. Verify rendered bars, ratios, table blanks/provenance, captions and
+no-Git copies with AppTest, save evidence and stop for the human checkpoint.

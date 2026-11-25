@@ -499,3 +499,21 @@ catalog totals and untouched protected files. [Verification JSON](../05_evidence
 records hashes/counts. No engine/test-expectation/historical-result change,
 new long measurement or final-selection reassessment. Bash verified by syntax
 only; Full and actual submission remain human actions.
+
+## Primary selection/session-effect checkpoint (2026-11-25, base 5785e9f)
+
+R37/R59: selection now uses five primary-session bars, a six-row blank-safe
+table (including the older 0.887 cross-session comparison and the binding
+0.873/25-of-27/26-of-27 rejection), and a second grouped primary-versus-binding
+chart with ratios above each group. All four run folders/commits remain
+explicit. Captions match Laurin's requested text; the obsolete count remark
+is gone. No change to stored data, measurements, engines or the final decision.
+
+[22 dashboard tests](../05_evidence/20261125T154659Z_5785e9f-dirty_selection-primary-dashboard.txt)
+pass, including actual rendered bar datasets versus independent CSV geomeans,
+annotations, table blanks/outcomes/provenance and both captions.
+[Two no-Git copy tests](../05_evidence/20261125T155536Z_5785e9f-dirty_selection-primary-portability.txt)
+pass. [Saved-file review](../05_evidence/20261125T161049Z_5785e9f-dirty_selection-primary-review.txt)
+and [verification JSON](../05_evidence/selection-primary-verification.json) bind
+source/XML hashes, all five primary values, both pairs/ratios and the protected
+file checks. This is presentation verification, not a new benchmark.

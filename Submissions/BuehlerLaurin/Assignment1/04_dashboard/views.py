@@ -13,6 +13,9 @@ from charting import reference_data, line_plot
 TABS = ['Final selection', 'Overview', 'Scaling', 'Original vs revised & variants', 'Throughput & latency',
         'Memory', 'Correctness', 'Bottleneck explained', 'Method & data']
 
+PRIMARY_CAPTION = "Each bar: the version's primary full-protocol session. Bars from different sessions are not a head-to-head; the binding same-session comparison is in the table."
+SESSION_CAPTION = 'Absolute times shift by about 10 % between sessions on the same laptop, for both versions alike; the ratio stays at about 0.87-0.89. Therefore versions are compared within one session, and the binding decision uses the same-session rematch.'
+
 
 class Dashboard:
     def __init__(self, bundle):
@@ -75,30 +78,44 @@ class Dashboard:
         candidates = saved.selection_candidates(self.b)
         bars, outcomes = st.columns([2,3])
         with bars:
-            self.candidate_chart(candidates,roles=tuple(saved.RUNS))
+            self.candidate_chart(candidates,roles=('candidates','baseline','cross'),primary=True)
+            self.session_effect_chart()
         with outcomes:
-            self.table(candidates[['version','comparison','geomean_s','official_100k_fast_over_B3r',
-                                  'outcome','robustness_issue','faster_scenarios','within_bound_scenarios',
-                                  'scenario_count','run','commit']],roles=tuple(saved.RUNS))
-            st.caption('B3r and binding B3r_fast use the SAME rematch session; the older fast row is historical. Counts distinguish faster (< 1) from within the bound (<= 1.05). The full historical decision below is preserved verbatim, including its older scenario-count wording.')
+            self.table(saved.selection_table(self.b),roles=tuple(saved.RUNS))
+            st.caption('Primary rows retain each version\'s original session, including the older cross-session fast comparison. The last row is the binding same-session rematch and its rejection.')
             self.document_source('00_docs/FINAL_SELECTION.md')
-        binding = candidates[candidates.version.eq('B3r_fast') & candidates.comparison.eq('same-session (binding)')].iloc[0]
-        st.markdown(f'**Same-session B3r_fast: official 100k ratio {binding.official_100k_fast_over_B3r:.3f}; faster in {int(binding.faster_scenarios)} of {int(binding.scenario_count)} scenarios, within the 5 % bound in {int(binding.within_bound_scenarios)}. Faster, rejected by the pre-registered rule ({binding.robustness_issue}).**')
         st.subheader('Full final selection record')
         self.document_source('00_docs/FINAL_SELECTION.md')
         st.markdown(self.b['selection'])
 
-    def candidate_chart(self, candidates,roles=('candidates','baseline')):
-        candidates = candidates.copy()
-        if 'candidate_label' not in candidates: candidates['candidate_label'] = candidates.version
+    def candidate_chart(self, candidates,roles=('candidates','baseline'),primary=False):
+        candidates = candidates[['version','geomean_s','cells','run','commit']].copy()
         st.caption(self.source(roles))
-        if 'comparison' in candidates:
-            st.caption('Bars span explicitly labelled sessions. Only the paired binding B3r/B3r_fast bars support the same-session speed comparison; the older fast bar uses the older run.')
         st.altair_chart(alt.Chart(candidates).mark_bar().encode(
-            x=alt.X('candidate_label:N',title='Implementation and recorded comparison'),
+            x=alt.X('version:N',title='Version',sort=candidates.version.tolist()),
             y=alt.Y('geomean_s:Q',title='Official 100k geometric-mean replay time (s)'),
             color='version:N',tooltip=['version','geomean_s','cells','run','commit']),width='stretch')
-        st.caption('How to read: x = version (categories); y = replay time (s), linear. One bar is the geometric mean of the 15 official 100k cell medians (five repeats per seed/case). Takeaway: B3r keeps competitive speed while addressing the reported robustness failures; speed alone did not select B.')
+        st.caption(PRIMARY_CAPTION if primary else 'How to read: x = version (categories); y = replay time (s), linear. One bar is the geometric mean of the 15 official 100k cell medians (five repeats per seed/case). Takeaway: B3r keeps competitive speed while addressing the reported robustness failures; speed alone did not select B.')
+
+    def session_effect_chart(self):
+        st.subheader('Session effect: B3r vs B3r_fast')
+        st.caption(self.source(('baseline','cross','rematch')))
+        d = saved.session_effect(self.b)
+        d = d[d.geomean_s.notna()]
+        if d.empty:
+            st.info('Not measured: no complete official 100k pair.')
+            return
+        order = ['Primary sessions (different sessions)','Same session, alternating order (binding)']
+        x = alt.X('comparison:N',title='Recorded comparison',sort=order,
+                  axis=alt.Axis(labelAngle=0,labelExpr="datum.label === 'Primary sessions (different sessions)' ? ['Primary sessions', '(different sessions)'] : ['Same session, alternating order', '(binding)']"))
+        y = alt.Y('geomean_s:Q',title='Official 100k geometric-mean replay time (s)',scale=alt.Scale(zero=True))
+        bars = alt.Chart(d).mark_bar().encode(x=x,y=y,xOffset='version:N',color='version:N',
+            tooltip=['comparison','version','geomean_s','ratio','run','commit'])
+        labels = d.groupby('comparison',sort=False).agg(geomean_s=('geomean_s','max'),ratio=('ratio','first')).reset_index()
+        labels['ratio_label'] = labels.ratio.map(lambda r:f'fast/B3r = {r:.3f}')
+        text = alt.Chart(labels).mark_text(dy=-12,fontWeight='bold').encode(x=x,y=y,text='ratio_label:N')
+        st.altair_chart((bars+text).properties(height=250),width='stretch')
+        st.caption(SESSION_CAPTION)
 
     def overview(self):
         st.header('Thirty-second summary')

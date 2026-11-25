@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 from streamlit.testing.v1 import AppTest
 
@@ -16,6 +17,9 @@ import views
 TABS = ['Final selection', 'Overview', 'Scaling', 'Original vs revised & variants',
         'Throughput & latency', 'Memory', 'Correctness',
         'Bottleneck explained', 'Method & data']
+
+PRIMARY_CAPTION = "Each bar: the version's primary full-protocol session. Bars from different sessions are not a head-to-head; the binding same-session comparison is in the table."
+SESSION_CAPTION = 'Absolute times shift by about 10 % between sessions on the same laptop, for both versions alike; the ratio stays at about 0.87-0.89. Therefore versions are compared within one session, and the binding decision uses the same-session rematch.'
 
 
 @pytest.fixture(scope='module')
@@ -129,28 +133,65 @@ def test_fast_rematch_score_is_from_same_session_csv(bundle):
     assert ratio == pytest.approx(bundle['rematch']['official_100k_ratio'],rel=1e-12)
 
 
-def test_selection_candidates_include_fast_from_both_recorded_sessions(bundle):
+def test_selection_primary_bars_binding_table_and_session_effect(bundle):
     app = AppTest.from_file(str(ROOT/'04_dashboard/app.py'),default_timeout=120).run()
     assert not app.exception,[e.message for e in app.exception]
-    frames = [d.value for d in app.tabs[0].dataframe if 'geomean_s' in d.value]
+    tab = app.tabs[0]
+    plots = tab.get('vega_lite_chart')
+    assert len(plots) == 2
+    def datasets(chart):
+        return [pa.ipc.open_stream(d.data.data).read_all().to_pandas() for d in chart.proto.datasets]
+    primary = next(d for d in datasets(plots[0]) if 'version' in d)
+    assert primary.version.tolist() == ['B1','B2','B3','B3r','B3r_fast']
+    frames = [d.value for d in tab.dataframe if 'geomean_s' in d.value]
     assert len(frames) == 1
     shown = frames[0]
-    fast = shown[shown.version.eq('B3r_fast')]
-    assert set(fast.comparison) == {'same-session (binding)','cross-session (older)'}
-    for comparison,role in [('same-session (binding)','rematch'),('cross-session (older)','cross')]:
-        row = fast[fast.comparison.eq(comparison)].iloc[0]
+    assert len(shown) == 6 and shown.version.eq('B3r_fast').sum() == 1
+    assert not shown.isna().any().any()
+    assert not shown.astype(str).isin(['None','nan','<NA>']).any().any()
+    for version,role in [('B1','candidates'),('B2','candidates'),('B3','candidates'),
+                         ('B3r','baseline'),('B3r_fast','cross')]:
+        row = primary[primary.version.eq(version)].iloc[0]
         raw = bundle['tables'][role]['summary'].query(
-            'phase == "replay" and experiment == "official" and size == 100000 and version == "B3r_fast"')
+            'phase == "replay" and experiment == "official" and size == 100000 and version == @version')
         assert len(raw) == 15
-        assert row.geomean_s == pytest.approx(math.exp(sum(map(math.log,raw.median_s))/15))
+        expected = math.exp(sum(map(math.log,raw.median_s))/15)
+        assert row.geomean_s == pytest.approx(expected,rel=1e-12)
         assert row.run == saved.RUNS[role] and row.commit == bundle['envs'][role]['git_commit']
-        assert 'rejected' in row.outcome
-    binding = fast[fast.comparison.eq('same-session (binding)')].iloc[0]
-    assert binding.faster_scenarios == sum(r['median_seed_ratio'] < 1 for r in bundle['rematch']['scenarios']) == 25
-    assert binding.within_bound_scenarios == sum(r['median_seed_ratio'] <= 1.05 for r in bundle['rematch']['scenarios']) == 26
-    assert 'dead_slot_rebuild' in binding.robustness_issue and '1.068' in binding.robustness_issue
-    plot = json.loads(app.tabs[0].get('vega_lite_chart')[0].proto.spec)
-    assert plot['encoding']['x']['field'] == 'candidate_label'
+        table_row = shown[shown.version.eq(version)].iloc[0]
+        assert table_row.geomean_s == f'{expected:.4f}'
+        assert table_row.run == row.run and table_row.commit == row.commit
+        assert table_row.outcome == ('final B' if version == 'B3r' else
+            'faster; rejected by the pre-registered rule' if version == 'B3r_fast' else 'excluded')
+    binding = shown.iloc[-1]
+    assert binding.version == 'B3r_fast vs B3r, same session (binding)'
+    assert binding.geomean_s == '' and binding.ratio == '0.873'
+    assert '25 of 27' in binding.detail and '26 of 27' in binding.detail
+    assert 'dead_slot_rebuild 1k (1.068)' in binding.detail
+    assert binding.run == saved.RUNS['rematch'] and binding.commit == bundle['envs']['rematch']['git_commit']
+    assert shown[shown.version.eq('B3r_fast')].ratio.iloc[0] == '0.887'
+    assert set(shown.run) == set(saved.RUNS.values())
+    effects = next(d for d in datasets(plots[1]) if 'version' in d)
+    assert len(effects) == 4
+    for label,roles,record in [
+        ('Primary sessions (different sessions)',{'B3r':'baseline','B3r_fast':'cross'},'cross'),
+        ('Same session, alternating order (binding)',{'B3r':'rematch','B3r_fast':'rematch'},'rematch')]:
+        pair = effects[effects.comparison.eq(label)].set_index('version')
+        assert set(pair.index) == set(roles)
+        for version,role in roles.items():
+            raw = bundle['tables'][role]['summary'].query(
+                'phase == "replay" and experiment == "official" and size == 100000 and version == @version')
+            assert pair.loc[version,'geomean_s'] == pytest.approx(math.exp(sum(map(math.log,raw.median_s))/15))
+            assert pair.loc[version,'run'] == saved.RUNS[role]
+            assert pair.loc[version,'commit'] == bundle['envs'][role]['git_commit']
+        assert pair.loc['B3r_fast','geomean_s']/pair.loc['B3r','geomean_s'] == pytest.approx(bundle[record]['official_100k_ratio'])
+    labels = next(d for d in datasets(plots[1]) if 'ratio_label' in d)
+    assert set(labels.ratio_label) == {'fast/B3r = 0.887','fast/B3r = 0.873'}
+    spec = json.loads(plots[1].proto.spec)
+    assert spec['layer'][0]['encoding']['xOffset']['field'] == 'version'
+    captions = [c.value for c in tab.caption]
+    assert PRIMARY_CAPTION in captions and SESSION_CAPTION in captions
+    assert not any('older scenario-count wording' in c for c in captions)
 
 
 def test_histogram_is_a_distribution_not_rebuilt_from_percentiles(bundle):
@@ -289,6 +330,7 @@ def test_method_raw_view_and_clarity_captions(bundle):
         'case_id == "official_buildup_1000_s42_l1000" and version == "B3r" and phase == "replay"').median_s.iloc[0]
     assert {m.label:m.value for m in method.metric}['Selected median (s)'] == f'{median:.6g}'
     captions = [c.value for c in app.caption]
-    assert sum(c.startswith('How to read:') for c in captions) >= len(app.get('vega_lite_chart'))
+    assert sum(c.startswith('How to read:') or c in (PRIMARY_CAPTION,SESSION_CAPTION)
+               for c in captions) >= len(app.get('vega_lite_chart'))
     assert any('generation-2' in item.value for item in app.info)
     assert any('Algorithmic spike' in item.value for item in app.warning)

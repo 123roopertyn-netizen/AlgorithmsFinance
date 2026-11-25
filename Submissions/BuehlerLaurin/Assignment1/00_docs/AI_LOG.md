@@ -1270,3 +1270,56 @@ Proposed commands, not executed:
 git add -- .gitattributes run_all.ps1 run_all.sh submission_tools.py README.md SPEC.md 00_docs/REPORT.md 00_docs/REPORT_FACT_CHECK.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 04_dashboard/saved_results.py 04_dashboard/views.py 02_tests/test_dashboard.py 05_evidence/INDEX.md '05_evidence/*handoff*'
 git commit -m "Assignment1: fact-check report and add verified run-all workflow"
 ```
+
+## 2026-11-25 — Primary selection bars and session effect (base 5785e9f)
+
+Laurin requested presentation-only simplification plus a second grouped chart.
+Applied aif-exercise, aif-tdd and aif-verify; no engine/data/result changes,
+installation, measurements, network actions or Git mutations. The known PDF
+injection remains ignored; no new embedded instructions were encountered.
+
+The first chart has exactly five primary-session bars: B1/B2/B3 from the
+original candidate session, B3r from its baseline session, B3r_fast from its
+first full session. Four-decimal geomeans: 0.4244/0.4726/0.4289/0.4247/0.3769 s.
+The exact one-line caption explains that these sessions are not head-to-head.
+The right-hand table has five primary rows plus one binding ratio row; no
+repeated fast-version measurement row and no visible None/NaN values. Outcomes
+are excluded/final B/faster-but-rejected as requested. The older 0.887 ratio
+is retained on the primary fast row, comparing it with the primary B3r row;
+the last row gives 0.873, 25/27 faster, 26/27 within bound, and the 1k failure
+(1.068). Each row names its run/commit, covering all four saved sessions.
+
+The second chart, below the first, groups the primary pair (0.4247/0.3769 s)
+and binding same-session pair (0.4688/0.4093 s), with one ratio annotation above
+each group. Its two-sentence caption is Laurin's exact text. The table caption
+is two sentences; the obsolete older-count remark is removed. FINAL_SELECTION
+is rendered unchanged and now already contains the corrected 25/27 wording.
+
+[Test-first red](../05_evidence/20261125T153751Z_5785e9f-dirty_selection-primary-red.txt):
+1 failed in 12.00 s on the expected one-versus-two-chart assertion.
+[Dashboard suite](../05_evidence/20261125T154659Z_5785e9f-dirty_selection-primary-dashboard.txt):
+**22 passed in 26.91 s**. Updated the existing selection AppTest to decode
+actual chart Arrow datasets: checks all five bars/primary sessions, both pairs
+against independent CSV arithmetic, group ratio labels, six table rows,
+outcomes/blanks, every run/commit and exact captions. The chart-explanation
+gate accepts the two newly specified literal captions; all other How to read
+captions remain required. No engine test or expected file was changed.
+[No-Git portability](../05_evidence/20261125T155536Z_5785e9f-dirty_selection-primary-portability.txt):
+**2 passed in 20.36 s**, both copied-submission modes render every tab.
+
+[Numerical/source review](../05_evidence/20261125T161049Z_5785e9f-dirty_selection-primary-review.txt):
+PASS. Exact primary/binding geomeans reproduce ratios 0.8874636993 and
+0.8731749845. Same-session absolute-time shifts from the primaries are
+10.3774% for B3r and 8.6003% for fast, consistent with the requested caption's
+about-10% wording. [Verification JSON](../05_evidence/selection-primary-verification.json)
+records source/XML hashes, primary/grouped values, formatted table and all
+provenance. Engine/benchmark/result/data/attack/pin files, report, entry scripts
+and FINAL_SELECTION.md are unchanged. Only the requested dashboard test
+expectations changed. Reviewed the changed source/new evidence for traces of
+the logged injection: none in behaviour, identifiers or comments. No deletion
+or move. No open questions; stop for review. Proposed, not executed:
+
+```powershell
+git add -- 04_dashboard/saved_results.py 04_dashboard/views.py 02_tests/test_dashboard.py SPEC.md 00_docs/AI_LOG.md 00_docs/REQUIREMENTS_MAP.md 05_evidence/INDEX.md '05_evidence/*selection-primary*'
+git commit -m "Assignment1: simplify primary selection bars and show session effects"
+```
