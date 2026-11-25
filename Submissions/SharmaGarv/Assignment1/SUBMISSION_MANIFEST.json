@@ -104,6 +104,10 @@
     "tests/test_orderbook.py": {
       "bytes": 8812,
       "sha256": "cfae986c3c4564e16f5541d59c6961244872518743d5fa2dfba6d120756e887a"
+    },
+    "SUBMITTED_COMMIT.txt": {
+      "bytes": 345,
+      "sha256": "3ee5238f43113bbf3aa4e5a73f0700fe85cdcde3efea3f6a9826eedeade4fcc3"
     }
   }
 }
