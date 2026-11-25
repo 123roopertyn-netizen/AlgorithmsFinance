@@ -438,8 +438,8 @@ def page_correctness() -> None:
     table(c.rename(columns={"all_results_equal": "all results equal",
                             "best_prices_equal": "best bid/ask equal",
                             "final_book_equal": "final book equal"}))
-    st.caption("Streams up to 100,000 events (A is too slow for the larger files, so the million-event "
-               "files are checked by B's invariants only; see the report).")
+    st.caption("Streams of 1,000, 5,000 and 10,000 events (A is too slow to compare larger files after every "
+               "event; see the report).")
 
 
 def page_incident() -> None:

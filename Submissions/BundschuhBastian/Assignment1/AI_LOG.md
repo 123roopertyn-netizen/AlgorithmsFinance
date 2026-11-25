@@ -120,6 +120,7 @@ Cumulative speed-up of kept steps 1, 2, 4 (before step 9; for the current B see 
 | Code snippets on "Why A is slow" | accepted as static text | a test checks that every snippet line is in `lob/version_a.py` |
 | Stopped and not-run markers | accepted | cross at the 600 s line and a diamond at the top, no value; the test checks that stopped runs have no median |
 | Pyright | corrected | pandas/altair gave 146 type errors; four rules switched off inside the three dashboard files, 0 errors left there. 10 older errors in other files remain |
+| Claim "A and B compared on streams up to 100,000 events" (REPORT section 3, Correctness page) | corrected in Phase 8b | the clean-clone check looked at `results/correctness.csv`: its 36 streams have 1,000, 5,000 and 10,000 events (195,000 compared events in total), none has 100,000. Both texts fixed |
 | Screenshots with headless Chrome | partly done | 11 of 12 pages looked at (not Correctness); the last fixes (memory axis, counts chart, Overview deltas) were not re-shot |
 
 ## Accepted

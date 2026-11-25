@@ -62,9 +62,11 @@ O(queue length). Revisions and the 10 optimization steps (kept 1, 2, 4, 9; rejec
 
 454 tests pass. Hand-calculated cases for matching and validation; invariants after every event; A and B
 compared after **every** event on small adversarial streams (4 profiles x 40 seeds) and on the generated
-streams up to 100,000 events (`results/correctness.csv`: 36 streams, no difference). Planted bugs (mutation
+generated streams of 1,000, 5,000 and 10,000 events (`results/correctness.csv`: 36 streams, 195,000 events, no difference). Planted bugs (mutation
 checks) make the matching, equivalence and structure tests fail. Limits: validation is shared by A and B, so
-only the hand tests guard it; the 1,000,000-event files are not compared with A (A cannot finish them).
+only the hand tests guard it; streams of 100,000 and 1,000,000 events are not compared event by event (A is too slow
+for a comparison with a full book check after every event). At 100,000 events A and B were compared only through
+the fill hashes of the liquidation trials, which are equal.
 
 ## 4. Results (replay seconds, median over seeds 42-44, 5 repeats after a warm-up, gc on)
 
