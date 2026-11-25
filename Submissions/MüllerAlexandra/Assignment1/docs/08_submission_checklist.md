@@ -13,5 +13,6 @@
 - [x] Specification and modeling boundaries completed
 - [x] Arbitrary plain/gzip event-file replay command supplied
 - [x] Clean-environment creation and installation commands documented
-- [ ] Final commit identifier recorded by the student
+- [x] Final implementation commit identifier recorded:
+  `c4d1c2f70731685c377fc83ab83fedb9295d9b49`
 

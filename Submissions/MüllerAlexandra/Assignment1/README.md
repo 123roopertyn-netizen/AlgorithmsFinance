@@ -6,6 +6,13 @@ implemented and measured. The indexed FIFO-price-level Version B is implemented
 and measured under the same behavioral contract, inputs, instrumentation, and
 stopping limits.
 
+## Submitted implementation
+
+The submitted implementation is commit
+`c4d1c2f70731685c377fc83ab83fedb9295d9b49`. The later documentation-only
+commit that records this identifier does not change source code, tests,
+measurements, or saved evidence.
+
 ## Environment
 
 - Python 3.12.10
