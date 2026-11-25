@@ -61,3 +61,22 @@ git commit -m "Assignment1: fix no-checkout acceptance and reconcile final docum
 ```
 
 The untracking proposal is optional and separate from the verified code changes; stored measurement contents have not been changed by this audit. **STOP.**
+
+
+## 2026-11-25 — Final pure-HEAD acceptance (`7e56958`)
+
+**PASS** at commit `7e56958f606d5b8b18c056778ee4e95191e3bf3a`. This committed-only run supersedes the earlier pre-commit HEAD limitation above. Exported `git archive HEAD:Submissions/BuehlerLaurin/Assignment1` into a new external directory: no initial `.venv`, `scratch` or `.git`, **no overlays**; Python 3.13.15.
+
+| Step | Result / exit code | Wall time |
+|---|---|---:|
+| Create .venv | PASS / exit 0 | 6.30 s |
+| Install pinned requirements | PASS / exit 0 | 56.86 s |
+| Full standard suite | 1,040 passed, 0 failed, 0 skipped / exit 0 | 721.58 s |
+| Worked-example replay and check | OK / exit 0 | 0.32 s |
+| 1k smoke | 108/108 workers OK / exit 0 | 44.73 s |
+| NoDashboard completion | PASS / exit 0 | 0.04 s |
+| No-Git dashboard AppTest (after run-all) | 9/9 tabs rendered, exit 0 | 5.56 s |
+
+Run-all exit **0**; total **830.43 s**. AppTest used an empty PATH, confirmed no Git/checkout, no errors/exceptions and the disk-source warning. All **470 archived files** remained byte-identical. Step wall times include process overhead.
+
+Logs and structured results: `%TEMP%/aif-pure-head-7e56958-20261125/` (`run-all.log`, `step-boundaries.jsonl`, `run-result.json`, `apptest.log`, `final-result.json`, and `05_evidence/20261125T223039Z_nogit_pure-head-7e56958-acceptance.txt`). The only repository write in this acceptance is this appended section; no code changes or Git mutations.
