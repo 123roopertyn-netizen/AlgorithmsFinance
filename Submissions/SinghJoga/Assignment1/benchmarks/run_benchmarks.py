@@ -4,6 +4,7 @@ import argparse
 import cProfile
 import ctypes
 import hashlib
+import inspect
 import json
 import math
 import multiprocessing
@@ -33,10 +34,12 @@ from benchmarks.metrics import (  # noqa: E402
     percentile_nearest_rank,
     phase_row,
     replay_without_history,
+    state_peak_replay,
     stopped_phase_row,
     summarize_seconds,
     validate_event_stream,
 )
+from benchmarks import metrics as _metrics  # noqa: E402
 
 
 SCENARIOS = ("buildup", "crowded", "mixed", "sweep", "cancel_churn")
@@ -44,6 +47,42 @@ VERSIONS = ("baseline", "revised")
 RUNS_DIR = ROOT / "results" / "benchmarks"
 TIMING_REPEATS = 5
 MEMORY_POLL_SECONDS = 0.05
+LEGACY_RUNNER_SHA256 = "aa88c4cd76d8f3b0d26bdb47c68e290ea184e8aa352ee939f7999f03243ff09b"
+LEGACY_METRICS_SHA256 = "3fdb7a3d356544d76894c7778ea0f7be8295c2bdc8185dc17e2513c490fdb4eb"
+DEFAULT_PHASE_BUDGETS = {
+    "primary": 300.0,
+    "latency": 300.0,
+    "memory": 300.0,
+    "state_peaks": 300.0,
+    "counters": 60.0,
+    "profile": 60.0,
+}
+SMOKE_PHASE_BUDGETS = {
+    "primary": 60.0,
+    "latency": 60.0,
+    "memory": 60.0,
+    "state_peaks": 60.0,
+    "counters": 30.0,
+    "profile": 30.0,
+}
+PHASE_DEFINITION_IDS = {
+    "input_read_parse": "primary-input-read-parse-v1",
+    "empty_engine_construction": "primary-empty-construction-v1",
+    "engine_replay": "primary-replay-v1",
+    "total_application": "primary-total-application-v1",
+    "initial_book_construction": "primary-initial-book-v1",
+    "latency": "event-latency-v1",
+    "memory": "tracemalloc-checkpoints-v1",
+    "state_peaks": "event-result-state-peaks-v1",
+    "counters": "small-snapshot-counter-estimates-v2",
+    "profile": "bounded-cprofile-v1",
+}
+GENERIC_PRIMARY_PHASES = (
+    "input_read_parse",
+    "empty_engine_construction",
+    "engine_replay",
+    "total_application",
+)
 
 
 def _json_write_exclusive(path, value):
@@ -777,7 +816,7 @@ def _profile_replay(book_type, events, artifact_dir, max_events):
 
 
 def _generic_worker(connection, case, version, repeats, artifact_dir,
-                    profile_event_limit):
+                    profile_event_limit, phase_job, settings):
     book_type = _get_engine_class(version)
     events = load_events(case["input_path"])
     event_count = len(events)
@@ -792,69 +831,88 @@ def _generic_worker(connection, case, version, repeats, artifact_dir,
     def warm_replay():
         replay_without_history(book_type(), events)
 
-    _timing_phase(
-        connection,
-        "input_read_parse",
-        repeats,
-        warm_parse,
-        lambda: _measure_input_parse(path),
-        event_count,
-    )
-    _timing_phase(
-        connection,
-        "empty_engine_construction",
-        repeats,
-        warm_empty,
-        lambda: _measure_constructor(book_type),
-        None,
-    )
-    _timing_phase(
-        connection,
-        "engine_replay",
-        repeats,
-        warm_replay,
-        lambda: _measure_engine_replay(book_type, events),
-        event_count,
-    )
+    if phase_job == "input_read_parse":
+        _timing_phase(
+            connection,
+            "input_read_parse",
+            repeats,
+            warm_parse,
+            lambda: _measure_input_parse(path),
+            event_count,
+        )
+    elif phase_job == "empty_engine_construction":
+        _timing_phase(
+            connection,
+            "empty_engine_construction",
+            repeats,
+            warm_empty,
+            lambda: _measure_constructor(book_type),
+            None,
+        )
+    elif phase_job == "engine_replay":
+        _timing_phase(
+            connection,
+            "engine_replay",
+            repeats,
+            warm_replay,
+            lambda: _measure_engine_replay(book_type, events),
+            event_count,
+        )
 
     def warm_total():
         _measure_total_application(path, book_type)
 
-    _timing_phase(
-        connection,
+    if phase_job == "total_application":
+        _timing_phase(
+            connection,
+            "total_application",
+            repeats,
+            warm_total,
+            lambda: _measure_total_application(path, book_type),
+            event_count,
+        )
+    if phase_job in (
+        "input_read_parse",
+        "empty_engine_construction",
+        "engine_replay",
         "total_application",
-        repeats,
-        warm_total,
-        lambda: _measure_total_application(path, book_type),
-        event_count,
-    )
+    ):
+        return
 
-    counter = _counter_event_replay(book_type, events)
-    counter_row = phase_row("counters", repeat=1)
-    counter_row.update(counter)
-    if "available_price_count" in case:
-        counter_row["available_price_count"] = case["available_price_count"]
-        counter_row["realized_price_count"] = counter["final_state"][
-            "occupied_price_levels"
-        ]
-    _emit(connection, counter_row)
-
-    latency_path = Path(artifact_dir) / "latencies.jsonl"
-    latency_summary = _latency_replay(book_type, events, latency_path)
-    latency_row = phase_row("latency_summary", repeat=1)
-    latency_row.update(latency_summary)
-    _emit(connection, latency_row)
-
-    for memory_row in _memory_replay(book_type, events, case):
-        _emit(connection, memory_row)
-
-    if case.get("profile"):
+    if phase_job == "state_peaks":
+        peak_row = phase_row("state_peaks", repeat=1)
+        peak_row.update(state_peak_replay(book_type, events))
+        _emit(connection, peak_row)
+    elif phase_job == "counters":
+        if event_count > settings["counter_max_events"]:
+            raise ValueError("snapshot counters are restricted to small workloads")
+        counter = _counter_event_replay(book_type, events)
+        counter_row = phase_row("counters", repeat=1)
+        counter_row.update(counter)
+        if "available_price_count" in case:
+            counter_row["available_price_count"] = case["available_price_count"]
+            counter_row["realized_price_count"] = counter["final_state"][
+                "occupied_price_levels"
+            ]
+        _emit(connection, counter_row)
+    elif phase_job == "latency":
+        latency_path = Path(artifact_dir) / "latencies.jsonl"
+        latency_summary = _latency_replay(book_type, events, latency_path)
+        latency_row = phase_row("latency_summary", repeat=1)
+        latency_row.update(latency_summary)
+        _emit(connection, latency_row)
+    elif phase_job == "memory":
+        for memory_row in _memory_replay(book_type, events, case):
+            _emit(connection, memory_row)
+    elif phase_job == "profile" and case.get("profile"):
         profile_summary = _profile_replay(
             book_type, events, artifact_dir, profile_event_limit
         )
         profile_row = phase_row("profile", repeat=1)
         profile_row.update(profile_summary)
         _emit(connection, profile_row)
+    elif phase_job != "profile":
+        raise ValueError(f"unsupported phase {phase_job!r} for generic workload")
 
 
 def _measure_constructor(book_type):
@@ -863,7 +921,8 @@ def _measure_constructor(book_type):
     return time.perf_counter() - started, {}
 
 
-def _fixed_worker(connection, case, version, repeats, artifact_dir):
+def _fixed_worker(connection, case, version, repeats, artifact_dir, phase_job,
+                   settings):
     book_type = _get_engine_class(version)
     initial_events = load_events(case["input_path"])
     event_count = len(initial_events)
@@ -872,30 +931,33 @@ def _fixed_worker(connection, case, version, repeats, artifact_dir):
     def warm_parse():
         load_events(path)
 
-    _timing_phase(
-        connection,
-        "input_read_parse",
-        repeats,
-        warm_parse,
-        lambda: _measure_input_parse(path),
-        event_count,
-    )
-    _timing_phase(
-        connection,
-        "empty_engine_construction",
-        repeats,
-        lambda: book_type(),
-        lambda: _measure_constructor(book_type),
-        None,
-    )
-    _timing_phase(
-        connection,
-        "initial_book_construction",
-        repeats,
-        lambda: _build_book(book_type, initial_events),
-        lambda: _measure_initial_book(book_type, initial_events),
-        event_count,
-    )
+    if phase_job == "input_read_parse":
+        _timing_phase(
+            connection,
+            "input_read_parse",
+            repeats,
+            warm_parse,
+            lambda: _measure_input_parse(path),
+            event_count,
+        )
+    elif phase_job == "empty_engine_construction":
+        _timing_phase(
+            connection,
+            "empty_engine_construction",
+            repeats,
+            lambda: book_type(),
+            lambda: _measure_constructor(book_type),
+            None,
+        )
+    elif phase_job == "initial_book_construction":
+        _timing_phase(
+            connection,
+            "initial_book_construction",
+            repeats,
+            lambda: _build_book(book_type, initial_events),
+            lambda: _measure_initial_book(book_type, initial_events),
+            event_count,
+        )
 
     for sale_case in case["sell_quantities"]:
         percent = sale_case["percent"]
@@ -910,61 +972,130 @@ def _fixed_worker(connection, case, version, repeats, artifact_dir):
                             sale_event=sale_event):
             _measure_total_sell(path, book_type, sale_event)
 
-        _timing_phase(
-            connection,
-            phase,
-            repeats,
-            warm_sell,
-            lambda book_type=book_type, initial_events=initial_events,
-            sale_event=sale_event: _measure_sell_operation(
-                book_type, initial_events, sale_event
-            ),
-            1,
-        )
-        _timing_phase(
-            connection,
-            f"total_application_sell_{percent}pct",
-            repeats,
-            warm_total_sell,
-            lambda path=path, book_type=book_type,
-            sale_event=sale_event: _measure_total_sell(
-                path, book_type, sale_event
-            ),
-            len(initial_events) + 1,
-        )
+        if phase_job == phase:
+            _timing_phase(
+                connection,
+                phase,
+                repeats,
+                warm_sell,
+                lambda book_type=book_type, initial_events=initial_events,
+                sale_event=sale_event: _measure_sell_operation(
+                    book_type, initial_events, sale_event
+                ),
+                1,
+            )
+        elif phase_job == f"total_application_sell_{percent}pct":
+            _timing_phase(
+                connection,
+                f"total_application_sell_{percent}pct",
+                repeats,
+                warm_total_sell,
+                lambda path=path, book_type=book_type,
+                sale_event=sale_event: _measure_total_sell(
+                    path, book_type, sale_event
+                ),
+                len(initial_events) + 1,
+            )
 
-        combined_events = initial_events + [sale_event]
-        counter = _counter_event_replay(book_type, combined_events)
+    if phase_job == "state_peaks":
+        peak_rows = []
+        for sale_case in case["sell_quantities"]:
+            sale_event = _sale_event(
+                case, sale_case["percent"], sale_case["qty_units"]
+            )
+            peaks = state_peak_replay(book_type, initial_events + [sale_event])
+            peak_rows.append(peaks)
+        peak_row = phase_row("state_peaks", repeat=1)
+        peak_row.update(
+            {
+                "active_order_peak": max(
+                    row["active_order_peak"] for row in peak_rows
+                ),
+                "occupied_price_level_peak": max(
+                    row["occupied_price_level_peak"] for row in peak_rows
+                ),
+                "state_peak_method": "event_result_shadow_bookkeeping",
+                "state_peak_counts_are": "logical event-boundary counts",
+                "sale_scenarios": len(peak_rows),
+            }
+        )
+        _emit(connection, peak_row)
+    elif phase_job == "counters":
+        if event_count > settings["counter_max_events"]:
+            raise ValueError("snapshot counters are restricted to small workloads")
+        counter_rows = []
+        for sale_case in case["sell_quantities"]:
+            sale_event = _sale_event(
+                case, sale_case["percent"], sale_case["qty_units"]
+            )
+            counter_rows.append(
+                (
+                    sale_case,
+                    _counter_event_replay(
+                        book_type, initial_events + [sale_event]
+                    ),
+                )
+            )
         counter_row = phase_row("counters", repeat=1)
-        counter_row.update(counter)
-        counter_row["requested_sell_qty_units"] = sale_event["qty_units"]
-        counter_row["sell_percent"] = percent
+        counter_row.update(
+            {
+                "counter_method": "per_event_canonical_snapshot",
+                "inferred_operation_counts_are_estimates": True,
+                "fill_count": sum(
+                    row["fill_count"] for _, row in counter_rows
+                ),
+                "maker_touches_estimate": sum(
+                    row["maker_touches_estimate"] for _, row in counter_rows
+                ),
+                "visited_price_levels_estimate": sum(
+                    row["visited_price_levels_estimate"]
+                    for _, row in counter_rows
+                ),
+                "active_order_peak": max(
+                    row["active_order_peak"] for _, row in counter_rows
+                ),
+                "occupied_price_level_peak": max(
+                    row["occupied_price_level_peak"]
+                    for _, row in counter_rows
+                ),
+            }
+        )
         _emit(connection, counter_row)
-
-        memory_rows = _memory_replay(book_type, combined_events, case)
-        for row in memory_rows:
-            row["requested_sell_qty_units"] = sale_event["qty_units"]
-            row["sell_percent"] = percent
-            _emit(connection, row)
-
-    representative_sale = case["sell_quantities"][1]
-    sale_event = _sale_event(
-        case, representative_sale["percent"], representative_sale["qty_units"]
-    )
-    combined_events = initial_events + [sale_event]
-    latency_path = Path(artifact_dir) / "latencies.jsonl"
-    latency_summary = _latency_replay(book_type, combined_events, latency_path)
-    latency_row = phase_row("latency_summary", repeat=1)
-    latency_row.update(latency_summary)
-    latency_row["requested_sell_qty_units"] = sale_event["qty_units"]
-    _emit(connection, latency_row)
+    elif phase_job == "memory":
+        for sale_case in case["sell_quantities"]:
+            sale_event = _sale_event(
+                case, sale_case["percent"], sale_case["qty_units"]
+            )
+            for row in _memory_replay(
+                book_type, initial_events + [sale_event], case
+            ):
+                row["requested_sell_qty_units"] = sale_event["qty_units"]
+                row["sell_percent"] = sale_case["percent"]
+                _emit(connection, row)
+    elif phase_job == "latency":
+        representative_sale = case["sell_quantities"][1]
+        sale_event = _sale_event(
+            case, representative_sale["percent"], representative_sale["qty_units"]
+        )
+        combined_events = initial_events + [sale_event]
+        latency_path = Path(artifact_dir) / "latencies.jsonl"
+        latency_summary = _latency_replay(
+            book_type, combined_events, latency_path
+        )
+        latency_row = phase_row("latency_summary", repeat=1)
+        latency_row.update(latency_summary)
+        latency_row["requested_sell_qty_units"] = sale_event["qty_units"]
+        _emit(connection, latency_row)
 
 
 def _measure_worker(connection, case, version, repeats, artifact_dir,
-                    profile_event_limit):
+                    profile_event_limit, phase_job, settings):
     try:
         if case["experiment"] == "fixed_liquidation":
-            _fixed_worker(connection, case, version, repeats, artifact_dir)
+            _fixed_worker(
+                connection, case, version, repeats, artifact_dir,
+                phase_job, settings,
+            )
         else:
             _generic_worker(
                 connection,
@@ -973,6 +1104,8 @@ def _measure_worker(connection, case, version, repeats, artifact_dir,
                 repeats,
                 artifact_dir,
                 profile_event_limit,
+                phase_job,
+                settings,
             )
         connection.send({"kind": "done"})
     except Exception as error:
@@ -986,6 +1119,153 @@ def _measure_worker(connection, case, version, repeats, artifact_dir,
         )
     finally:
         connection.close()
+
+
+def _phase_category(phase_job):
+    if phase_job in GENERIC_PRIMARY_PHASES or phase_job == "initial_book_construction":
+        return "primary"
+    if phase_job.startswith("sell_operation_") or phase_job.startswith(
+        "total_application_sell_"
+    ):
+        return "primary"
+    if phase_job in ("latency", "memory", "state_peaks", "counters", "profile"):
+        return phase_job
+    raise ValueError(f"unknown benchmark phase {phase_job!r}")
+
+
+def _phase_definition_id(phase_job):
+    if phase_job.startswith("sell_operation_"):
+        return f"primary-{phase_job}-v1"
+    if phase_job.startswith("total_application_sell_"):
+        return f"primary-{phase_job}-v1"
+    if phase_job in PHASE_DEFINITION_IDS:
+        return PHASE_DEFINITION_IDS[phase_job]
+    raise ValueError(f"unknown benchmark phase {phase_job!r}")
+
+
+def _phase_source_objects(phase_job):
+    primary_sources = {
+        "input_read_parse": ("_timing_phase", "_measure_input_parse", "load_events"),
+        "empty_engine_construction": (
+            "_timing_phase",
+            "_measure_constructor",
+        ),
+        "engine_replay": (
+            "_timing_phase",
+            "_measure_engine_replay",
+            "replay_without_history",
+        ),
+        "total_application": (
+            "_timing_phase",
+            "_measure_total_application",
+            "load_events",
+            "replay_without_history",
+        ),
+        "initial_book_construction": (
+            "_timing_phase",
+            "_measure_initial_book",
+            "_build_book",
+        ),
+    }
+    if phase_job.startswith("sell_operation_"):
+        names = ("_timing_phase", "_measure_sell_operation", "_build_book")
+    elif phase_job.startswith("total_application_sell_"):
+        names = (
+            "_timing_phase",
+            "_measure_total_sell",
+            "load_events",
+            "_build_book",
+        )
+    elif phase_job in primary_sources:
+        names = primary_sources[phase_job]
+    elif phase_job == "latency":
+        names = ("_latency_replay", "percentile_nearest_rank", "replay_without_history")
+    elif phase_job == "memory":
+        names = ("_memory_replay", "_state_checkpoint", "book_state_counts")
+    elif phase_job == "state_peaks":
+        names = ("state_peak_replay", "EventResultBookkeeping")
+    elif phase_job == "counters":
+        names = ("counter_replay", "_price_visits", "book_state_counts")
+    elif phase_job == "profile":
+        names = ("_profile_replay", "replay_without_history")
+    else:
+        raise ValueError(f"unknown benchmark phase {phase_job!r}")
+
+    objects = []
+    for name in names:
+        if hasattr(_metrics, name):
+            objects.append(getattr(_metrics, name))
+        else:
+            objects.append(globals()[name])
+    return objects
+
+
+def _phase_definition_hash(phase_job):
+    sources = [inspect.getsource(obj) for obj in _phase_source_objects(phase_job)]
+    definition = {
+        "definition_id": _phase_definition_id(phase_job),
+        "sources": sources,
+    }
+    encoded = json.dumps(definition, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _phase_budget_seconds(phase_job, settings):
+    return settings["phase_budgets"][_phase_category(phase_job)]
+
+
+def _phase_settings_snapshot(phase_job, case, settings):
+    category = _phase_category(phase_job)
+    snapshot = {
+        "event_count": case["event_count"],
+        "generator_settings": case["generator_settings"],
+        "input_checksums": case["input_checksums"],
+    }
+    if category == "primary":
+        snapshot["timing_repeats"] = settings["timing_repeats"]
+        if case["experiment"] == "fixed_liquidation":
+            snapshot["sell_quantities"] = case["sell_quantities"]
+    elif category == "latency":
+        snapshot["latency_definition"] = "event-position-raw-v1"
+    elif category == "memory":
+        snapshot["memory_checkpoint_fractions"] = [0.25, 0.5, 0.75, 1.0]
+    elif category == "state_peaks":
+        snapshot["count_source"] = "accepted-event-results"
+    elif category == "counters":
+        snapshot["counter_max_events"] = settings["counter_max_events"]
+    elif category == "profile":
+        snapshot["profile_event_limit"] = settings["profile_event_limit"]
+    return snapshot
+
+
+def _phase_jobs(case, settings):
+    if case["experiment"] == "fixed_liquidation":
+        primary = [
+            "input_read_parse",
+            "empty_engine_construction",
+            "initial_book_construction",
+        ]
+        for sale_case in case["sell_quantities"]:
+            percent = sale_case["percent"]
+            primary.extend(
+                [
+                    f"sell_operation_{percent}pct",
+                    f"total_application_sell_{percent}pct",
+                ]
+            )
+    else:
+        primary = list(GENERIC_PRIMARY_PHASES)
+
+    jobs = primary + ["state_peaks", "latency", "memory"]
+    small_representative = (
+        case["event_count"] <= settings["counter_max_events"]
+        and case.get("profile")
+    )
+    if small_representative:
+        jobs.append("counters")
+    if small_representative:
+        jobs.append("profile")
+    return jobs
 
 
 _WINDOWS_MEMORY_API = None
@@ -1106,30 +1386,360 @@ def _config_id(case, version):
 def _next_attempt(records_dir, config_id):
     records_dir = Path(records_dir)
     attempt = 1
-    while (
-        records_dir / f"{config_id}__attempt_{attempt:03d}.json"
-    ).exists() or (
-        records_dir / f"{config_id}__attempt_{attempt:03d}.progress.jsonl"
-    ).exists():
+    while any(
+        records_dir.glob(f"{config_id}__attempt_{attempt:03d}*")
+    ):
         attempt += 1
     return attempt
 
 
-def _completed_config_exists(records_dir, config_id):
-    prefix = f"{config_id}__attempt_"
-    for path in Path(records_dir).glob(f"{prefix}*.json"):
-        if path.name.endswith(".progress.jsonl"):
-            continue
+def _phase_row_name(phase_job):
+    return {
+        "latency": "latency_summary",
+        "state_peaks": "state_peaks",
+        "counters": "counters",
+        "memory": "memory",
+        "profile": "profile",
+    }.get(phase_job, phase_job)
+
+
+def _phase_rows_complete(phase_job, rows, case, settings, run_dir):
+    row_name = _phase_row_name(phase_job)
+    matching = [
+        row for row in rows
+        if row.get("phase") == row_name and row.get("status") == "completed"
+    ]
+    if _phase_category(phase_job) == "primary":
+        repeats = sorted(
+            row.get("repeat") for row in matching
+            if isinstance(row.get("repeat"), int)
+        )
+        summaries = [
+            row for row in rows
+            if row.get("phase") == f"{row_name}_summary"
+            and row.get("status") == "completed"
+        ]
+        return (
+            repeats == list(range(1, TIMING_REPEATS + 1))
+            and len(summaries) == 1
+            and len(summaries[0].get("raw_repeats_seconds", ()))
+            == TIMING_REPEATS
+        ), "requires five completed repeats and one matching summary"
+
+    if phase_job == "latency":
+        if len(matching) != 1:
+            return False, "requires one completed latency summary"
+        row = matching[0]
+        raw_path = row.get("latency_raw_path")
+        artifact = Path(run_dir) / raw_path if raw_path else None
+        if row.get("latency_raw_count") != case["event_count"]:
+            return False, "raw latency count does not equal event count"
+        if artifact is None or not artifact.is_file():
+            return False, "raw latency artifact is missing"
+        return True, "summary and full raw latency artifact are present"
+
+    if phase_job == "memory":
+        expected_positions = {
+            max(1, math.ceil(case["event_count"] * fraction))
+            for fraction in (0.25, 0.5, 0.75, 1.0)
+        }
+        if case["experiment"] == "fixed_liquidation":
+            expected_per_sale = expected_positions | {
+                case["event_count"] - 1
+            }
+            expected = {
+                (percent, position)
+                for percent in (10, 100, 200)
+                for position in expected_per_sale
+            }
+            actual = {
+                (row.get("sell_percent"), row.get("event_position"))
+                for row in matching
+            }
+            return actual == expected, "requires all memory checkpoints for each sale size"
+        actual = {row.get("event_position") for row in matching}
+        return actual == expected_positions, "requires all four stream checkpoints"
+
+    if phase_job == "profile":
+        if len(matching) != 1:
+            return False, "requires one completed profile row"
+        row = matching[0]
+        expected_events = min(
+            settings["profile_event_limit"], case["event_count"]
+        )
+        if row.get("profiled_event_count") != expected_events:
+            return False, "profiled event count differs from configured limit"
+        paths = (row.get("profile_data_path"), row.get("profile_text_path"))
+        if any(not path or not (Path(run_dir) / path).is_file() for path in paths):
+            return False, "profile artifact is missing"
+        return True, "bounded profile outputs are present"
+
+    if len(matching) != 1:
+        return False, "requires one completed diagnostic row"
+    if phase_job == "state_peaks" and matching[0].get(
+        "state_peak_method"
+    ) != "event_result_shadow_bookkeeping":
+        return False, "state peaks were not derived from the event-result ledger"
+    if phase_job == "counters" and not matching[0].get(
+        "inferred_operation_counts_are_estimates"
+    ):
+        return False, "counter estimates are not labelled as estimates"
+    return True, "one completed diagnostic row is present"
+
+
+def _phase_candidates(records_dir, config_id):
+    records_dir = Path(records_dir)
+    candidates = []
+    seen_attempts = set()
+    for path in records_dir.glob(f"{config_id}__attempt_*.json"):
         try:
             record = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
-        if record.get("status") == "completed":
-            return True
-    return False
+        if record.get("config_id") != config_id:
+            continue
+        attempt = record.get("attempt")
+        candidates.append(
+            {
+                "source": _relative_path(path),
+                "attempt": attempt,
+                "rows": record.get("rows", []),
+                "case": record.get("case"),
+                "record": record,
+            }
+        )
+        if isinstance(attempt, int):
+            seen_attempts.add(attempt)
+
+    for path in records_dir.glob(f"{config_id}__attempt_*.progress.jsonl"):
+        stem = path.name.split("__attempt_", 1)[-1]
+        try:
+            attempt = int(stem[:3])
+        except ValueError:
+            continue
+        if attempt in seen_attempts:
+            continue
+        rows = []
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                item = json.loads(line)
+                if item.get("kind") in ("row", "worker_stop"):
+                    rows.append(item["row"])
+        except (OSError, json.JSONDecodeError, KeyError):
+            continue
+        candidates.append(
+            {
+                "source": _relative_path(path),
+                "attempt": attempt,
+                "rows": rows,
+                "case": None,
+                "record": None,
+            }
+        )
+    return sorted(
+        candidates,
+        key=lambda item: (item["attempt"] or 0, item["source"]),
+        reverse=True,
+    )
 
 
-def _row_common(case, version, environment, code_hashes, limits):
+def _legacy_phase_allowed(phase_job, code_hashes):
+    return (
+        phase_job not in ("counters", "state_peaks")
+        and code_hashes.get("run_benchmarks.py") == LEGACY_RUNNER_SHA256
+        and code_hashes.get("metrics.py") == LEGACY_METRICS_SHA256
+    )
+
+
+def _candidate_phase_reasons(
+    phase_job, candidate, case, version, settings, run_dir, current_hashes
+):
+    reasons = []
+    rows = candidate["rows"]
+    row_name = _phase_row_name(phase_job)
+    matching = [
+        row for row in rows
+        if row.get("phase") in (row_name, f"{row_name}_summary")
+    ]
+    if not matching:
+        return ["no saved rows for this phase"]
+
+    if candidate["case"] is not None and candidate["case"] != _case_manifest(case):
+        reasons.append("saved workload settings/case manifest differ")
+    for row in matching:
+        if row.get("version") != version:
+            reasons.append("implementation version differs")
+            break
+        if row.get("event_count") != case["event_count"]:
+            reasons.append("event count differs")
+            break
+        if row.get("generator_settings") != case["generator_settings"]:
+            reasons.append("generator settings differ")
+            break
+        if row.get("input_checksums") != case["input_checksums"]:
+            reasons.append("input checksum differs")
+            break
+        if row.get("scenario") != case["scenario"] or row.get("seed") != case["seed"]:
+            reasons.append("scenario or seed differs")
+            break
+
+    code_hashes = matching[0].get("code_hashes", {})
+    engine_hash_key = f"{version}.py"
+    if code_hashes.get(engine_hash_key) != current_hashes.get(engine_hash_key):
+        reasons.append(f"{engine_hash_key} hash differs")
+    if (
+        case["generator_settings"].get("generator") == "generate_orders.py"
+        and code_hashes.get("generate_orders.py")
+        != current_hashes.get("generate_orders.py")
+    ):
+        reasons.append("workload generator hash differs")
+
+    definition_hash = _phase_definition_hash(phase_job)
+    if matching[0].get("measurement_definition_hash"):
+        if matching[0].get("measurement_definition_id") != _phase_definition_id(
+            phase_job
+        ):
+            reasons.append("measurement definition ID differs")
+        if matching[0].get("measurement_definition_hash") != definition_hash:
+            reasons.append("measurement definition hash differs")
+        if matching[0].get("phase_settings") != _phase_settings_snapshot(
+            phase_job, case, settings
+        ):
+            reasons.append("phase settings differ")
+    elif not _legacy_phase_allowed(phase_job, code_hashes):
+        reasons.append(
+            "legacy runner/metrics hashes are not an approved definition"
+        )
+
+    complete, completeness_reason = _phase_rows_complete(
+        phase_job, rows, case, settings, run_dir
+    )
+    if not complete:
+        reasons.append(completeness_reason)
+    return list(dict.fromkeys(reasons))
+
+
+def _build_continuation_plan(run_dir, cases, settings):
+    records_dir = Path(run_dir) / "records"
+    current_hashes = _code_hashes()
+    configs = []
+    for case in cases:
+        for version in VERSIONS:
+            config_id = _config_id(case, version)
+            candidates = _phase_candidates(records_dir, config_id)
+            phase_plans = []
+            for phase_job in _phase_jobs(case, settings):
+                assessments = []
+                selected = None
+                for candidate in candidates:
+                    reasons = _candidate_phase_reasons(
+                        phase_job,
+                        candidate,
+                        case,
+                        version,
+                        settings,
+                        run_dir,
+                        current_hashes,
+                    )
+                    assessment = {
+                        "source": candidate["source"],
+                        "attempt": candidate["attempt"],
+                        "reusable": not reasons,
+                        "reasons": reasons,
+                    }
+                    assessments.append(assessment)
+                    if not reasons and selected is None:
+                        selected = assessment
+                if selected:
+                    phase_plans.append(
+                        {
+                            "phase": phase_job,
+                            "status": "reusable",
+                            "budget_seconds": _phase_budget_seconds(
+                                phase_job, settings
+                            ),
+                            "source": selected["source"],
+                            "attempt": selected["attempt"],
+                            "reason": (
+                                "input, engine code, phase definition, settings, "
+                                "and complete measurement set match"
+                            ),
+                            "candidate_assessments": assessments,
+                        }
+                    )
+                else:
+                    phase_plans.append(
+                        {
+                            "phase": phase_job,
+                            "status": (
+                                "incompatible" if assessments else "pending"
+                            ),
+                            "budget_seconds": _phase_budget_seconds(
+                                phase_job, settings
+                            ),
+                            "reason": (
+                                "no compatible complete phase; execute as a new "
+                                "phase attempt"
+                            ),
+                            "candidate_assessments": assessments,
+                        }
+                    )
+            configs.append(
+                {
+                    "config_id": config_id,
+                    "case": _case_manifest(case),
+                    "version": version,
+                    "phases": phase_plans,
+                }
+            )
+    return {
+        "schema_version": 1,
+        "run_id": Path(run_dir).name,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "settings": settings,
+        "configs": configs,
+    }
+
+
+def _write_continuation_plan(run_dir, plan):
+    directory = Path(run_dir) / "continuation_plans"
+    directory.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    path = directory / f"plan_{timestamp}.json"
+    _json_write_exclusive(path, plan)
+    return path
+
+
+def _continuation_counts(plan):
+    counts = {}
+    for config in plan["configs"]:
+        for phase in config["phases"]:
+            status = phase["status"]
+            counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def _execution_priority(case):
+    experiment_priority = {
+        "fixed_liquidation": 0,
+        "queue_concentration": 1,
+        "cancellation_churn": 2,
+        "workload_replay": 3,
+    }
+    scenario_priority = {
+        scenario: index for index, scenario in enumerate(SCENARIOS)
+    }
+    return (
+        experiment_priority[case["experiment"]],
+        case["event_count"],
+        scenario_priority.get(case["scenario"], 0),
+        case.get("seed", 0),
+    )
+
+
+def _row_common(
+    case, version, environment, code_hashes, limits, phase_job, settings
+):
     return {
         "version": version,
         "experiment": case["experiment"],
@@ -1151,7 +1761,13 @@ def _row_common(case, version, environment, code_hashes, limits):
         "environment": environment,
         "code_hashes": code_hashes,
         "time_limit_seconds": limits["time_limit_seconds"],
+        "phase_budget_seconds": limits["time_limit_seconds"],
         "memory_limit_mib": limits["memory_limit_mib"],
+        "measurement_definition_id": _phase_definition_id(phase_job),
+        "measurement_definition_hash": _phase_definition_hash(phase_job),
+        "phase_settings": _phase_settings_snapshot(
+            phase_job, case, settings
+        ),
     }
 
 
@@ -1169,22 +1785,36 @@ def _decorate_row(row, common, run_dir):
     return decorated
 
 
-def _run_one_configuration(run_dir, case, version, limits, settings):
+def _run_one_phase(
+    run_dir, case, version, phase_job, attempt, settings, budget_seconds=None
+):
     records_dir = Path(run_dir) / "records"
     artifacts_root = Path(run_dir) / "artifacts"
     records_dir.mkdir(parents=True, exist_ok=True)
     artifacts_root.mkdir(parents=True, exist_ok=True)
     config_id = _config_id(case, version)
-    attempt = _next_attempt(records_dir, config_id)
     attempt_name = f"{config_id}__attempt_{attempt:03d}"
-    progress_path = records_dir / f"{attempt_name}.progress.jsonl"
-    result_path = records_dir / f"{attempt_name}.json"
-    artifact_dir = artifacts_root / attempt_name
+    phase_stem = f"{attempt_name}__phase_{phase_job}"
+    progress_path = records_dir / f"{phase_stem}.progress.jsonl"
+    result_path = records_dir / f"{phase_stem}.json"
+    artifact_dir = artifacts_root / attempt_name / phase_job
     artifact_dir.mkdir(parents=True, exist_ok=False)
 
     environment = _environment_snapshot()
     code_hashes = _code_hashes()
-    common = _row_common(case, version, environment, code_hashes, limits)
+    limits = {
+        "time_limit_seconds": (
+            _phase_budget_seconds(phase_job, settings)
+            if budget_seconds is None else budget_seconds
+        ),
+        "memory_limit_mib": settings["memory_limit_mib"],
+        "memory_limit_bytes": int(
+            settings["memory_limit_mib"] * 1024 * 1024
+        ),
+    }
+    common = _row_common(
+        case, version, environment, code_hashes, limits, phase_job, settings
+    )
     context = multiprocessing.get_context("spawn")
     parent_connection, child_connection = context.Pipe(duplex=False)
     process = context.Process(
@@ -1196,6 +1826,8 @@ def _run_one_configuration(run_dir, case, version, limits, settings):
             TIMING_REPEATS,
             str(artifact_dir),
             settings["profile_event_limit"],
+            phase_job,
+            settings,
         ),
         name=f"benchmark-{config_id}",
     )
@@ -1235,6 +1867,7 @@ def _run_one_configuration(run_dir, case, version, limits, settings):
                 if message is not None:
                     if message["kind"] == "row":
                         row = _decorate_row(message["row"], common, Path(run_dir))
+                        row["measurement_phase"] = phase_job
                         rows.append(row)
                         _write_jsonl_line(progress, {"kind": "row", "row": row})
                     elif message["kind"] == "error":
@@ -1299,6 +1932,7 @@ def _run_one_configuration(run_dir, case, version, limits, settings):
                     break
                 if message["kind"] == "row":
                     row = _decorate_row(message["row"], common, Path(run_dir))
+                    row["measurement_phase"] = phase_job
                     rows.append(row)
                     _write_jsonl_line(progress, {"kind": "row", "row": row})
                 elif message["kind"] == "error":
@@ -1350,6 +1984,7 @@ def _run_one_configuration(run_dir, case, version, limits, settings):
             status, duration_until_stop, peak_working_set
         )
         decorated_stop_row = _decorate_row(stop_row, common, Path(run_dir))
+        decorated_stop_row["measurement_phase"] = phase_job
         rows.append(decorated_stop_row)
         with progress_path.open("a", encoding="utf-8", newline="\n") as progress:
             _write_jsonl_line(
@@ -1357,12 +1992,20 @@ def _run_one_configuration(run_dir, case, version, limits, settings):
             )
 
     record = {
+        "record_type": "phase_attempt",
         "config_id": config_id,
         "attempt": attempt,
+        "phase_job": phase_job,
+        "measurement_definition_id": _phase_definition_id(phase_job),
+        "measurement_definition_hash": _phase_definition_hash(phase_job),
+        "phase_settings": _phase_settings_snapshot(
+            phase_job, case, settings
+        ),
         "status": status,
         "case": _case_manifest(case),
         "version": version,
         "time_limit_seconds": limits["time_limit_seconds"],
+        "phase_budget_seconds": limits["time_limit_seconds"],
         "memory_limit_mib": limits["memory_limit_mib"],
         "duration_until_stop_seconds": duration_until_stop,
         "peak_working_set_bytes_observed": peak_working_set,
@@ -1370,8 +2013,158 @@ def _run_one_configuration(run_dir, case, version, limits, settings):
         "rows": rows,
         "progress_file": _relative_path(progress_path),
         "artifact_directory": _relative_path(artifact_dir),
+        "record_file": _relative_path(result_path),
     }
     _json_write_exclusive(result_path, record)
+    return record
+
+
+def _record_unstarted_phase(
+    run_dir, case, version, phase_job, attempt, settings, reason
+):
+    records_dir = Path(run_dir) / "records"
+    artifacts_root = Path(run_dir) / "artifacts"
+    config_id = _config_id(case, version)
+    attempt_name = f"{config_id}__attempt_{attempt:03d}"
+    phase_stem = f"{attempt_name}__phase_{phase_job}"
+    progress_path = records_dir / f"{phase_stem}.progress.jsonl"
+    result_path = records_dir / f"{phase_stem}.json"
+    artifact_dir = artifacts_root / attempt_name / phase_job
+    records_dir.mkdir(parents=True, exist_ok=True)
+    artifact_dir.mkdir(parents=True, exist_ok=False)
+
+    phase_limit = _phase_budget_seconds(phase_job, settings)
+    common = _row_common(
+        case,
+        version,
+        _environment_snapshot(),
+        _code_hashes(),
+        {
+            "time_limit_seconds": phase_limit,
+            "memory_limit_mib": settings["memory_limit_mib"],
+        },
+        phase_job,
+        settings,
+    )
+    row = _decorate_row(
+        stopped_phase_row("stopped_timeout", 0, None),
+        common,
+        Path(run_dir),
+    )
+    row.update(
+        {
+            "measurement_phase": phase_job,
+            "status_reason": reason,
+        }
+    )
+    with progress_path.open("x", encoding="utf-8", newline="\n") as progress:
+        _write_jsonl_line(progress, {"kind": "worker_stop", "row": row})
+
+    record = {
+        "record_type": "phase_attempt",
+        "config_id": config_id,
+        "attempt": attempt,
+        "phase_job": phase_job,
+        "measurement_definition_id": _phase_definition_id(phase_job),
+        "measurement_definition_hash": _phase_definition_hash(phase_job),
+        "phase_settings": _phase_settings_snapshot(
+            phase_job, case, settings
+        ),
+        "status": "stopped_timeout",
+        "case": _case_manifest(case),
+        "version": version,
+        "time_limit_seconds": phase_limit,
+        "phase_budget_seconds": phase_limit,
+        "memory_limit_mib": settings["memory_limit_mib"],
+        "duration_until_stop_seconds": 0,
+        "peak_working_set_bytes_observed": None,
+        "failure": {"message": reason},
+        "rows": [row],
+        "progress_file": _relative_path(progress_path),
+        "artifact_directory": _relative_path(artifact_dir),
+        "record_file": _relative_path(result_path),
+    }
+    _json_write_exclusive(result_path, record)
+    return record
+
+
+def _run_one_configuration(run_dir, case, version, settings, phase_plan=None):
+    records_dir = Path(run_dir) / "records"
+    config_id = _config_id(case, version)
+    attempt = _next_attempt(records_dir, config_id)
+    attempt_name = f"{config_id}__attempt_{attempt:03d}"
+    planned_phases = {
+        item["phase"]: item
+        for item in (phase_plan or {}).get("phases", [])
+    }
+    phase_statuses = {}
+    rows = []
+    category_elapsed = {}
+
+    for phase_job in _phase_jobs(case, settings):
+        planned = planned_phases.get(phase_job)
+        if planned and planned["status"] == "reusable":
+            phase_statuses[phase_job] = {
+                "status": "reused",
+                "source": planned["source"],
+                "reason": planned["reason"],
+            }
+            continue
+
+        category = _phase_category(phase_job)
+        category_budget = _phase_budget_seconds(phase_job, settings)
+        remaining_budget = category_budget - category_elapsed.get(category, 0)
+        if remaining_budget <= 0:
+            result = _record_unstarted_phase(
+                run_dir,
+                case,
+                version,
+                phase_job,
+                attempt,
+                settings,
+                f"{category} phase budget exhausted before worker start",
+            )
+        else:
+            result = _run_one_phase(
+                run_dir,
+                case,
+                version,
+                phase_job,
+                attempt,
+                settings,
+                remaining_budget,
+            )
+            category_elapsed[category] = (
+                category_elapsed.get(category, 0)
+                + result["duration_until_stop_seconds"]
+            )
+        phase_statuses[phase_job] = {
+            "status": result["status"],
+            "record": result["record_file"],
+            "reuse_assessment": planned,
+        }
+        rows.extend(result["rows"])
+
+    successful = {"completed", "reused"}
+    status = (
+        "completed"
+        if all(item["status"] in successful for item in phase_statuses.values())
+        else "partial"
+    )
+    record = {
+        "record_type": "configuration_attempt",
+        "config_id": config_id,
+        "attempt": attempt,
+        "status": status,
+        "case": _case_manifest(case),
+        "version": version,
+        "phase_statuses": phase_statuses,
+        "rows": rows,
+        "continuation_plan": phase_plan,
+    }
+    summary_path = records_dir / f"{attempt_name}.json"
+    record["record_file"] = _relative_path(summary_path)
+    _json_write_exclusive(summary_path, record)
     return record
 
 
@@ -1400,9 +2193,13 @@ def _settings_from_args(args):
         "profile_event_limit": 2000,
         "time_limit_seconds": 60 if smoke else 300,
         "memory_limit_mib": 2048 if smoke else 4096,
+        "counter_max_events": 1500,
         "timing_repeats": TIMING_REPEATS,
         "memory_monitor_poll_seconds": MEMORY_POLL_SECONDS,
     }
+    phase_budgets = dict(
+        SMOKE_PHASE_BUDGETS if smoke else DEFAULT_PHASE_BUDGETS
+    )
     if args.events:
         settings["event_sizes"] = _parse_int_list(args.events, "--events")
     if args.seeds:
@@ -1425,6 +2222,16 @@ def _settings_from_args(args):
             settings[setting] = value
     if args.time_limit_seconds is not None:
         settings["time_limit_seconds"] = args.time_limit_seconds
+        phase_budgets = {
+            phase: args.time_limit_seconds for phase in phase_budgets
+        }
+    for phase in phase_budgets:
+        option = f"{phase}_time_limit_seconds"
+        value = getattr(args, option, None)
+        if value is not None:
+            phase_budgets[phase] = value
+    settings["phase_budgets"] = phase_budgets
+    settings["time_limit_seconds"] = phase_budgets["primary"]
     if args.memory_limit_mib is not None:
         settings["memory_limit_mib"] = args.memory_limit_mib
     positive = (
@@ -1436,6 +2243,7 @@ def _settings_from_args(args):
         "profile_event_limit",
         "time_limit_seconds",
         "memory_limit_mib",
+        "counter_max_events",
     )
     if any(settings[key] <= 0 for key in positive):
         raise ValueError("sizes and resource limits must be positive")
@@ -1445,6 +2253,11 @@ def _settings_from_args(args):
         raise ValueError("--time-limit-seconds must be finite")
     if not math.isfinite(settings["memory_limit_mib"]):
         raise ValueError("--memory-limit-mib must be finite")
+    if any(
+        not math.isfinite(value) or value <= 0
+        for value in settings["phase_budgets"].values()
+    ):
+        raise ValueError("phase time limits must be positive finite values")
     if len(set(settings["event_sizes"])) != len(settings["event_sizes"]):
         raise ValueError("--events must not contain duplicate sizes")
     if len(set(settings["seeds"])) != len(settings["seeds"]):
@@ -1469,8 +2282,60 @@ def _argument_parser():
     parser.add_argument("--parity-event-limit", type=int)
     parser.add_argument("--profile-event-limit", type=int)
     parser.add_argument("--time-limit-seconds", type=float)
+    parser.add_argument("--primary-time-limit-seconds", type=float)
+    parser.add_argument("--latency-time-limit-seconds", type=float)
+    parser.add_argument("--memory-time-limit-seconds", type=float)
+    parser.add_argument("--state-peaks-time-limit-seconds", type=float)
+    parser.add_argument(
+        "--counter-time-limit-seconds",
+        "--counters-time-limit-seconds",
+        dest="counters_time_limit_seconds",
+        type=float,
+    )
+    parser.add_argument("--profile-time-limit-seconds", type=float)
     parser.add_argument("--memory-limit-mib", type=float)
+    parser.add_argument(
+        "--plan-resume",
+        action="store_true",
+        help="write a phase reuse plan without starting benchmark workers",
+    )
     return parser
+
+
+def _apply_phase_budget_args(settings, args):
+    budgets = dict(settings.get("phase_budgets", {}))
+    settings.setdefault("counter_max_events", 1500)
+    legacy_budget = settings.get(
+        "time_limit_seconds",
+        60 if settings.get("profile") == "smoke" else 300,
+    )
+    for phase, default in DEFAULT_PHASE_BUDGETS.items():
+        budgets.setdefault(phase, legacy_budget if phase in (
+            "primary", "latency", "memory", "state_peaks"
+        ) else default)
+
+    if args.time_limit_seconds is not None:
+        budgets = {phase: args.time_limit_seconds for phase in budgets}
+    for phase in budgets:
+        value = getattr(args, f"{phase}_time_limit_seconds", None)
+        if value is not None:
+            budgets[phase] = value
+    settings["phase_budgets"] = budgets
+    settings["time_limit_seconds"] = budgets["primary"]
+    if args.memory_limit_mib is not None:
+        settings["memory_limit_mib"] = args.memory_limit_mib
+
+    if any(
+        not math.isfinite(value) or value <= 0
+        for value in budgets.values()
+    ):
+        raise ValueError("phase time limits must be positive finite values")
+    if (
+        not math.isfinite(settings["memory_limit_mib"])
+        or settings["memory_limit_mib"] <= 0
+    ):
+        raise ValueError("memory limit must be a positive finite value")
+    return settings
 
 
 def _resolve_run_path(run_id_or_path):
@@ -1492,27 +2357,35 @@ def _create_run_directory(run_id):
 
 
 def _run(args):
-    if args.resume and (args.run_id or args.smoke or args.events or args.seeds
-                        or args.scenarios or args.levels
-                        or args.fixed_book_orders or args.queue_orders
-                        or args.churn_cycles):
+    if args.resume and (
+        args.run_id
+        or args.smoke
+        or args.events
+        or args.seeds
+        or args.scenarios
+        or args.levels
+        or args.fixed_book_orders
+        or args.queue_orders
+        or args.churn_cycles
+    ):
         raise ValueError(
             "resume uses the saved workload configuration; specify only new limits"
         )
+    if args.plan_resume and not args.resume:
+        raise ValueError("--plan-resume requires --resume")
 
     if args.resume:
         run_dir = _resolve_run_path(args.resume)
         metadata_path = run_dir / "metadata.json"
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        settings = metadata["settings"]
-        if args.time_limit_seconds is not None:
-            settings["time_limit_seconds"] = args.time_limit_seconds
-        if args.memory_limit_mib is not None:
-            settings["memory_limit_mib"] = args.memory_limit_mib
+        settings = _apply_phase_budget_args(
+            dict(metadata["settings"]), args
+        )
         cases = build_cases(settings, run_dir)
         current_cases = [_case_manifest(case) for case in cases]
         if current_cases != metadata["cases"]:
             raise ValueError("resume inputs/settings differ from saved run metadata")
+        cases = sorted(cases, key=_execution_priority)
     else:
         settings = _settings_from_args(args)
         run_id = args.run_id or (
@@ -1552,30 +2425,48 @@ def _run(args):
             )
             raise
 
-    limits = {
-        "time_limit_seconds": settings["time_limit_seconds"],
-        "memory_limit_mib": settings["memory_limit_mib"],
-        "memory_limit_bytes": int(settings["memory_limit_mib"] * 1024 * 1024),
+    if args.resume:
+        continuation_plan = _build_continuation_plan(
+            run_dir, cases, settings
+        )
+        plan_path = _write_continuation_plan(run_dir, continuation_plan)
+        counts = _continuation_counts(continuation_plan)
+        if args.plan_resume:
+            print(json.dumps({
+                "run_id": run_dir.name,
+                "plan_file": _relative_path(plan_path),
+                "phase_status_counts": counts,
+                "workers_started": 0,
+            }, indent=2, sort_keys=True))
+            return 0
+    else:
+        continuation_plan = None
+
+    plans_by_config = {
+        config["config_id"]: config
+        for config in (continuation_plan or {}).get("configs", [])
     }
     run_statuses = {}
+    run_phase_statuses = {}
     for case in cases:
         parity = validate_case(case, settings["parity_event_limit"])
         if parity["status"] != "passed":
             raise AssertionError(f"benchmark input parity failed for {case['case_id']}")
         for version in VERSIONS:
             config_id = _config_id(case, version)
-            records_dir = run_dir / "records"
-            if args.resume and _completed_config_exists(records_dir, config_id):
-                run_statuses[config_id] = "skipped_completed"
-                print(f"{config_id}: skipped (completed record exists)")
-                continue
+            config_plan = plans_by_config.get(config_id)
             record = _run_one_configuration(
-                run_dir, case, version, limits, settings
+                run_dir, case, version, settings, config_plan
             )
             run_statuses[config_id] = record["status"]
+            for phase_status in record["phase_statuses"].values():
+                status = phase_status["status"]
+                run_phase_statuses[status] = (
+                    run_phase_statuses.get(status, 0) + 1
+                )
             print(
                 f"{config_id}: {record['status']} "
-                f"({len(record['rows'])} measurement rows)"
+                f"({len(record['phase_statuses'])} phase statuses)"
             )
 
     status_counts = {}
@@ -1586,12 +2477,14 @@ def _run(args):
         "run_directory": str(run_dir),
         "profile": settings["profile"],
         "config_status_counts": status_counts,
+        "phase_status_counts": run_phase_statuses,
+        "continuation_plan_status_counts": (
+            _continuation_counts(continuation_plan)
+            if continuation_plan else None
+        ),
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0 if all(
-        status in ("completed", "skipped_completed")
-        for status in run_statuses.values()
-    ) else 2
+    return 0 if all(status == "completed" for status in run_statuses.values()) else 2
 
 
 def main(argv=None):

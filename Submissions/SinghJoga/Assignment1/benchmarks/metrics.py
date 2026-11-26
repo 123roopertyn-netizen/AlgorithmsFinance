@@ -141,6 +141,89 @@ def book_state_counts(book):
     }
 
 
+class EventResultBookkeeping:
+    """Track logical book counts from event results without inspecting books."""
+
+    def __init__(self):
+        self._orders = {}
+        self._level_counts = {}
+        self.active_order_peak = 0
+        self.occupied_price_level_peak = 0
+
+    def observe(self, event, result):
+        if result.get("status") == "rejected":
+            return
+
+        for fill in result.get("fills", ()):
+            maker_id = fill["maker_id"]
+            order = self._orders.get(maker_id)
+            if order is None:
+                raise ValueError(
+                    f"fill refers to unknown active maker {maker_id!r}"
+                )
+            order["qty_units"] -= fill["qty_units"]
+            if order["qty_units"] < 0:
+                raise ValueError(f"fill overdraws maker {maker_id!r}")
+            if order["qty_units"] == 0:
+                self._remove(maker_id)
+
+        if event["type"] == "CANCEL" and result.get("status") == "cancelled":
+            self._remove(event["target_order_id"])
+        elif event["type"] == "LIMIT":
+            remaining = result.get("unfilled_qty_units")
+            if remaining is None:
+                raise ValueError("accepted LIMIT result lacks residual quantity")
+            if remaining:
+                order_id = event["order_id"]
+                if order_id in self._orders:
+                    raise ValueError(
+                        f"accepted LIMIT duplicates tracked order {order_id!r}"
+                    )
+                order = {
+                    "side": event["side"],
+                    "price_ticks": event["price_ticks"],
+                    "qty_units": remaining,
+                }
+                self._orders[order_id] = order
+                level = (order["side"], order["price_ticks"])
+                self._level_counts[level] = self._level_counts.get(level, 0) + 1
+
+        self.active_order_peak = max(self.active_order_peak, len(self._orders))
+        self.occupied_price_level_peak = max(
+            self.occupied_price_level_peak, len(self._level_counts)
+        )
+
+    def _remove(self, order_id):
+        order = self._orders.pop(order_id, None)
+        if order is None:
+            raise ValueError(f"cannot remove unknown active order {order_id!r}")
+        level = (order["side"], order["price_ticks"])
+        remaining = self._level_counts[level] - 1
+        if remaining:
+            self._level_counts[level] = remaining
+        else:
+            del self._level_counts[level]
+
+    def summary(self):
+        return {
+            "active_order_peak": self.active_order_peak,
+            "occupied_price_level_peak": self.occupied_price_level_peak,
+            "state_peak_method": "event_result_shadow_bookkeeping",
+            "state_peak_counts_are": "logical event-boundary counts",
+            "final_active_orders": len(self._orders),
+            "final_occupied_price_levels": len(self._level_counts),
+        }
+
+
+def state_peak_replay(book_type, events):
+    """Track event-boundary logical peaks using only accepted event results."""
+    book = book_type()
+    counts = EventResultBookkeeping()
+    for event in events:
+        counts.observe(event, book.process_event(event))
+    return counts.summary()
+
+
 def _price_visits(before_book, event, result):
     if result.get("status") == "rejected" or event["type"] == "CANCEL":
         return 0
@@ -208,7 +291,9 @@ def counter_replay(book_type, events):
         ),
         "physical_storage_peak": peaks.get("physical_storage_entries_peak", 0),
         "fill_count": fill_count,
-        "maker_touches": maker_touches,
-        "visited_price_levels": visited_price_levels,
+        "maker_touches_estimate": maker_touches,
+        "visited_price_levels_estimate": visited_price_levels,
+        "counter_method": "per_event_canonical_snapshot",
+        "inferred_operation_counts_are_estimates": True,
         "final_state": final_counts,
     }

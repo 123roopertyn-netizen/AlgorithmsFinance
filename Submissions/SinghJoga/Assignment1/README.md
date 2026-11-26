@@ -1,3 +1,39 @@
+# Student quick start — Assignment 1
+
+This section is a student-added entry point. The original professor-provided
+assignment specification begins immediately below and is otherwise preserved.
+Because this authorized addition changes `README.md`, its SHA-256 will differ
+from the supplied `MANIFEST.json` entry; the manifest is retained as historical
+package evidence, not rewritten.
+
+From the repository root, open PowerShell and change to this assignment:
+
+```powershell
+cd .\Submissions\SinghJoga\Assignment1
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m orderbook.replay data\worked_example.jsonl --version baseline
+.\.venv\Scripts\python.exe -m orderbook.replay data\worked_example.jsonl --version revised
+.\.venv\Scripts\python.exe -m streamlit run dashboard\app.py
+```
+
+Python 3.14.7 was used; pinned dependencies are in `requirements.txt`.
+The full test suite is expected to pass (185 tests at the latest full run).
+The 10,000-event supplied-stream parity check completed for mixed and
+cancel-churn; buildup, crowded, and sweep remain partial after their
+individual 60-second limits. See [`docs/test_coverage.md`](docs/test_coverage.md)
+for the completed event counts and preserved progress.
+Both worked-example replays should finish with the ask unchanged, 4 BTC
+remaining on `b4`, and gross proceeds of `$359,400`. See
+[`RUNNING.md`](RUNNING.md) for all commands, [`docs/report.md`](docs/report.md)
+for results and limitations, and [`dashboard/app.py`](dashboard/app.py) for
+the saved-results dashboard. The dashboard reads existing evidence only; it
+does not launch benchmarks.
+
+# Professor-provided assignment specification
+
 # Assignment 1 — Build and benchmark a limit order book
 
 This take-home exercise extends **Phase 1: Implement and measure** of the coding lab. The assignment slides are `AlgorithmsFinance_Exercise1.pdf`. Work individually, using the same tests throughout implementation and revision. Submission is due 26 November 2026, 18:00:00h. Grading weights are not specified here.

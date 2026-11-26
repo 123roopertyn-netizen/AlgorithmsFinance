@@ -6,7 +6,7 @@ Run commands from this assignment directory with its local interpreter:
 
 ```powershell
 .\.venv\Scripts\python.exe benchmarks\run_benchmarks.py --smoke --run-id smoke_final_04
-.\.venv\Scripts\python.exe benchmarks\run_benchmarks.py --run-id full_20261125
+.\.venv\Scripts\python.exe benchmarks\run_benchmarks.py --resume full_20261125 --plan-resume --primary-time-limit-seconds 300 --latency-time-limit-seconds 300 --memory-time-limit-seconds 300 --state-peaks-time-limit-seconds 300 --counter-time-limit-seconds 60 --profile-time-limit-seconds 60 --memory-limit-mib 4096
 ```
 
 The smoke command uses 25 generated events per supplied workload family,
@@ -18,17 +18,28 @@ queue-concentration orders, and 5,000 anchored churn cycles. This is 49
 scenarios and 98 version/configuration runs. It does not launch one-million
 event runs.
 
-Resume an interrupted or partial run without overwriting its attempts:
+`--plan-resume` validates inputs, hashes, measurement definitions and phase
+completeness, writes a timestamped compatibility plan, and starts no workers.
+After reviewing that plan, continue the matrix with:
 
 ```powershell
-.\.venv\Scripts\python.exe benchmarks\run_benchmarks.py --resume full_20261125
+.\.venv\Scripts\python.exe benchmarks\run_benchmarks.py --resume full_20261125 --primary-time-limit-seconds 300 --latency-time-limit-seconds 300 --memory-time-limit-seconds 300 --state-peaks-time-limit-seconds 300 --counter-time-limit-seconds 60 --profile-time-limit-seconds 60 --memory-limit-mib 4096
 ```
 
-Completed configurations are skipped. A retry of an incomplete configuration
-gets a new attempt number, progress file, and artifact directory. Resume accepts
-only time/memory-limit overrides; it verifies saved workload settings and input
-checksums before continuing. Use a new run ID rather than reusing a completed
-directory for a new matrix.
+Each newly attempted configuration gets a new attempt number, per-phase
+progress and result files, and artifact directories; old evidence is retained.
+Resume verifies the saved workload settings and input checksums. Reuse is
+phase-specific, not configuration-wide: a phase is reusable only when the
+input, version/engine hash, generator hash (where applicable), measurement
+definition ID/hash, phase settings, and complete raw outputs match. Primary
+timing requires all five repeats and its summary; latency requires the full raw
+event file; memory requires all expected checkpoints. A stopped or incomplete
+phase is rerun as a new attempt. Incompatible repeats are never combined.
+Legacy phases are considered only when their recorded runner and metrics
+hashes exactly match the known pre-correction versions; state peaks and
+snapshot-based counters from those records are not reusable. Every candidate
+gets a saved compatibility assessment and explicit reuse/incompatibility
+reason.
 
 The smoke timeout path was also checked with an intentionally tiny limit:
 
@@ -36,9 +47,9 @@ The smoke timeout path was also checked with an intentionally tiny limit:
 .\.venv\Scripts\python.exe benchmarks\run_benchmarks.py --smoke --run-id smoke_timeout_validation_01 --time-limit-seconds 0.001
 ```
 
-This command is expected to return exit code 2 because its 18 configurations
-are recorded as `stopped_timeout`; the records have null elapsed timing rather
-than fabricated zeroes.
+This command is expected to return exit code 2 because its phase attempts are
+recorded as `stopped_timeout`; records use null elapsed timing rather than
+fabricated zeroes.
 
 ## Workloads and validation
 
@@ -98,19 +109,19 @@ of the event processing interval.
   its own percentiles and process-time throughput. This includes the buildup
   stream's early/late growth comparison. Throughput is reported separately
   from latency and is not inferred from reciprocal total-run throughput.
-- **Counters:** A separate full replay inspects canonical state before each
-  event. `active_order_peak` and `occupied_price_level_peak` are logical
-  maxima; physical storage entries include version-specific ID/queue/heap
-  containers. `fill_count` is returned fill records, and `maker_touches`
-  counts maker orders filled (one touch per fill record). `visited_price_levels`
-  counts distinct price levels from which fills occurred plus the first
-  terminal noncrossing level considered by limit matching, where applicable;
-  cancellations do not count as matching price visits. These are semantic
-  operation counters, not a reconstruction of every internal list/dictionary
-  probe.
+- **State peaks:** A separate lightweight event-result shadow ledger tracks
+  accepted inserts, fills, residual quantities, and cancellations. It does
+  not call `inspect_book()` or scan/sort the engine book per event. Its active
+  order and occupied-price peaks are logical event-boundary counts, not
+  physical storage counts.
+- **Counters:** Heavy operation counting is confined to the small representative
+  workload selected by the run settings (at most 1,500 events and marked as
+  representative). This counter path uses snapshots, so inferred visited
+  prices and operation totals are explicitly estimates, not exact executed
+  internal-operation counts. It is not run on large matrix cases.
 - **Profile:** A separate `cProfile` replay saves `.prof` and top cumulative
   text output. It is bounded to `min(profile_event_limit, M)` events and is
-  enabled for the smallest mixed workload in the selected run.
+  enabled only for the same small representative workload as counters.
 - **Memory:** Each run uses a fresh `tracemalloc` session, with input events
   already parsed and prepared. Traced allocations include engine construction,
   active book structures, matching and transient outputs; the most recent event
@@ -120,27 +131,33 @@ of the event processing interval.
   Input lists, JSON parsing, native allocations, allocator fragmentation, and
   total process memory are not represented by `tracemalloc`.
 
-Primary timing, counters, latency, profiling, and memory have separate phase
-records; instrumentation is not mixed into primary timings.
+Primary timing, state peaks, counters, latency, profiling, and memory have
+separate phase records and workers; instrumentation is not mixed into primary
+timings. Individual phase rows retain their own completion/stopped/error
+status. The configuration summary records each phase status independently.
 
 ## Limits, saved output, and interpretation
 
-Defaults are a **300-second wall-time limit and 4,096 MiB process-memory limit
-per version/configuration** for the full matrix. Smoke defaults are 60 seconds
-and 2,048 MiB. The same limits apply to baseline and revised. The timeout clock
-starts immediately before opening the progress log and spawning that
-configuration's worker. It covers worker startup, all five-repeat timing
-phases, counters, latency, profiling, memory tracing, IPC, parent progress-log
-flushes, and worker shutdown. It is one cap for the entire version/configuration
-run, not a separate cap per phase.
+Full-run budgets are independently set and identical for both versions:
+**300 seconds for all primary timing phases combined**, 300 seconds for the
+latency phase, 300 seconds for the memory phase, 300 seconds for lightweight
+state peaks, and 60 seconds each for small-workload counters and profiling.
+The primary budget is cumulative across primary measurement workers; each
+worker receives the remaining primary budget. Smoke uses shorter phase
+budgets. The per-phase process-memory limit is 4,096 MiB full / 2,048 MiB
+smoke.
 
-Workload generation, parity validation, environment/code-hash collection,
-configuration setup, and final result-JSON serialization happen outside that
-clock. A timeout may therefore occur during primary replay or any diagnostic
-phase; completed phase rows and individual timing repeats are flushed to the
-progress log and copied into the attempt record. A phase median is emitted only
-after all five repeats for that phase finish. An incomplete repeat set has no
-summary/median row and the configuration status remains stopped.
+Each worker's wall clock starts immediately before opening its progress log
+and spawning the worker. It covers startup, that measurement phase, IPC,
+progress flushes, and worker shutdown. A diagnostic timeout cannot consume the
+primary budget or invalidate completed primary timing. Generation, parity
+validation, hash collection, continuation planning, inter-phase orchestration,
+and final summary serialization are outside each worker clock. Completed rows
+and repeats are flushed incrementally. A primary median is emitted only after
+all five repeats for that measurement finish; incomplete repeat sets have no
+median and are never presented as complete. Workers are terminated when their
+phase deadline is reached. Exhausting the shared primary budget prevents later
+primary workers from starting and records them as stopped before start.
 
 On Windows, the parent samples process peak working set through
 `GetProcessMemoryInfo`; on Linux it samples `/proc/<pid>/status` `VmHWM`.
@@ -149,15 +166,16 @@ configured threshold terminates the worker and records `stopped_memory_limit`.
 This is **sampled termination, not an operating-system hard memory cap**;
 memory can overshoot between samples. Timeouts use a spawned worker process,
 are checked while it runs, and terminate it when the deadline is reached.
-Stopped/error attempts include a status, duration, observed memory, and
-`elapsed_seconds: null`; partial phase rows remain in the progress JSONL.
+Stopped/error phase attempts include a status, duration, observed memory, and
+`elapsed_seconds: null`; partial phase rows remain in their progress JSONL.
 
 Each run is saved under `results/benchmarks/<run-id>/`:
 
 - `metadata.json`: settings, environment, code hashes, input checksums, and
   pre-measurement parity outcomes.
-- `records/*attempt*.json`: per-phase raw repeats, summaries, diagnostics,
-  status, and limits.
+- `continuation_plans/`: timestamped phase-by-phase compatibility decisions.
+- `records/*attempt*.json`: per-phase results and configuration summaries,
+  including raw repeats, diagnostics, status, compatibility reason, and limits.
 - `records/*.progress.jsonl`: incrementally flushed rows, including partial
   work if a worker stops.
 - `artifacts/`: raw per-event latency files and profiling artifacts.
@@ -168,8 +186,25 @@ Rows include implementation version, experiment/scenario/seed, event count,
 generator settings, input checksums, phase/repeat, elapsed or traced bytes,
 active/price-level peaks, fills/sell quantities where relevant, completion
 status, Python/dependency/machine/Git information, code hashes, and limits.
-The benchmark runner does not claim a speedup; this task runs only smoke-scale
-workloads, not the requested full matrix.
+The original aggregate configuration timeout was 300 seconds and included
+counter diagnostics that called canonical `inspect_book()` before every event.
+That inspection can copy/sort the entire active book (and the baseline counter
+path also scans it), creating diagnostic work unrelated to engine replay. This
+caused repeated timeouts in counter runs and obscured which measurement was
+incomplete. The revised runner confines those heavy counters and profiling to
+one small representative case, obtains large-run logical peaks from the
+lightweight event-result ledger, and budgets primary, latency, memory, and
+other diagnostics independently. Historical records are preserved; no old
+counter/state-peak records are silently reused.
+
+The paused `full_20261125` matrix contains 18 completed configurations, 14
+timed-out configurations, one interrupted attempt, and 65 configurations not
+started. These are historical aggregate-run statuses, not phase-completion
+claims under the revised protocol. Do not combine incomplete five-repeat sets
+or report incomplete configurations as complete medians.
+
+The benchmark runner does not claim a speedup. The paused matrix is not a
+completed full benchmark.
 
 AI assistance was used to draft the runner, tests, and this protocol. The
 separate-measurement design was retained. A Windows smoke run exposed a closed
