@@ -2,8 +2,10 @@
 
 ## Start here (two minutes)
 
-Requires Python 3.13. Git is required for official long measurements; the
-results dashboard and 1k smoke also work without a checkout. From Assignment1:
+Requires Python 3.11 or newer (reference runs on 3.13; core tests and dashboard
+also checked on 3.11, 3.12 and 3.14). Git is required for official long
+measurements; the results dashboard and 1k smoke also work without a checkout.
+From Assignment1:
 
 ```powershell
 .\run_all.ps1                 # Windows PowerShell
@@ -14,7 +16,7 @@ bash run_all.sh                # macOS/Linux
 
 If PowerShell blocks the script: `powershell -ExecutionPolicy Bypass -File .\run_all.ps1`.
 
-**Results only (1 minute).** With Python 3.13 and your environment active:
+**Results only (1 minute).** With Python 3.11+ and your environment active:
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -81,7 +83,9 @@ views; `00_docs/` spec/report/selection/logs; `05_evidence/` verification;
 `06_data/supplied/` fixtures, `06_data/generated/` ignored large inputs;
 `07_attack/` independent attacks; `scratch/` local checks and smoke output.
 
-Submitted commit: `<to be filled at submission>`
+Submitted commit: the head of branch `assignment1` in this pull request. Full
+acceptance (1,040 tests, 1k smoke, no-git dashboard) ran on Windows and Linux at
+`7e56958`/`859e89e`; later commits change README text only.
 
 ## Detailed reference
 
@@ -132,8 +136,13 @@ and [current fix verification](00_docs/FINAL_FIX_VERIFICATION.md).
   Windows Smart App Control can block standalone tool launchers.
 - `hypothesis==6.155.7` is deliberate: newer native modules were blocked on the
   author's machine. The matching engine and generators use the standard library.
-- If `python` resolves to a disabled Store alias, activate the Python 3.13
+- If `python` resolves to a disabled Store alias, activate the Python 3.11+
   environment or put that installed interpreter on PATH before starting.
+- Windows path limit: if `pip install` or `test_checkout_portability` fails with
+  `No such file or directory`, Windows long paths are off (260 characters).
+  Enable them once in an administrator PowerShell, then reopen the shell:
+  `New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force`.
+  Extracting/cloning to a short folder (e.g. `C:\aif`) also helps.
 - Streamlit normally opens port 8501; if occupied, use its printed URL or
   `python -m streamlit run 04_dashboard/app.py --server.port=8502`.
 
