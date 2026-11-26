@@ -211,7 +211,9 @@ Results of different steps come from different code states:
 
 ## Code version and submitted commit
 
-* **Submitted commit (course repository):** `<fill in after pushing>`
+* **Submitted commit (course repository):** `d61cd1f644b02b8aca531d40deb5cd364a8d6390` (`d61cd1f`), branch
+  `submission/welscher-yannick` of the author's fork. It contains all code, results and documents; the
+  commit after it only records this id here.
 * **Measured code:** the timing step records its commit in `results/env.json` (`git_commit`). That commit
   belongs to the author's working repository, whose full history is included as
   `provenance/history.bundle`, together with a readable `provenance/git_history.txt`:
