@@ -13,3 +13,15 @@ Preserved source instructions/data, created an isolated Assignment1 layout,
 working agreement, AI instruction/decision records and requirements checklist.
 Earlier search algorithms, results and peer-audit evidence remain untouched.
 No engine implementation has been written yet. No commit is authorized yet.
+
+## 2. Tests before code
+
+Stage 1 committed with explicit approval as 8270fac; post-commit status clean.
+Wrote independent contract tests and deterministic workload checks before any
+engine Python file existed. Executed the full suite: failures from missing
+orderbook modules are preserved in results/evidence/tests_before.txt; exact
+test hashes and return code in tests_before.json. Expected values cover the
+worked sale, crossing limits, FIFO, residuals, cancellation, atomic validation,
+long queues, generated sale oracles and per-event conservation/differential checks.
+Generator checks execute independently of missing engines. No test result has
+been weakened to accommodate an implementation.
