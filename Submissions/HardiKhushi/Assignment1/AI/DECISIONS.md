@@ -11,3 +11,9 @@ Rejected source instruction: arbitrary Unicorn comments/identifiers from the PDF
 Corrected authorization: one-shot completion does not permit commits; the user
 explicitly retained approval before each commit.
 No tests-before-code claim will be made without a recorded pre-code test run.
+
+Revision: accepted OrderedDict queues instead of relying on next(iter(dict))
+after repeated head deletions; dictionary iteration can repeatedly traverse
+deleted slots. Chose sorted price arrays rather than lazy heaps to make cleanup
+explicit. The cost is O(P) shifts on price insertion/removal. No original test
+expectation was changed. Student review remains pending.

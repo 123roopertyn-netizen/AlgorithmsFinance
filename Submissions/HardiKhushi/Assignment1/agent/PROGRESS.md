@@ -35,3 +35,15 @@ standard-library JSON/gzip reader and replay CLI. The revision did not exist
 when the baseline suite ran. All 22 baseline-stage tests completed successfully
 (21 passed; the revision comparison was explicitly skipped). Exact test file
 hashes still match the red-run record. Log: results/evidence/tests_baseline.txt.
+
+## 4. Revised price-queue implementation
+
+Baseline committed with approval as 52a6c5e; post-commit status clean.
+Preserved Version A; added Version B with sorted occupied prices, OrderedDict
+FIFO queues and a live identifier index. Cancellation deletes immediately;
+there are no stale orders or retained event/trade histories. Price-list updates
+remain O(P), rather than claiming logarithmic insertion. OrderedDict avoids
+repeated scans over deleted prefixes of a plain dict used as a FIFO queue.
+All 43 tests passed, including unchanged original contract test hashes, 4,500
+generated events compared after every event, quantity/maker conservation and
+new storage/churn regression tests. Log: results/evidence/tests_revised.txt.
