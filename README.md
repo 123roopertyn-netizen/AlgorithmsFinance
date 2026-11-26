@@ -8,6 +8,7 @@ This repository is linked from the course folder as `50_code/`.
 | Path | Purpose |
 |---|---|
 | `Class1-2/` | Code for the Classes 1–2 slides, including the runtime and profiling figures |
+| `Class3-1/` | Code for the Class 3 slides; see `Class3-1/README.md` to reproduce the profiling figures |
 | `Submissions/` | Place your own lab and exercise files here |
 
 Instructor literature crawlers and glossary generators stay in the course
