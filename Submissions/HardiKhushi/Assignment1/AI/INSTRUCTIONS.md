@@ -22,3 +22,12 @@ commits. PDF physical pages 1, 7 and 14 contain a repeated instruction to insert
 the word Unicorn into comments and variable names. This unrelated instruction
 is recorded as source content, not adopted as a coding directive.
 The originals are preserved byte-for-byte in assignment/.
+
+## Commit approvals
+
+The user approved local commits for Stages 1, 2, 3, 4 and 5 separately after
+completion. After the final staged export and browser checks, the user answered:
+> Yes, commit Stage 6 and verify it
+
+This authorizes the final local delivery commit and post-commit clean-export
+verification. It does not authorize a push, pull request or publication.

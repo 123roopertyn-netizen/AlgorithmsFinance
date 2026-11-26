@@ -72,3 +72,40 @@ had no engine; tests-only reproduced 37 expected missing-module errors out of
 results/evidence/checkpoints/ and checkpoint_verification.json. The exporter
 initially used a subfolder cwd for a repository-relative archive path; corrected
 the helper, reran successfully, and did not change engines or measured results.
+
+## 6. Saved-results dashboard, report and delivery checks
+
+Measurement checkpoint committed with approval as 383b0aa. Its clean local Git
+export verified all 52 files against Git blob IDs, passed all 47 tests and both
+worked-example replays, revalidated the saved results and exercised CLI help.
+That second-verification record is clean_export_383b0aa.json/.txt.
+
+Built the offline dashboard solely from saved measurements, with replay,
+throughput, construction/application/parsing, allocation growth/cleanup, per-event
+latency distributions/percentiles, fresh-book liquidation/reset scaling, correctness
+records, raw repeats, stopped trials and JSON download. It preserves all nine
+churn regressions and labels incomplete baseline observations. Wrote the report,
+clean-environment README, actual requirements/evidence map, contribution and
+commit records; linked Assignment1 from the parent README. The earlier lab's
+code/results, audit, course folders and other students remain unchanged.
+
+Chrome passed 90 main filter states at each of 1440- and 500-pixel widths, 463
+checks per viewport including raw-data median cards, finite charts, nonoverlapping
+x-axis labels, no document overflow, six liquidation selections, three phases,
+plain JSON Blob download contents and no JavaScript errors. Top and lower page
+screenshots were visually inspected. Sandbox launches aborted before page load;
+the authorized external local Chrome launch succeeded. Corrected a requested
+460-pixel screenshot versus Chrome's actual 500-pixel minimum, improved narrow
+controls, replaced a blank scrolling capture fixture, and spaced chart labels.
+Only QA/presentation code changed; measured engines/tests/results did not.
+
+Original test hashes, 12 measured-source hashes, all raw medians/percentiles,
+source-data checksums and embedded dashboard data verify. A clean staged delivery
+export and post-commit verification are the final checks, using
+agent/verify_submission.py; benchmark runs are not repeated for those checks.
+The user explicitly approved the final local commit and post-commit verification.
+Before approval, clean staged tree 1e27381155a98a3a0bec897be739bfc46aab9193
+verified all 64 project files, passed 47 tests and both worked examples, rechecked
+saved results/CLI help, and rebuilt dashboard/findings byte-for-byte identically.
+The delivery commit identifier is in Git history and the completion message.
+No push or external publication is authorized.

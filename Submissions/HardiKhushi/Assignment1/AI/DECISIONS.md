@@ -26,3 +26,11 @@ repeats when completed. The revision lost all nine paired churn cases; retained
 those results. Corrected a Git-export helper's working directory without changing
 any measured source or data. No function-level profiler or process-RSS measurement
 is claimed; operation counters and tracemalloc have explicit boundaries.
+
+Dashboard verification: retained independent saved-data boundaries and explicit
+missing/stopped labels. Corrected the Chrome screenshot's requested/actual width
+mismatch, a blank scrolling fixture and crowded log-axis labels; added a browser
+assertion against label overlap. Final checks pass at 1440 and 500 pixels, 90 main
+filter states and 463 assertions each. Sandboxed Chrome aborted before loading;
+authorized local unsandboxed browser checks succeeded with background networking
+disabled. No benchmark source, raw values or original tests changed in this phase.
