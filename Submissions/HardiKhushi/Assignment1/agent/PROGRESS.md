@@ -47,3 +47,28 @@ repeated scans over deleted prefixes of a plain dict used as a FIFO queue.
 All 43 tests passed, including unchanged original contract test hashes, 4,500
 generated events compared after every event, quantity/maker conservation and
 new storage/churn regression tests. Log: results/evidence/tests_revised.txt.
+
+## 5. Measurement and evidence
+
+Revision committed with approval as 3276644; post-commit status clean.
+Added and passed four measurement-definition tests (47 total). The protocol
+smoke run passed before the full experiment. Executed all 90 primary version/
+scenario/seed/size configurations, plus construction/application, separate
+tracemalloc and latency/counter/depth diagnostics, fixed fresh-book 10/100/200%
+sales at 4/1000 available prices, and million-event streaming cancellation churn.
+The same four-second wall deadline applied to both engines. Saved 2,478 raw/
+diagnostic records, 257 timing summary groups and 642,536 per-event latency
+samples. There were 48 stopped timed trials across phases; these remain labelled.
+All original test hashes and 12 actual measured-source hashes match. Independent
+verification recomputed medians/throughput, all saved percentiles, matrix coverage,
+input checksums and memory invariants. All 47 tests passed again. Baseline/revised
+completed medians paired in 33 cases: revision faster in 24 and slower in all
+nine tiny-active-book churn cases. Million-event streaming parse and both engines
+completed warmup plus five repetitions. Generated large inputs remain ignored.
+
+Second verification exported each of the four approved commits: organization
+had no engine; tests-only reproduced 37 expected missing-module errors out of
+40 tests; baseline passed 21 with one skip; revision passed 43. Evidence is in
+results/evidence/checkpoints/ and checkpoint_verification.json. The exporter
+initially used a subfolder cwd for a repository-relative archive path; corrected
+the helper, reran successfully, and did not change engines or measured results.

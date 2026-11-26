@@ -17,3 +17,12 @@ after repeated head deletions; dictionary iteration can repeatedly traverse
 deleted slots. Chose sorted price arrays rather than lazy heaps to make cleanup
 explicit. The cost is O(P) shifts on price insertion/removal. No original test
 expectation was changed. Student review remains pending.
+
+Measurements: accepted a common four-second deadline, 256 MiB traced-engine
+allocation budget and 200,000-event preload cap. The million-event trial streams
+cancel_churn seed42 and is explicitly application time including parsing; other
+million-event families are unattempted. Recorded all stops and all five raw
+repeats when completed. The revision lost all nine paired churn cases; retained
+those results. Corrected a Git-export helper's working directory without changing
+any measured source or data. No function-level profiler or process-RSS measurement
+is claimed; operation counters and tracemalloc have explicit boundaries.
