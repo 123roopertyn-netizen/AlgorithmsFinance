@@ -1,6 +1,6 @@
 {
  "measured_commit": "48076ba3886a8c33fd463184f92723317b2f7227",
- "fingerprinted_at_commit": "e38dcf34d17951e51451da97230c545780fcf02b",
+ "fingerprinted_at_commit": "46eb924b51aa2a405465d611dba7cb328fdbfe73",
  "engine_files_identical": false,
  "lob_diff_vs_measured_commit": "diff --git a/lob/book_b.py b/lob/book_b.py\nindex e184bcf..b50752d 100644\n--- a/lob/book_b.py\n+++ b/lob/book_b.py\n@@ -20,7 +20,8 @@ Revision steps (all measured, see bench/run_revision_steps.py and bench/variants\n   1. price levels + index (this data organisation) with the shared generic validation;\n   2. a fused fast-path process(): profiling showed ~60% of step 1's time in generic\n      validation/dispatch, so well-formed events are checked and applied inline, and\n-     anything doubtful falls back to the shared validating code;\n+     anything doubtful falls back to the shared validating code; in the same step the\n+     matching loop _take was tightened (early return, bound append);\n   3. orders stored as 4-item lists instead of objects (cheaper to create).\n Steps 2 and 3 change constant factors only; the complexity below is unchanged.\n \n",
  "files": [

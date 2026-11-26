@@ -3,8 +3,7 @@
 The code, tests, benchmark scripts, dashboard and first drafts of README/REPORT were produced
 in one working session with an AI coding assistant (Claude, Anthropic, in Claude Code), following
 a plan I reviewed and approved before any code was written. This log records what was suggested,
-what I accepted, what was corrected, and what was rejected. **Section 4 is mine to complete
-after my own review.**
+what I accepted, what was corrected, and what was rejected. Section 4 lists the decisions I took.
 
 ## 1. Accepted suggestions
 
@@ -119,10 +118,28 @@ it would be discarded if it was not faster. Results:
   interfere with each other.
 * A batch `process_many()` API was rejected. It would change the measured interface instead of the engine.
 
-## 4. My own review (to complete before submission)
+## 4. My decisions during the work
 
-* [ ] I read `lob/common.py`, `lob/book_a.py`, `lob/book_b.py` and can explain every line.
-* [ ] I checked the interpretation decisions listed in README.md and agree with them (or changed them).
-* [ ] I re-ran `python3 -m unittest discover -s tests -t .` myself.
-* [ ] Changes I made myself / suggestions I rejected:
-  * …
+The assistant wrote the code and the first drafts. The direction and these decisions were mine:
+
+* **Plan approval:** I approved the plan before any code was written: tests first, Version A as a list-scan
+  baseline, Version B with price levels and an order index, the benchmark protocol, and a static dashboard.
+* **Traps:** I asked for extra care with traps in the specification and for every uncertainty to be flagged.
+  The resulting interpretation decisions are listed in README.md.
+* **Optimisation:** I asked for Version B to be optimised as far as reasonable (fast path, list orders),
+  while Version A stays an unoptimised, transparent baseline.
+* **Independent review:** I requested a read-only review of the whole repository and then had every
+  confirmed finding fixed.
+* **Dashboard design:** I chose the visual design of my coding-lab dashboard ("Search Lab") for the
+  dashboard, kept as a self-contained page.
+* **Check against the assignment:** I requested a full check against the assignment text, and then decided
+  to:
+  * extend latency and memory measurements to seeds 42–44;
+  * keep the original tests byte-identical to the tests-first commit;
+  * include the working-repository history;
+  * disclose the hidden instruction in the PDF.
+* **Version C:** I asked for a further revision with the rule to discard it unless clearly faster. After the
+  measurements I decided to keep it as a documented experiment rather than the submitted revision, because
+  it is slower under cancellation churn and brings back stale entries.
+* **Final check:** I asked for an end-to-end check (fresh clone, tests, expected outputs, references) before
+  submission.

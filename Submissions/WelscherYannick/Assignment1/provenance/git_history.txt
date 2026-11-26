@@ -224,3 +224,21 @@ Date:   2026-11-26 16:50:43 +0100
  dashboard/index.html     |  2 +-
  results/correctness.json | 10 +++++-----
  4 files changed, 24 insertions(+), 11 deletions(-)
+commit fa949cd221690091a8c868a67630684fc598e246
+Date:   2026-11-26 16:50:43 +0100
+
+    Refresh provenance (bundle, history, fingerprints)
+
+
+ provenance/git_history.txt    |  21 +++++++++++++++++++++
+ provenance/history.bundle     | Bin 2720071 -> 4119896 bytes
+ results/code_fingerprint.json |   2 +-
+ 3 files changed, 22 insertions(+), 1 deletion(-)
+commit 46eb924b51aa2a405465d611dba7cb328fdbfe73
+Date:   2026-11-26 16:54:49 +0100
+
+    AI log: record the author's decisions in section 4
+
+
+ AI_LOG.md | 35 ++++++++++++++++++++++++++---------
+ 1 file changed, 26 insertions(+), 9 deletions(-)
