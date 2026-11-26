@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 import statistics
 import zlib
@@ -33,8 +34,17 @@ METRICS = (
 )
 
 
+def saved_path(path):
+    text = str(path).replace("\\", "/")
+    for anchor in ("/data/", "/results/"):
+        if anchor in text:
+            return ROOT / anchor.strip("/") / text.rsplit(anchor, 1)[1]
+    value = Path(text)
+    return value if value.is_absolute() else ROOT / value
+
+
 def read_json(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(saved_path(path).read_text(encoding="utf-8"))
 
 
 def read_rows(path):
@@ -103,7 +113,9 @@ def compare_pair(left, right, diag_left=None, diag_right=None):
         return dict(speedup=None, status="unavailable", reason="measurement missing")
     if any(r["summary"].get("phase") != "timing" for r in (left, right)):
         return dict(speedup=None, status="unavailable", reason="primary timing groups required")
-    if any(left["summary"].get(f) != right["summary"].get(f) for f in ("event_count", "seed", "scenario")):
+    if any(left["summary"].get(f) != right["summary"].get(f) for f in
+           ("experiment", "scenario", "requested_count", "event_count", "source_event_count",
+            "construction_event_count", "seed", "levels", "sale_percent")):
         return dict(speedup=None, status="incomparable", reason="case identity differs")
     if left["state"] != "completed" or right["state"] != "completed":
         return dict(speedup=None, status="unavailable", reason="completed groups required")
@@ -118,7 +130,7 @@ def compare_pair(left, right, diag_left=None, diag_right=None):
             return dict(speedup=None, status="incomparable", reason="diagnostic provenance differs")
     if any(not d["summary"].get("result_digest") or not d["summary"].get("snapshot_digest") for d in (diag_left, diag_right)):
         return dict(speedup=None, status="unavailable", reason="diagnostic digests missing")
-    fields = ("result_digest", "snapshot_digest", "fill_count", "unfilled_qty_units",
+    fields = ("result_digest", "snapshot_digest", "fill_count", "price_levels_visited", "unfilled_qty_units",
               "cancelled_qty_units", "rejected_event_count", "active_orders_peak",
               "occupied_prices_peak", "active_orders_final", "occupied_prices_final")
     if any(diag_left["summary"].get(f) != diag_right["summary"].get(f) for f in fields):
@@ -145,8 +157,15 @@ def load_catalog(results):
             raw_groups[(row["case_id"], row["version"], row["phase"])].append(row)
         wall_path = path.parent / "command_wall_time.json"
         wall = read_json(wall_path) if wall_path.exists() else None
-        observations = {(p["case_id"], p["version"], p["phase"]):
-                        p["interval_since_previous_progress_seconds"] for p in wall["progress"]} if wall else {}
+        observations = {}
+        for point in wall.get("progress", []) if wall else []:
+            if "case_id" in point:
+                observations[(point["case_id"], point["version"], point["phase"])] = point["interval_since_previous_progress_seconds"]
+            else:
+                match = re.match(r"^\[\d+/\d+\]\s+(\S+)\s+(shared|baseline|revised)\s+(\w+):", point["line"])
+                if match:
+                    case_id, version, phase = match.groups()
+                    observations[(case_id, None if version == "shared" else version, phase)] = point["interval_seconds"]
         run_record = dict(path=str(path.parent.relative_to(ROOT)), status=manifest["status"],
                           command_wall_seconds=wall["total_command_wall_seconds"] if wall else None,
                           code_version=manifest["environment"]["git_head"], versions=manifest["versions"])
@@ -158,7 +177,7 @@ def load_catalog(results):
             key = (summary["case_id"], summary["version"], summary["phase"])
             group = raw_groups[key]
             case = cases[summary["case_id"]]
-            source = Path(case["source"]["path"])
+            source = saved_path(case["source"]["path"])
             try:
                 if source not in dataset_cache:
                     if len(dataset_cache) >= 2:
@@ -241,7 +260,7 @@ def load_catalog(results):
                                     reason=f"{type(error).__name__}: {error}"))
         for job_path in (path.parent / "workers").glob("*.job.json"):
             job = read_json(job_path)
-            checkpoint_path = Path(job["checkpoint"])
+            checkpoint_path = saved_path(job["checkpoint"])
             completed = [r for r in raw_groups[(job["case"]["case_id"], job["version"], job["phase"])]
                          if r["status"] == "complete"]
             checkpoint_rows = read_json(checkpoint_path)["rows"] if checkpoint_path.exists() else []
