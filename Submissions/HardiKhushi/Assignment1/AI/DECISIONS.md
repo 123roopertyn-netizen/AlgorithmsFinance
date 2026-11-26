@@ -34,3 +34,8 @@ assertion against label overlap. Final checks pass at 1440 and 500 pixels, 90 ma
 filter states and 463 assertions each. Sandboxed Chrome aborted before loading;
 authorized local unsandboxed browser checks succeeded with background networking
 disabled. No benchmark source, raw values or original tests changed in this phase.
+
+Publication: excluded the earlier local peer-audit parent from the Assignment1
+submission. Preserve the six directory snapshots in order and map original
+local hashes to their public equivalents; do not relabel measured source data.
+Only publication/verifier documentation and a parent README link are added.

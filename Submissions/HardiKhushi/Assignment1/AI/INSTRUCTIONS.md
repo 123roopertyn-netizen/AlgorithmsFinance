@@ -31,3 +31,15 @@ completion. After the final staged export and browser checks, the user answered:
 
 This authorizes the final local delivery commit and post-commit clean-export
 verification. It does not authorize a push, pull request or publication.
+
+## Assignment 1 publication request
+
+The user subsequently requested:
+> Can you push now in HardiKhushi? that is like submitting the assignment so structure accordingly. and this is assignment 1
+
+This authorizes pushing Assignment1 under Submissions/HardiKhushi/Assignment1/.
+Earlier no-push statements describe previous scopes. Publication excludes earlier
+local audit changes. Any new publication commits still require approval.
+
+The user explicitly approved recreating the six Assignment1-only checkpoints,
+adding the publication record and pushing the clean submission branch.

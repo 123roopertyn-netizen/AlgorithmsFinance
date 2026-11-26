@@ -1,4 +1,5 @@
 """Second verification of the approved historical checkpoints, in clean exports."""
+import argparse
 import io
 import json
 import os
@@ -15,6 +16,11 @@ CHECKPOINTS=(("8270fac",None,0),("35125e8",None,40),("52a6c5e","baseline",22),
 
 
 def export(commit,destination):
+    metadata=ROOT/"agent/PUBLICATION.json"
+    if metadata.exists():
+        mapped=json.loads(metadata.read_text()).get("checkpoint_map",{}).get(commit)
+        if mapped and mapped != "PENDING_APPROVAL":
+            commit=mapped
     archive=subprocess.check_output(["git","archive",commit,PREFIX],cwd=ROOT.parents[2],stderr=subprocess.DEVNULL)
     destination.mkdir(parents=True,exist_ok=True)
     with tarfile.open(fileobj=io.BytesIO(archive)) as source:
@@ -31,7 +37,7 @@ def export(commit,destination):
     return destination/PREFIX
 
 
-def main():
+def main(save=True):
     scratch=ROOT/".preview/checkpoints"
     output=ROOT/"results/evidence/checkpoints"
     output.mkdir(parents=True,exist_ok=True)
@@ -49,7 +55,8 @@ def main():
         run=subprocess.run([sys.executable,"-B","-m","unittest","discover","-s","tests","-v"],
                            cwd=target,env=env,capture_output=True,text=True,timeout=30)
         text=run.stdout+run.stderr
-        (output/f"{commit}.txt").write_text(text)
+        if save:
+            (output/f"{commit}.txt").write_text(text)
         count=int(re.search(r"Ran (\d+) tests",text).group(1))
         assert count==expected_count
         if commit=="35125e8":
@@ -58,9 +65,12 @@ def main():
         else: assert run.returncode==0,text
         results.append(dict(commit=commit,tests=count,returncode=run.returncode,passed=True,
                             interpretation="expected missing modules" if commit=="35125e8" else "passing suite"))
-    (ROOT/"results/evidence/checkpoint_verification.json").write_text(json.dumps(results,indent=2)+"\n")
+    if save:
+        (ROOT/"results/evidence/checkpoint_verification.json").write_text(json.dumps(results,indent=2)+"\n")
     print(json.dumps(results,indent=2))
 
 
 if __name__=="__main__":
-    main()
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--no-save",action="store_true")
+    main(save=not parser.parse_args().no_save)

@@ -53,7 +53,9 @@ def main():
         deterministic=True
     for command in ("generate_orders.py","benchmark.py","replay.py"):
         run([command,"--help"])
-    names=subprocess.check_output(["git","diff","--name-only","ae01998",reference],cwd=repo,text=True,stderr=subprocess.DEVNULL).splitlines()
+    metadata=ROOT/"agent/PUBLICATION.json"
+    base=json.loads(metadata.read_text())["course_base"] if metadata.exists() else "ae01998"
+    names=subprocess.check_output(["git","diff","--name-only",base,reference],cwd=repo,text=True,stderr=subprocess.DEVNULL).splitlines()
     allowed={"Submissions/HardiKhushi/AGENTS.md","Submissions/HardiKhushi/PROGRESS.md","Submissions/HardiKhushi/AI_USAGE.md","Submissions/HardiKhushi/README.md"}
     assert all(name.startswith(PREFIX+"/") or name in allowed for name in names),"unrelated changed file"
     result=dict(reference=reference,exported_files_verified=files,tests=test_count,all_tests_passed=True,

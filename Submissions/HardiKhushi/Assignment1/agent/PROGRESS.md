@@ -109,3 +109,17 @@ verified all 64 project files, passed 47 tests and both worked examples, recheck
 saved results/CLI help, and rebuilt dashboard/findings byte-for-byte identically.
 The delivery commit identifier is in Git history and the completion message.
 No push or external publication is authorized.
+
+## 7. Assignment 1 publication preparation
+
+The user requested pushing Assignment1 as the submission. Prepared a clean
+publication branch from current origin/main, preserving the six Assignment1
+snapshots and excluding the earlier local peer-audit changes. Added public/local
+checkpoint mapping and made Git export verifiers use that mapping and the public
+course base. No measured engine, tests, benchmark source or raw values changed.
+The parent README links to Assignment1. New publication commits require approval.
+
+The user approved the publication commit batch and push. All six original
+Assignment1 tree snapshots were recreated byte-for-byte on the course base;
+PUBLICATION.json records actual public commit IDs. Their test-first ordering is
+preserved. Final checks cover the mapped checkpoints and clean submission tree.

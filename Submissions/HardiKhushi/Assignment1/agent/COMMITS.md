@@ -27,3 +27,10 @@ measured source and outputs. No retrospective re-identification of data is made.
 Clean-export evidence is in results/evidence/checkpoint_verification.json and
 clean_export_383b0aa.json. `agent/verify_submission.py` can verify the eventual
 HEAD again, without rerunning the experimental matrix or changing tracked files.
+
+## Public submission references
+
+The table above records the original local checkpoints. PUBLICATION.json maps
+them to the equivalent Assignment1-only public commits, preserving their order
+and source bytes without publishing the earlier local peer-audit commit.
+See PUBLICATION.md for the publication base, destination and scope.

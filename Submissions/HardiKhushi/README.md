@@ -1,5 +1,9 @@
 # HardiKhushi — Search methods
 
+The take-home project is [Assignment 1: limit order book](Assignment1/README.md).
+Its tests, original/revised engines, raw results, report, dashboard and AI records
+are inside Assignment1/. The earlier search lab below is preserved.
+
 Self-contained *Algorithms in Finance* project comparing manual linear search,
 manual binary search, and standard-library hash-set membership. Everything is
 inside `Submissions/HardiKhushi/`; course folders and other submissions are not
