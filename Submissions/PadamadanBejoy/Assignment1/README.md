@@ -115,4 +115,4 @@ python3 generate_orders.py --scenario buildup --events 100000 --levels 1000 --se
 
 - Version A: commit `e2a5a74`; validation: `1ccf24c`; Version B: `dfc4322`
 - Benchmark results measured at commit `0f700e4` (recorded in `results/environment.json`)
-- Submitted commit: `SUBMITTED_COMMIT`
+- Submitted commit: `1c780d5`
