@@ -25,3 +25,13 @@ worked sale, crossing limits, FIFO, residuals, cancellation, atomic validation,
 long queues, generated sale oracles and per-event conservation/differential checks.
 Generator checks execute independently of missing engines. No test result has
 been weakened to accommodate an implementation.
+
+## 3. Baseline implementation
+
+Tests-first checkpoint committed with explicit approval as 35125e8; clean status
+verified. Implemented Version A using a list of individual active orders and
+explicit best-price/arrival scans, shared atomic validation/result formatting,
+standard-library JSON/gzip reader and replay CLI. The revision did not exist
+when the baseline suite ran. All 22 baseline-stage tests completed successfully
+(21 passed; the revision comparison was explicitly skipped). Exact test file
+hashes still match the red-run record. Log: results/evidence/tests_baseline.txt.
